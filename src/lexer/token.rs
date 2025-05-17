@@ -16,12 +16,34 @@ pub enum TokenKind {
     RParen,      // )
     LBrace,      // {
     RBrace,      // }
+    LBracket,    // [
+    RBracket,    // ]
+    Dollar,      // $
     Colon,       // :
     Comma,       // ,
+    Period,      // .
     Semicolon,   // ;
     SingleEqual, // =
 
+    // operators:
+    ExclamationMark,    // !
+    Plus,               // +
+    Minus,              // -
+    Slash,              // /
+    Asterisk,           // *
+    BitAnd,             // &
+    BitOr,              // |
+    BitXor,             // ^
+    DoubleEqual,        // ==
+    NotEqual,           // !=
+    LessThan,           // <
+    GreaterThan,        // >
+    LessThanOrEqual,    // <=
+    GreaterThanOrEqual, // >=
+
     Identifier,
+    IntLiteral,
+    StringLiteral,
     Eof
 }
 
@@ -43,6 +65,26 @@ impl Display for TokenKind {
             TokenKind::SingleEqual => "=",
             TokenKind::Identifier => "identifier",
             TokenKind::Eof => "EOF",
+            TokenKind::ExclamationMark => "!",
+            TokenKind::Plus => "+",
+            TokenKind::Minus => "-",
+            TokenKind::Slash => "/",
+            TokenKind::Asterisk => "*",
+            TokenKind::BitAnd => "&",
+            TokenKind::BitOr => "|",
+            TokenKind::BitXor => "^",
+            TokenKind::DoubleEqual => "==",
+            TokenKind::NotEqual => "!=",
+            TokenKind::LessThan => "<",
+            TokenKind::GreaterThan => ">",
+            TokenKind::LessThanOrEqual => "<=",
+            TokenKind::GreaterThanOrEqual => ">=",
+            TokenKind::IntLiteral => "integer literal",
+            TokenKind::LBracket => "[",
+            TokenKind::RBracket => "]",
+            TokenKind::StringLiteral => "string literal",
+            TokenKind::Dollar => "$",
+            TokenKind::Period => "."
         };
         f.write_str(str)
     }

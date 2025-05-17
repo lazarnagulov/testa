@@ -1,5 +1,29 @@
-use testa::lexer::token;
+use testa::lexer::lexer::Lexer;
+
 
 fn main() {
-    println!("Hello, world!");
+    let lexer = Lexer::new(
+r#"
+        // Directives
+        @output csv;
+        @seed 42;
+
+        // Customize data resources
+        resource Name {
+            first = ["John", "Peter"];
+            last = ["Doe", "Smith"];
+        }
+
+        // Generate
+        generate _ [10] {
+            id = $uuid();
+            first_name = $pick(Name.first);
+            last_name = $pick(Name.last);
+        }
+        "#
+    );
+
+    for tok in lexer {
+        println!("{:?}", tok);
+    }
 }
