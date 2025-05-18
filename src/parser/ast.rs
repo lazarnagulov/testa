@@ -9,6 +9,10 @@ pub enum Statement {
         name: String,
         body: Vec<Field>
     },
+    OutputDirective {
+        argument: String,
+        options: Vec<(String, String)>
+    },
     Enum {
         name: String,
         variants: Vec<String>
@@ -48,8 +52,6 @@ impl Expression {
     }
 }
 
-
-
 #[derive(PartialEq, Eq, Debug)]
 pub enum ExpressionKind {
     IntLiteral(isize),
@@ -66,9 +68,6 @@ pub enum ExpressionKind {
     },
     FuncCall {
         arguments: Vec<Expression>
-    },
-    Directive {
-        argument: Box<Expression>
     }
 }
 

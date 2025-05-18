@@ -3,7 +3,7 @@ use std::{iter::Peekable};
 
 use crate::lexer::{lexer::Lexer, token::TokenKind};
 
-use super::{ast::{Expression, ExpressionKind, ExpressionStatemnt, InfixOperator, Precedence, PrefixOperator, Program, Statement}, parser_error::ParserError};
+use super::{ast::*, parser_error::ParserError};
 
 pub struct Parser<'src> {
     lexer: Peekable<Lexer<'src>>,
@@ -32,7 +32,7 @@ impl<'src> Parser<'src> {
 
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.peek_kind() {
-            TokenKind::Output => todo!(),
+            TokenKind::Output => self.parse_output_directive(),
             TokenKind::Seed => todo!(),
             TokenKind::Template => todo!(),
             TokenKind::Resource => todo!(),
@@ -42,23 +42,57 @@ impl<'src> Parser<'src> {
         }
     }
 
+    fn parse_output_directive(&mut self) -> Result<Statement, ParserError> {
+        self.lexer.next();
+        let (start, size) = self.expect_token(TokenKind::Identifier)?;
+        let mut options = vec![];
+        
+        if self.peek_kind() == &TokenKind::LBrace {
+            self.lexer.next();
+            options = self.parse_option_fields()?;
+            self.expect_token(TokenKind::RBrace)?;
+        } else {
+            self.expect_token(TokenKind::Semicolon)?;
+        }
+
+        Ok(Statement::OutputDirective { argument: self.source[start..start + size].to_string(), options: options })
+    }
+
     fn parse_enum(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
         let (start, size) = self.expect_token(TokenKind::Identifier)?;
         let name = self.source[start..start + size].to_string();
-        let mut variants = vec![];
         self.expect_token(TokenKind::LBrace)?;
+        let variants = self.parse_parameters()?;
+        Ok(Statement::Enum { name, variants })
+    }
 
+    fn parse_parameters(&mut self) -> Result<Vec<String>, ParserError> {
+        let mut parameters = vec![];
         while self.peek_kind() == &TokenKind::Identifier {
-            let (start, size) = self.expect_token(TokenKind::Identifier)?;
-            variants.push(self.source[start..start + size].to_string());
+            let (start, size) = self.expect_token(TokenKind::Identifier).unwrap();
+            parameters.push(self.source[start..start + size].to_string());
             if self.peek_kind() == &TokenKind::RBrace {
                 break;
             }
             self.expect_token(TokenKind::Comma)?;
         }
         self.lexer.next();
-        Ok(Statement::Enum { name, variants })
+        Ok(parameters)
+    }
+
+    fn parse_option_fields(&mut self) -> Result<Vec<(String, String)>, ParserError> {
+        let mut options = vec![];
+        while self.peek_kind() == &TokenKind::Identifier {
+            let (start, size) = self.expect_token(TokenKind::Identifier).unwrap();
+            let key = self.source[start..start + size].to_string();
+            self.expect_token(TokenKind::SingleEqual)?;
+            let (start, size) = self.expect_token(TokenKind::StringLiteral)?;
+            let value = self.source[start + 1..start + size - 1].to_string();
+            self.expect_token(TokenKind::Semicolon)?;
+            options.push((key, value));
+        }
+        Ok(options)
     }
 
     fn parse_generate(&mut self) -> Result<Statement, ParserError> {

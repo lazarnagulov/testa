@@ -5,7 +5,7 @@ use testa::parser::parser::Parser;
 fn main() {
     let mut parser = Parser::new(
 r#"
-        enum Role { User }
+        @output csv { delimiter = ";"; }
         "#
     );
 

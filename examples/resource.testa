@@ -1,5 +1,5 @@
 // Directives 
-@output csv;
+@output csv; 
 @seed 42;
 
 // Customize data resources
