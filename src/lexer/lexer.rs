@@ -64,8 +64,7 @@ impl<'src> Lexer<'src> {
             '"' => {
                 self.next();
                 let size = self.read_string(current_index);
-                println!("Found string: {:?}", self.content[current_index + 1..current_index + size].to_string());
-                Token::new(StringLiteral, current_index + 1, size)
+                Token::new(StringLiteral, current_index, size )
             }
             '<' => {
                 self.next();
@@ -160,8 +159,12 @@ impl<'src> Lexer<'src> {
             let token = self.next().unwrap();
             last = token.0;
         }
-        self.next();
-        self.content[position..=last].len()
+        match self.next() {
+            Some(..) => {},
+            None => panic!("Invalid string literal: missing closing quote"),
+        }
+        // Add "" to size
+        2 + last - position
     }
 
     fn make_single_char_token(&mut self, current_index: usize, kind: TokenKind) -> Token {
