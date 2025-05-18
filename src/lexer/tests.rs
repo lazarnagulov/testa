@@ -44,6 +44,18 @@ mod lexer_tests {
     }
 
     #[test]
+    #[should_panic]
+    fn lex_invalid_multiline_string() {
+        let program = r#"
+            "john
+            peter
+            "
+        "#;
+        let mut lexer = Lexer::new(program);
+        expect_token(&mut lexer, vec![]);
+    }
+
+    #[test]
     fn lex_literal_size() {
         let program = "john \"Peter\" 123";
         let mut lexer = Lexer::new(program);

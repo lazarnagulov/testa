@@ -156,8 +156,11 @@ impl<'src> Lexer<'src> {
     fn read_string(&mut self, position: usize) -> usize {
         let mut last = position;
         while self.peek().is_some_and(|(_, c)| c != '"') {
-            let token = self.next().unwrap();
-            last = token.0;
+            let (current_position, ch) = self.next().unwrap();
+            if ch == '\n' {
+                panic!("Invalid string literal: missing closing quote");
+            }
+            last = current_position;
         }
         match self.next() {
             Some(..) => {},
