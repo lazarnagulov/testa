@@ -38,7 +38,6 @@ impl<'src> Lexer<'src> {
             ';' => self.make_single_char_token(current_index, Semicolon),
             '[' => self.make_single_char_token(current_index, LBracket),
             ']' => self.make_single_char_token(current_index, RBracket),
-            '$' => self.make_single_char_token(current_index, Dollar),
             '.' => self.make_single_char_token(current_index, Period),
             '+' => self.make_single_char_token(current_index, Plus),
             '-' => self.make_single_char_token(current_index, Minus),
@@ -53,7 +52,7 @@ impl<'src> Lexer<'src> {
                 } else {
                     Token::new(SingleEqual, current_index, 1)
                 }
-            },
+            }
             '!' => {
                 self.next();
                 if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
@@ -61,20 +60,16 @@ impl<'src> Lexer<'src> {
                 } else {
                     Token::new(ExclamationMark, current_index, 1)
                 }
-            },
+            }
             '"' => {
                 self.next();
                 let size = self.read_string(current_index);
                 println!("Found string: {:?}", self.content[current_index + 1..current_index + size].to_string());
                 Token::new(StringLiteral, current_index + 1, size)
-            },
+            }
             '<' => {
                 self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
-                {
+                if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
                     Token::new(LessThanOrEqual, current_index, 2)
                 } else {
                     Token::new(LessThan, current_index, 1)
@@ -82,16 +77,12 @@ impl<'src> Lexer<'src> {
             }
             '>' => {
                 self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
-                {
+                if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
                     Token::new(GreaterThanOrEqual, current_index, 2)
                 } else {
                     Token::new(GreaterThan, current_index, 1)
                 }
-            },
+            }
             '/' => {
                 self.next();
                 if self.chars.next_if(|(_, next_char)| *next_char == '/').is_some() {
@@ -99,6 +90,15 @@ impl<'src> Lexer<'src> {
                     self.next_token()
                 } else {
                     Token::new(Slash, current_index, 1)
+                }
+            }
+            '$' => {
+                self.next();
+                let builtin = self.read_identifier(current_index);
+                match builtin {
+                    "$pick" => Token::new(Pick, current_index, 4),
+                    "$uuid" => Token::new(Uuid, current_index, 4),
+                    _ => panic!("Invalid builtin {}", builtin)
                 }
             }
             '@' => {
@@ -116,15 +116,11 @@ impl<'src> Lexer<'src> {
                     "generate" => Token::new(Generate, current_index, 8),
                     "template" => Token::new(Template, current_index, 8),
                     "resource" => Token::new(Resource, current_index, 8),
-                    ident => {
-                        println!("Found identifier: {:?}", ident);
-                        Token::new(Identifier, current_index, ident.len())
-                    }
+                    ident=> Token::new(Identifier, current_index, ident.len())
                 }
             }
             '0'..='9' =>  {
                 let size = self.read_number(current_index);
-                println!("Found integer: {:?}", self.content[current_index..current_index + size].to_string());
                 Token::new(IntLiteral, current_index, size)
             }
             c => panic!("Invalid token {}", c)

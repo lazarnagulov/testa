@@ -1,10 +1,16 @@
 use std::fmt::Display;
 
+
+// TODO: Add lookup table for directives, keywords and builtins.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TokenKind {
     // directives -- starts with @
     Output,
     Seed,
+
+    // builtins -- starts with $
+    Pick,
+    Uuid,
 
     // keywords
     Generate,
@@ -18,7 +24,6 @@ pub enum TokenKind {
     RBrace,      // }
     LBracket,    // [
     RBracket,    // ]
-    Dollar,      // $
     Colon,       // :
     Comma,       // ,
     Period,      // .
@@ -83,8 +88,9 @@ impl Display for TokenKind {
             TokenKind::LBracket => "[",
             TokenKind::RBracket => "]",
             TokenKind::StringLiteral => "string literal",
-            TokenKind::Dollar => "$",
-            TokenKind::Period => "."
+            TokenKind::Period => ".",
+            TokenKind::Pick => "pick",
+            TokenKind::Uuid => "uuid"
         };
         f.write_str(str)
     }
