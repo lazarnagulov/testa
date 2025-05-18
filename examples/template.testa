@@ -1,0 +1,11 @@
+@output csv;
+
+enum Role { User, Admin, Moderator };
+
+template User {
+    id = $uuid();
+    name = string(1,16);
+    role = $pick(Role);
+}
+
+generate User[10];

@@ -11,6 +11,6 @@ resource Name {
 // Generate
 generate _ [10] {
     id = $uuid();
-    first_name = pick(Name.first);
-    last_name = pick(Name.last);
+    first_name = $pick(Name.first);
+    last_name = $pick(Name.last);
 }

@@ -10,7 +10,7 @@ mod lexer_tests {
     }
 
     fn expect_token_size(lexer: &mut Lexer, input: &str, expected: Vec<&str>) {
-        let token_kinds = lexer.into_iter().map(|token| &input[token.start..token.start + token.size] ).collect::<Vec<_>>();
+        let token_kinds = lexer.into_iter().map(|token| &input[token.start..token.start + token.size]).collect::<Vec<_>>();
         assert_eq!(token_kinds, expected);
     }
 

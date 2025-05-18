@@ -1,2 +1,3 @@
-# testa
-Test data generator.
+# TestA
+DSL for generating test data.
+
