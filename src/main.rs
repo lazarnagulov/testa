@@ -1,8 +1,9 @@
-use testa::lexer::lexer::Lexer;
+use testa::parser::parser::Parser;
+
 
 
 fn main() {
-    let lexer = Lexer::new(
+    let parser = Parser::new(
 r#"
         // Directives
         @output csv;
@@ -23,7 +24,4 @@ r#"
         "#
     );
 
-    for tok in lexer {
-        println!("{:?}", tok);
-    }
 }

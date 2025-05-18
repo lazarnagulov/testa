@@ -16,6 +16,7 @@ pub enum TokenKind {
     Generate,
     Template,
     Resource,
+    Enum,
 
     // syntax
     LParen,      // (
@@ -90,7 +91,8 @@ impl Display for TokenKind {
             TokenKind::StringLiteral => "string literal",
             TokenKind::Period => ".",
             TokenKind::Pick => "pick",
-            TokenKind::Uuid => "uuid"
+            TokenKind::Uuid => "uuid",
+            TokenKind::Enum => "enum",
         };
         f.write_str(str)
     }
