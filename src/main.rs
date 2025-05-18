@@ -3,25 +3,18 @@ use testa::parser::parser::Parser;
 
 
 fn main() {
-    let parser = Parser::new(
+    let mut parser = Parser::new(
 r#"
-        // Directives
-        @output csv;
-        @seed 42;
-
-        // Customize data resources
-        resource Name {
-            first = ["John", "Peter"];
-            last = ["Doe", "Smith"];
-        }
-
-        // Generate
-        generate _ [10] {
-            id = $uuid();
-            first_name = $pick(Name.first);
-            last_name = $pick(Name.last);
-        }
+        enum Role { User }
         "#
     );
 
+    match parser.parse() {
+        Ok(_) => {},
+        Err(error) => match error {
+            testa::parser::parser_error::ParserError::Expected { expected, got } => panic!("Expected {} got {}", expected, got),
+            testa::parser::parser_error::ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
+            testa::parser::parser_error::ParserError::Syntax(message) => panic!("{}", message),
+        },
+    }
 }
