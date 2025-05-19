@@ -100,12 +100,58 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_expression_statement(&mut self) -> Result<ExpressionStatemnt, ParserError> {
-        todo!()
+        let expression = self.parse_expression(Precedence::Lowest)?;
+        self.expect_token(TokenKind::Semicolon)?;
+
+        Ok(ExpressionStatemnt { expression })
     }
 
-    fn parse_expression(&mut self, _precendence: Precedence) -> Result<Expression, ParserError> {
-        todo!()
+    fn parse_expression(&mut self, precendence: Precedence) -> Result<Expression, ParserError> {
+        let mut expression = self.parse_expression_by_prefix()?;
+        
+        while precendence < self.current_precendence() {
+            expression = match &self.peek_kind() {
+                TokenKind::Asterisk => self.parse_infix_expression(expression, InfixOperator::Multiply,Precedence::Product)?,
+                TokenKind::Slash => self.parse_infix_expression(expression, InfixOperator::Divide,Precedence::Product)?,
+                TokenKind::Plus => self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?,
+                TokenKind::Minus => self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?,
+                TokenKind::BitAnd => self.parse_infix_expression(expression, InfixOperator::BitAnd, Precedence::Lowest)?,
+                TokenKind::BitOr => self.parse_infix_expression(expression, InfixOperator::BitOr, Precedence::Lowest)?,
+                TokenKind::BitXor => self.parse_infix_expression(expression, InfixOperator::BitXor, Precedence::Lowest)?,
+                TokenKind::LessThan => self.parse_infix_expression(expression, InfixOperator::LessThan, Precedence::Comparison)?,
+                TokenKind::LessThanOrEqual => self.parse_infix_expression(expression, InfixOperator::LessThanOrEqual, Precedence::Comparison)?,
+                TokenKind::GreaterThan => self.parse_infix_expression(expression, InfixOperator::GreaterThan, Precedence::Comparison)?,
+                TokenKind::GreaterThanOrEqual => self.parse_infix_expression(expression, InfixOperator::GreaterThanOrEqual, Precedence::Comparison)?,
+                TokenKind::DoubleEqual => self.parse_infix_expression(expression, InfixOperator::Equal, Precedence::Comparison)?,
+                TokenKind::NotEqual => self.parse_infix_expression(expression, InfixOperator::NotEqual, Precedence::Comparison)?,
+                token => return Err(ParserError::syntax_err(&format!("Invalid operator: {}", token)))
+            }
+        }
+        Ok(expression)
     }
+
+    fn parse_expression_by_prefix(&mut self) -> Result<Expression, ParserError> {
+        match &self.peek_kind()  {
+            TokenKind::IntLiteral => Ok(self.parse_int_literal()?),
+            TokenKind::ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNot)?),
+            TokenKind::Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
+            _ => Err(ParserError::syntax_err("Invalid prefix expression"))
+        }
+    }
+
+    fn parse_int_literal(&mut self) -> Result<Expression, ParserError> {
+        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
+        let start = token.start;
+        let size = token.size;
+        if token.kind == TokenKind::IntLiteral {
+            self.lexer.next();
+            let number = (&self.source[start..start+size]).parse().unwrap();
+            Ok(Expression { kind: ExpressionKind::IntLiteral(number), start, size })
+        } else {
+            Err(ParserError::Expected { expected: "int litral".to_string(), got: token.kind.to_string()})
+        }
+    }
+
 
     fn parse_prefix_expression(&mut self, operator: PrefixOperator) -> Result<Expression, ParserError> {
         let (start, size) = self.expect_token(match operator {
@@ -116,8 +162,19 @@ impl<'src> Parser<'src> {
         Ok(Expression::new(ExpressionKind::Prefix { operator, expression: Box::new(expression) }, start, size))
     }
 
-    fn parse_infix_expression(&mut self, _operator: InfixOperator) -> Result<Expression, ParserError> {
-        todo!()
+    fn parse_infix_expression(&mut self, left: Expression, operator: InfixOperator, precendence: Precedence) -> Result<Expression, ParserError> {
+        self.lexer.next();
+        let right= self.parse_expression(precendence)?;
+        let start = left.start;
+        let end = right.start + right.size; 
+
+        Ok(Expression::new(ExpressionKind::Infix {
+            left: Box::new(left), 
+            operator, 
+            right: Box::new(right)}, 
+            start,
+            end - start
+        ))
     }
 
     fn expect_token(&mut self, kind: TokenKind) -> Result<(usize, usize), ParserError> {
@@ -133,7 +190,7 @@ impl<'src> Parser<'src> {
         self.lexer.peek().map_or(&TokenKind::Eof, |t| &t.kind)
     }
 
-    fn get_current_precendance(&mut self) -> Precedence {
+    fn current_precendence(&mut self) -> Precedence {
         match self.peek_kind() {
             TokenKind::DoubleEqual | TokenKind::NotEqual => Precedence::Equality,
             TokenKind::LessThan | TokenKind::GreaterThan | TokenKind::LessThanOrEqual | TokenKind::GreaterThanOrEqual => Precedence::Comparison,

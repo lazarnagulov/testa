@@ -11,6 +11,7 @@ pub enum Statement {
     },
     OutputDirective {
         argument: String,
+        // TODO: Change to Vec<Field>
         options: Vec<(String, String)>
     },
     Enum {
@@ -39,11 +40,13 @@ pub struct ExpressionStatemnt {
     pub expression: Expression
 }
 
+
+//TODO: Add start and size for expression
 #[derive(PartialEq, Eq, Debug)]
 pub struct Expression {
-    kind: ExpressionKind,
-    start: usize,
-    size: usize
+    pub kind: ExpressionKind,
+    pub start: usize,
+    pub size: usize
 }
 
 impl Expression {
@@ -83,6 +86,9 @@ pub enum InfixOperator {
     Minus,
     Divide,
     Multiply,
+    BitAnd,
+    BitOr,
+    BitXor,
     Equal,
     NotEqual,
     LessThan,

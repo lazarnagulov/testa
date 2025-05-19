@@ -1,20 +1,14 @@
-use testa::parser::parser::Parser;
+use testa::parser::{parser::Parser, parser_error::ParserError};
 
 
 
-fn main() {
+fn main() -> Result<(), ParserError> {
     let mut parser = Parser::new(
 r#"
-        @output csv { delimiter = ";"; }
+        5 * 3 - 5;
         "#
     );
 
-    match parser.parse() {
-        Ok(_) => {},
-        Err(error) => match error {
-            testa::parser::parser_error::ParserError::Expected { expected, got } => panic!("Expected {} got {}", expected, got),
-            testa::parser::parser_error::ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
-            testa::parser::parser_error::ParserError::Syntax(message) => panic!("{}", message),
-        },
-    }
+    parser.parse()?;
+    Ok(())
 }
