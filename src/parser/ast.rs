@@ -65,6 +65,8 @@ pub enum ExpressionKind {
     StringLiteral(String),
     BooleanLiteral(bool),
     Identifier(String),
+    // TODO: add type options e.g. int { 0..=100 }
+    Type(String),
     Prefix {
         operator: PrefixOperator,
         expression: Box<Expression>

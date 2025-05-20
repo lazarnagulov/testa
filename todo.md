@@ -10,6 +10,7 @@
 - [x] Comparison: ==, !=, <, >, <=, >=.
 - [x] Integers
 - [x] Strings
+- [x] Type keywords (int, string, float...)
 - [ ] Floats
 - [x] Range .., ..=
 - [x] Directives
@@ -24,4 +25,9 @@
 - [ ] Built-ins 
 - [ ] Generate statement
 - [ ] Resource statement
-- [ ] Template statement
+- [x] Template statement
+
+### Questions
+
+- Should ranges be infix expression or its own kind?
+- Should directive and built-ins be seperated from TokenKind -- Directive(DirectiveKind)?

@@ -148,6 +148,9 @@ impl<'src> Lexer<'src> {
                     "true" => Token::new(True, current_index, 4),
                     "false" => Token::new(False, current_index, 4),
                     "enum" => Token::new(Enum, current_index, 4),
+                    "int" => Token::new(Int, current_index, 3),
+                    "float" => Token::new(Float, current_index, 5),
+                    "string" => Token::new(Str, current_index, 6),
                     ident=> Token::new(Identifier, current_index, ident.len())
                 }
             }

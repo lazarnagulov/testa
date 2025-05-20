@@ -35,12 +35,22 @@ impl<'src> Parser<'src> {
         match self.peek_kind() {
             Output => self.parse_output_directive(),
             Seed => todo!(),
-            Template => todo!(),
+            Template => self.parse_template(),
             Resource => todo!(),
             Enum => self.parse_enum(),
             Generate => self.parse_generate(),
             _ => Ok(Statement::Expression(self.parse_expression_statement()?))
         }
+    }
+
+    fn parse_template(&mut self) -> Result<Statement, ParserError> {
+        self.lexer.next();
+        let (start, size) = self.expect_token(Identifier)?;
+        let name = self.source[start..start + size].to_string();
+        self.expect_token(LBrace)?;
+        let fields = self.parse_fields()?;
+        self.expect_token(RBrace)?;
+        Ok(Statement::Template { name, body: fields })
     }
 
     fn parse_output_directive(&mut self) -> Result<Statement, ParserError> {
@@ -58,6 +68,11 @@ impl<'src> Parser<'src> {
 
         Ok(Statement::OutputDirective { argument: self.source[start..start + size].to_string(), options: options })
     }
+
+    fn parse_generate(&mut self) -> Result<Statement, ParserError> {
+        todo!()
+    }
+
 
     fn parse_enum(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
@@ -93,10 +108,6 @@ impl<'src> Parser<'src> {
             options.push(Field::new(name, expression));
         }
         Ok(options)
-    }
-
-    fn parse_generate(&mut self) -> Result<Statement, ParserError> {
-        todo!()
     }
 
     fn parse_expression_statement(&mut self) -> Result<ExpressionStatemnt, ParserError> {
@@ -138,6 +149,8 @@ impl<'src> Parser<'src> {
 
     fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.peek_kind()  {
+            Int | Float | Str => Ok(self.parse_type()?),
+            Identifier => Ok(self.parse_identifier()?),
             IntLiteral => Ok(self.parse_int_literal()?),
             StringLiteral => Ok(self.parse_string_literal()?),
             True | False => Ok(self.parse_bool_literal()?),
@@ -145,8 +158,37 @@ impl<'src> Parser<'src> {
             ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
             LParen => Ok(self.parse_group_expression()?),
-            _ => Err(ParserError::syntax_err("Invalid prefix expression"))
+            kind => Err(ParserError::syntax_err(&format!("Invalid primary expression: {}", kind)))
         }
+    }
+
+    fn parse_type(&mut self) -> Result<Expression, ParserError> {
+        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
+        let start = token.start;
+        let size = token.size;
+        match &token.kind {
+            Int | Float | Str => {
+                self.lexer.next();
+                let literal = self.source[start..start+size].to_string();
+                Ok(Expression::new(ExpressionKind::Type(literal), start, size))
+            },
+            kind => Err(ParserError::expected("string literal", &kind.to_string()))
+        }
+    }
+
+    fn parse_identifier(&mut self) -> Result<Expression, ParserError> {
+        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
+        let start = token.start;
+        let size = token.size;
+        match &token.kind {
+            Identifier => {
+                self.lexer.next();
+                let literal = self.source[start+1..start+size-1].to_string();
+                Ok(Expression::new(ExpressionKind::Identifier(literal), start, size))
+            },
+            kind => Err(ParserError::expected("string literal", &kind.to_string()))
+        }
+
     }
 
     fn parse_string_literal(&mut self) -> Result<Expression, ParserError> {
@@ -161,7 +203,6 @@ impl<'src> Parser<'src> {
             },
             kind => Err(ParserError::expected("string literal", &kind.to_string()))
         }
-
     }
 
     fn parse_bool_literal(&mut self) -> Result<Expression, ParserError> {

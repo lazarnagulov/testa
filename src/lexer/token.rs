@@ -19,6 +19,9 @@ pub enum TokenKind {
     Enum,
     False,
     True,
+    Int,
+    Float,
+    Str,
 
     // syntax
     LParen,            // (
@@ -59,6 +62,7 @@ pub enum TokenKind {
     Identifier,
     IntLiteral,
     StringLiteral,
+    FloatLiteral,
     Eof
 }
 
@@ -70,6 +74,9 @@ impl Display for TokenKind {
             TokenKind::Generate => "generate",
             TokenKind::Template => "template",
             TokenKind::Resource => "resource",
+            TokenKind::Int => "int",
+            TokenKind::Float => "float",
+            TokenKind::Str => "string",
             TokenKind::LParen => "(",
             TokenKind::RParen => ")",
             TokenKind::LBrace => "{",
@@ -103,6 +110,7 @@ impl Display for TokenKind {
             TokenKind::LBracket => "[",
             TokenKind::RBracket => "]",
             TokenKind::StringLiteral => "string literal",
+            TokenKind::FloatLiteral => "float literal",
             TokenKind::SinglePeriod => ".",
             TokenKind::DoublePeriod => "..",
             TokenKind::DoublePeriodEqual => "..=",
