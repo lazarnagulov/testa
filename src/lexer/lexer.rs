@@ -70,7 +70,9 @@ impl<'src> Lexer<'src> {
                 self.next();
                 if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
                     Token::new(LessThanOrEqual, current_index, 2)
-                } else {
+                } else if self.chars.next_if(|(_, next_char)| *next_char == '<').is_some() {
+                    Token::new(BitLShift, current_index, 2)
+                }else {
                     Token::new(LessThan, current_index, 1)
                 }
             }
@@ -78,6 +80,8 @@ impl<'src> Lexer<'src> {
                 self.next();
                 if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
                     Token::new(GreaterThanOrEqual, current_index, 2)
+                } else if self.chars.next_if(|(_, next_char)| *next_char == '>').is_some() {
+                    Token::new(BitRShift, current_index, 2)
                 } else {
                     Token::new(GreaterThan, current_index, 1)
                 }

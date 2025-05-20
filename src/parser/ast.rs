@@ -88,6 +88,8 @@ pub enum InfixOperator {
     BitAnd,
     BitOr,
     BitXor,
+    BitLShift,
+    BitRShift,
     Equal,
     NotEqual,
     LessThan,

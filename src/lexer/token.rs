@@ -42,6 +42,8 @@ pub enum TokenKind {
     BitAnd,             // &
     BitOr,              // |
     BitXor,             // ^
+    BitLShift,          // <<
+    BitRShift,          // >>
     DoubleEqual,        // ==
     NotEqual,           // !=
     LessThan,           // <
@@ -84,6 +86,8 @@ impl Display for TokenKind {
             TokenKind::DoubleEqual => "==",
             TokenKind::NotEqual => "!=",
             TokenKind::LessThan => "<",
+            TokenKind::BitLShift => "<<",
+            TokenKind::BitRShift => ">>",
             TokenKind::GreaterThan => ">",
             TokenKind::LessThanOrEqual => "<=",
             TokenKind::GreaterThanOrEqual => ">=",

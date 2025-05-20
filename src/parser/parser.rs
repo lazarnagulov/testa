@@ -114,9 +114,11 @@ impl<'src> Parser<'src> {
                 Slash => self.parse_infix_expression(expression, InfixOperator::Divide,Precedence::Product)?,
                 Plus => self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?,
                 Minus => self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?,
-                BitAnd => self.parse_infix_expression(expression, InfixOperator::BitAnd, Precedence::Lowest)?,
-                BitOr => self.parse_infix_expression(expression, InfixOperator::BitOr, Precedence::Lowest)?,
-                BitXor => self.parse_infix_expression(expression, InfixOperator::BitXor, Precedence::Lowest)?,
+                BitAnd => self.parse_infix_expression(expression, InfixOperator::BitAnd, Precedence::Bitwise)?,
+                BitOr => self.parse_infix_expression(expression, InfixOperator::BitOr, Precedence::Bitwise)?,
+                BitXor => self.parse_infix_expression(expression, InfixOperator::BitXor, Precedence::Bitwise)?,
+                BitLShift => self.parse_infix_expression(expression, InfixOperator::BitLShift, Precedence::Bitwise)?,
+                BitRShift => self.parse_infix_expression(expression, InfixOperator::BitRShift, Precedence::Bitwise)?,
                 LessThan => self.parse_infix_expression(expression, InfixOperator::LessThan, Precedence::Comparison)?,
                 LessThanOrEqual => self.parse_infix_expression(expression, InfixOperator::LessThanOrEqual, Precedence::Comparison)?,
                 GreaterThan => self.parse_infix_expression(expression, InfixOperator::GreaterThan, Precedence::Comparison)?,
@@ -195,7 +197,6 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_infix_expression(&mut self, left: Expression, operator: InfixOperator, precendence: Precedence) -> Result<Expression, ParserError> {
-        println!("Op: {:?}", operator);
         self.lexer.next();
         let right= self.parse_expression(precendence)?;
         let start = left.start;
@@ -227,7 +228,7 @@ impl<'src> Parser<'src> {
         match self.peek_kind() {
             DoubleEqual | NotEqual => Precedence::Equality,
             LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual => Precedence::Comparison,
-            BitAnd | BitOr | BitXor => Precedence::Bitwise,
+            BitAnd | BitOr | BitXor | BitLShift | BitRShift => Precedence::Bitwise,
             Plus | Minus => Precedence::Sum,
             Asterisk | Slash => Precedence::Product,
             LParen => Precedence::Group,

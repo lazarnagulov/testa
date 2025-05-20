@@ -27,10 +27,10 @@ mod lexer_tests {
 
     #[test]
     fn lex_two_char_tokens() {
-        let program = "==!=<=>=";
+        let program = "==!=<=>=<<>>";
         let mut lexer = Lexer::new(program);
         expect_token(&mut lexer, vec![
-            DoubleEqual, NotEqual, LessThanOrEqual, GreaterThanOrEqual
+            DoubleEqual, NotEqual, LessThanOrEqual, GreaterThanOrEqual, BitLShift, BitRShift
         ]);
     }
 

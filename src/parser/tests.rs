@@ -86,7 +86,7 @@ mod parser_tests {
 
     #[test]
     fn parse_missing_paren() {
-        let program = "(2 + 3 & 5 ;";
+        let program = "(2 << 3 & 5 >> 1;";
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(_) => panic!("Program should have returned err."),
