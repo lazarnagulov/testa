@@ -2,14 +2,15 @@
 
 ### Lexer
 - [x] Aritmetic operators : +, -, *, /.
-- [ ] Bitwise operators : &, |, ^, <<, >>, ~.
-- [ ] Logical operators: &&, ||.
+- [x] Bitwise operators : &, |, ^, <<, >>, ~.
+- [x] Logical operators: &&, ||.
 - [x] Comparison: ==, !=, <, >, <=, >=.
 - [x] Integers
 - [x] Strings
 - [ ] Floats
 - [x] Directives
 - [x] Built-ins
+- [ ] Lookup
 
 ### Parser
 - [x] Infix expressions
@@ -20,3 +21,4 @@
 - [ ] Generate statement
 - [ ] Resource statement
 - [ ] Template statement
+- [ ] Lookup

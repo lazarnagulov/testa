@@ -112,7 +112,7 @@ mod parser_tests {
         });
         let logical_not_statement = Statement::Expression(ExpressionStatemnt { 
             expression: Expression::new(ExpressionKind::Prefix { 
-                operator: PrefixOperator::LogicalNot, 
+                operator: PrefixOperator::LogicalNegate, 
                 expression: Box::new(Expression::new(ExpressionKind::BooleanLiteral(true), 5, 4)) 
             }, 4, 5),
         });

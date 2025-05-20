@@ -5,6 +5,7 @@ use crate::lexer::{lexer::Lexer, token::TokenKind::{self, *}};
 
 use super::{ast::*, parser_error::ParserError};
 
+// TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
     lexer: Peekable<Lexer<'src>>,
     source: &'src str
@@ -119,6 +120,8 @@ impl<'src> Parser<'src> {
                 BitXor => self.parse_infix_expression(expression, InfixOperator::BitXor, Precedence::Bitwise)?,
                 BitLShift => self.parse_infix_expression(expression, InfixOperator::BitLShift, Precedence::Bitwise)?,
                 BitRShift => self.parse_infix_expression(expression, InfixOperator::BitRShift, Precedence::Bitwise)?,
+                And => self.parse_infix_expression(expression, InfixOperator::And, Precedence::Comparison)?,
+                Or => self.parse_infix_expression(expression, InfixOperator::Or, Precedence::Comparison)?,
                 LessThan => self.parse_infix_expression(expression, InfixOperator::LessThan, Precedence::Comparison)?,
                 LessThanOrEqual => self.parse_infix_expression(expression, InfixOperator::LessThanOrEqual, Precedence::Comparison)?,
                 GreaterThan => self.parse_infix_expression(expression, InfixOperator::GreaterThan, Precedence::Comparison)?,
@@ -135,7 +138,8 @@ impl<'src> Parser<'src> {
         match &self.peek_kind()  {
             IntLiteral => Ok(self.parse_int_literal()?),
             True | False => Ok(self.parse_bool_literal()?),
-            ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNot)?),
+            BitNegate => Ok(self.parse_prefix_expression(PrefixOperator::BitNegate)?),
+            ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
             LParen => Ok(self.parse_group_expression()?),
             _ => Err(ParserError::syntax_err("Invalid prefix expression"))
@@ -188,8 +192,9 @@ impl<'src> Parser<'src> {
 
     fn parse_prefix_expression(&mut self, operator: PrefixOperator) -> Result<Expression, ParserError> {
         let (start, size) = self.expect_token(match operator {
-            PrefixOperator::LogicalNot => ExclamationMark,
+            PrefixOperator::LogicalNegate => ExclamationMark,
             PrefixOperator::Negative => Minus,
+            PrefixOperator::BitNegate => BitNegate,
         })?;
         let expression = self.parse_expression(Precedence::Prefix)?;
         let size = size + expression.size;
@@ -227,7 +232,7 @@ impl<'src> Parser<'src> {
     fn current_precendence(&mut self) -> Precedence {
         match self.peek_kind() {
             DoubleEqual | NotEqual => Precedence::Equality,
-            LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual => Precedence::Comparison,
+            LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual | And | Or => Precedence::Comparison,
             BitAnd | BitOr | BitXor | BitLShift | BitRShift => Precedence::Bitwise,
             Plus | Minus => Precedence::Sum,
             Asterisk | Slash => Precedence::Product,

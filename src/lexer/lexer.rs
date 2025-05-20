@@ -42,8 +42,23 @@ impl<'src> Lexer<'src> {
             '+' => self.make_single_char_token(current_index, Plus),
             '-' => self.make_single_char_token(current_index, Minus),
             '*' => self.make_single_char_token(current_index, Asterisk),
-            '&' => self.make_single_char_token(current_index, BitAnd),
-            '|' => self.make_single_char_token(current_index, BitOr),
+            '&' => {
+                self.next();
+                if self.chars.next_if(|(_, next_char)| *next_char == '&').is_some() {
+                    Token::new(And, current_index, 2)
+                } else {
+                    Token::new(BitAnd, current_index, 1)
+                }
+            }
+            '~' => self.make_single_char_token(current_index, BitNegate),
+            '|' => {
+                self.next();
+                if self.chars.next_if(|(_, next_char)| *next_char == '|').is_some() {
+                    Token::new(Or, current_index, 2)
+                } else {
+                    Token::new(BitOr, current_index, 1)
+                }
+            }
             '^' => self.make_single_char_token(current_index, BitXor),
             '=' => {
                 self.next();

@@ -75,7 +75,8 @@ pub enum ExpressionKind {
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum PrefixOperator {
-    LogicalNot,
+    BitNegate,
+    LogicalNegate,
     Negative,
 }
 
@@ -91,6 +92,8 @@ pub enum InfixOperator {
     BitLShift,
     BitRShift,
     Equal,
+    And,
+    Or,
     NotEqual,
     LessThan,
     GreaterThan,
