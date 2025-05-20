@@ -49,7 +49,7 @@ impl<'src> Parser<'src> {
         
         if self.peek_kind() == &LBrace {
             self.lexer.next();
-            options = self.parse_option_fields()?;
+            options = self.parse_fields()?;
             self.expect_token(RBrace)?;
         } else {
             self.expect_token(Semicolon)?;
@@ -63,16 +63,16 @@ impl<'src> Parser<'src> {
         let (start, size) = self.expect_token(Identifier)?;
         let name = self.source[start..start + size].to_string();
         self.expect_token(LBrace)?;
-        let variants = self.parse_parameters()?;
+        let variants = self.parse_parameters(RBrace)?;
         Ok(Statement::Enum { name, variants })
     }
 
-    fn parse_parameters(&mut self) -> Result<Vec<String>, ParserError> {
+    fn parse_parameters(&mut self, delimiter: TokenKind) -> Result<Vec<String>, ParserError> {
         let mut parameters = vec![];
         while self.peek_kind() == &Identifier {
             let (start, size) = self.expect_token(Identifier).unwrap();
             parameters.push(self.source[start..start + size].to_string());
-            if self.peek_kind() == &RBrace {
+            if self.peek_kind() == &delimiter {
                 break;
             }
             self.expect_token(Comma)?;
@@ -81,16 +81,15 @@ impl<'src> Parser<'src> {
         Ok(parameters)
     }
 
-    fn parse_option_fields(&mut self) -> Result<Vec<(String, String)>, ParserError> {
+    fn parse_fields(&mut self) -> Result<Vec<Field>, ParserError> {
         let mut options = vec![];
         while self.peek_kind() == &Identifier {
             let (start, size) = self.expect_token(Identifier).unwrap();
-            let key = self.source[start..start + size].to_string();
+            let name = self.source[start..start + size].to_string();
             self.expect_token(SingleEqual)?;
-            let (start, size) = self.expect_token(StringLiteral)?;
-            let value = self.source[start + 1..start + size - 1].to_string();
+            let expression = self.parse_expression(Precedence::Lowest)?;
             self.expect_token(Semicolon)?;
-            options.push((key, value));
+            options.push(Field::new(name, expression));
         }
         Ok(options)
     }
@@ -137,6 +136,7 @@ impl<'src> Parser<'src> {
     fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.peek_kind()  {
             IntLiteral => Ok(self.parse_int_literal()?),
+            StringLiteral => Ok(self.parse_string_literal()?),
             True | False => Ok(self.parse_bool_literal()?),
             BitNegate => Ok(self.parse_prefix_expression(PrefixOperator::BitNegate)?),
             ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
@@ -144,6 +144,21 @@ impl<'src> Parser<'src> {
             LParen => Ok(self.parse_group_expression()?),
             _ => Err(ParserError::syntax_err("Invalid prefix expression"))
         }
+    }
+
+    fn parse_string_literal(&mut self) -> Result<Expression, ParserError> {
+        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
+        let start = token.start;
+        let size = token.size;
+        match &token.kind {
+            StringLiteral => {
+                self.lexer.next();
+                let literal = self.source[start+1..start+size-1].to_string();
+                Ok(Expression::new(ExpressionKind::StringLiteral(literal), start, size))
+            },
+            kind => Err(ParserError::expected("string literal", &kind.to_string()))
+        }
+
     }
 
     fn parse_bool_literal(&mut self) -> Result<Expression, ParserError> {

@@ -3,7 +3,7 @@ mod parser_tests {
     use core::panic;
     use std::vec;
 
-    use crate::parser::{ast::{Expression, ExpressionKind, ExpressionStatemnt, InfixOperator, PrefixOperator, Program, Statement}, parser::Parser, parser_error::ParserError};
+    use crate::parser::{ast::{Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program, Statement}, parser::Parser, parser_error::ParserError};
 
 
     #[test]
@@ -143,7 +143,7 @@ mod parser_tests {
             Ok(program) => {
                 assert_eq!(program.0, vec![Statement::OutputDirective { 
                     argument: "csv".to_string(), 
-                    options: vec![("delimiter".to_string(), ";".to_string())]
+                    options: vec![Field::new("delimiter".to_string(), Expression::new(ExpressionKind::StringLiteral(";".to_string()), 26, 3))]
                 }]);
             },
             Err(err) => handle_error(err),

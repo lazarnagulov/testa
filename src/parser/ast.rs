@@ -11,8 +11,7 @@ pub enum Statement {
     },
     OutputDirective {
         argument: String,
-        // TODO: Change to Vec<Field>
-        options: Vec<(String, String)>
+        options: Vec<Field>
     },
     Enum {
         name: String,
@@ -32,8 +31,15 @@ pub enum Statement {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Field {
     pub name: String,
-    pub value: Vec<Expression>
+    pub value: Expression,
 } 
+
+impl Field {
+    pub fn new(name: String, value: Expression) -> Self {
+        Field { name, value }
+    }
+}
+
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct ExpressionStatemnt {
