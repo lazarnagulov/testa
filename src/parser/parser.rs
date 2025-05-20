@@ -54,23 +54,37 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_output_directive(&mut self) -> Result<Statement, ParserError> {
-        self.lexer.next();
-        let (start, size) = self.expect_token(Identifier)?;
-        let mut options = vec![];
+        todo!()
+        // let (start, size) = self.expect_token(OutputDirective)?;
+        // let mut options = vec![];
         
-        if self.peek_kind() == &LBrace {
-            self.lexer.next();
-            options = self.parse_fields()?;
-            self.expect_token(RBrace)?;
-        } else {
-            self.expect_token(Semicolon)?;
-        }
+        // if self.peek_kind() == &LBrace {
+        //     self.lexer.next();
+        //     options = self.parse_fields()?;
+        //     self.expect_token(RBrace)?;
+        // } else {
+        //     self.expect_token(Semicolon)?;
+        // }
 
-        Ok(Statement::OutputDirective { argument: self.source[start..start + size].to_string(), options: options })
+        // Ok(Statement::OutputDirective { argument: self.source[start..start + size].to_string(), options: options })
     }
 
     fn parse_generate(&mut self) -> Result<Statement, ParserError> {
-        todo!()
+        self.lexer.next();
+        let (start, size) = self.expect_token(Identifier)?;
+        let name = self.source[start..start + size].to_string();
+        self.expect_token(LBracket)?;
+        let count = self.parse_expression(Precedence::Lowest)?;
+        self.expect_token(RBracket)?;
+        if name == "_" {
+            self.expect_token(LBrace)?;
+            let fields = self.parse_fields()?;
+            self.lexer.next();
+            Ok(Statement::Generate { template_name: None, body: fields, count })
+        } else {
+            self.expect_token(Semicolon)?;
+            Ok(Statement::Generate { template_name: Some(name), body: vec![], count })
+        }
     }
 
 

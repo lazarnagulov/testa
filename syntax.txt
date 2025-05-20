@@ -27,9 +27,9 @@ template User(role: string) {
 }
 
 template Point {
-    x: float(0,100);
-    y: float(0,100);
-    z: float(0,100);
+    x: float(0..=100);
+    y: float(0..=100);
+    z: float(0..=100);
 }
 
 // --- Enum Declaration ---
@@ -39,23 +39,19 @@ enum Status {
     Pending
 }
 
-enum Role {
-    Admin = "admin",
-    User = "user",
-    Guest = "guest"
-}
-
 // --- User-Defined Function ---
 fn full_phone() -> string {
     return format("+1-{0}-{1}", int(100,999), int(1000,9999));
 }
 
 // --- Data Generation ---
-generate User("Admin")[10] {
-    email: string = format("{0}@company.com", slug(name));
-    role: Role = pick(Role);
+generate _ [10] {
+    email: string = $format("{0}@company.com", slug(name));
+    role: Role = $pick(Role);
     status: Status = Status.Active;
 }
+
+generate TemplateName [10];
 
 // --- Assignment & Expressions ---
 id: string = uuid();
@@ -98,3 +94,8 @@ fullPhone()       // user-defined
 // ref(User.id)                 // Cross-entity references
 // now(), date(), faker.*      // Additional built-ins
 // enums, weights, conditions  // Value selection logic
+// enum Role {
+//    Admin = "admin",
+//    User = "user",
+//    Guest = "guest"
+// }

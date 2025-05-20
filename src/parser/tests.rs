@@ -47,6 +47,41 @@ mod parser_tests {
     }
 
     #[test]
+    fn parse_anonymus_generate() {
+        let program = "generate _ [10] { name = string; price = float; }";
+        let mut parser = Parser::new(program);
+        let name_field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type("string".to_string()), 25, 6));
+        let price_field = Field::new("price".to_string(), Expression::new(ExpressionKind::Type("float".to_string()), 41, 5));
+        match parser.parse() {
+            Ok(program) => {
+                assert_eq!(program.0, vec![Statement::Generate { 
+                    template_name: None, 
+                    body: vec![name_field, price_field], 
+                    count: Expression::new(ExpressionKind::IntLiteral(10), 12, 2) 
+                }]);
+            },
+            Err(err) => handle_error(err),
+        }
+    }
+
+    #[test]
+    fn parse_generate() {
+        let program = "generate User [10];";
+        let mut parser = Parser::new(program);
+        match parser.parse() {
+            Ok(program) => {
+                assert_eq!(program.0, vec![Statement::Generate { 
+                    template_name: Some("User".to_string()), 
+                    body: vec![], 
+                    count: Expression::new(ExpressionKind::IntLiteral(10), 15, 2) 
+                }]);
+            },
+            Err(err) => handle_error(err),
+        }
+
+    }
+
+    #[test]
     fn parse_empty_enum() {
         let program = "enum Role {}";
         let mut parser = Parser::new(program);
@@ -161,6 +196,7 @@ mod parser_tests {
     }
 
     #[test]
+    #[ignore = "will be enabled when general directive parser is made"]
     fn parse_output_directive() {
         let program = "@output csv;";
         let mut parser = Parser::new(program);
@@ -176,6 +212,7 @@ mod parser_tests {
     }
 
     #[test]
+    #[ignore = "will be enabled when general directive parser is made"]
     fn parse_output_directive_options() {
         let program = "@output csv { delimiter = \";\"; }";
         let mut parser = Parser::new(program);

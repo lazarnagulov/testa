@@ -23,7 +23,7 @@ pub enum Statement {
     },
     Generate {
         template_name: Option<String>,
-        tamplate: Option<Expression>,
+        body: Vec<Field>,
         count: Expression,
     }
 }

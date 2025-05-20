@@ -31,3 +31,4 @@
 
 - Should ranges be infix expression or its own kind?
 - Should directive and built-ins be seperated from TokenKind -- Directive(DirectiveKind)?
+- How should constraints be added to types?
