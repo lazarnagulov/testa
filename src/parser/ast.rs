@@ -40,8 +40,6 @@ pub struct ExpressionStatemnt {
     pub expression: Expression
 }
 
-
-//TODO: Add start and size for expression
 #[derive(PartialEq, Eq, Debug)]
 pub struct Expression {
     pub kind: ExpressionKind,
@@ -59,6 +57,7 @@ impl Expression {
 pub enum ExpressionKind {
     IntLiteral(isize),
     StringLiteral(String),
+    BooleanLiteral(bool),
     Identifier(String),
     Prefix {
         operator: PrefixOperator,
@@ -102,6 +101,7 @@ pub enum Precedence {
     Lowest,
     Equality,   // == or !=
     Comparison, // <, <=, >, >=
+    Bitwise,    // &, |, ^
     Sum,        // + or -
     Product,    // * or /
     Group,      // ( )

@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 use std::{iter::Peekable};
 
-use crate::lexer::{lexer::Lexer, token::TokenKind};
+use crate::lexer::{lexer::Lexer, token::TokenKind::{self, *}};
 
 use super::{ast::*, parser_error::ParserError};
 
@@ -24,7 +24,6 @@ impl<'src> Parser<'src> {
         let mut statements = vec![];
         while self.lexer.peek().is_some() {
             let stmt = self.parse_statement()?;
-            println!("{:?}", stmt);
             statements.push(stmt);
         }
         Ok(Program(statements))
@@ -32,27 +31,27 @@ impl<'src> Parser<'src> {
 
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.peek_kind() {
-            TokenKind::Output => self.parse_output_directive(),
-            TokenKind::Seed => todo!(),
-            TokenKind::Template => todo!(),
-            TokenKind::Resource => todo!(),
-            TokenKind::Enum => self.parse_enum(),
-            TokenKind::Generate => self.parse_generate(),
+            Output => self.parse_output_directive(),
+            Seed => todo!(),
+            Template => todo!(),
+            Resource => todo!(),
+            Enum => self.parse_enum(),
+            Generate => self.parse_generate(),
             _ => Ok(Statement::Expression(self.parse_expression_statement()?))
         }
     }
 
     fn parse_output_directive(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
-        let (start, size) = self.expect_token(TokenKind::Identifier)?;
+        let (start, size) = self.expect_token(Identifier)?;
         let mut options = vec![];
         
-        if self.peek_kind() == &TokenKind::LBrace {
+        if self.peek_kind() == &LBrace {
             self.lexer.next();
             options = self.parse_option_fields()?;
-            self.expect_token(TokenKind::RBrace)?;
+            self.expect_token(RBrace)?;
         } else {
-            self.expect_token(TokenKind::Semicolon)?;
+            self.expect_token(Semicolon)?;
         }
 
         Ok(Statement::OutputDirective { argument: self.source[start..start + size].to_string(), options: options })
@@ -60,22 +59,22 @@ impl<'src> Parser<'src> {
 
     fn parse_enum(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
-        let (start, size) = self.expect_token(TokenKind::Identifier)?;
+        let (start, size) = self.expect_token(Identifier)?;
         let name = self.source[start..start + size].to_string();
-        self.expect_token(TokenKind::LBrace)?;
+        self.expect_token(LBrace)?;
         let variants = self.parse_parameters()?;
         Ok(Statement::Enum { name, variants })
     }
 
     fn parse_parameters(&mut self) -> Result<Vec<String>, ParserError> {
         let mut parameters = vec![];
-        while self.peek_kind() == &TokenKind::Identifier {
-            let (start, size) = self.expect_token(TokenKind::Identifier).unwrap();
+        while self.peek_kind() == &Identifier {
+            let (start, size) = self.expect_token(Identifier).unwrap();
             parameters.push(self.source[start..start + size].to_string());
-            if self.peek_kind() == &TokenKind::RBrace {
+            if self.peek_kind() == &RBrace {
                 break;
             }
-            self.expect_token(TokenKind::Comma)?;
+            self.expect_token(Comma)?;
         }
         self.lexer.next();
         Ok(parameters)
@@ -83,13 +82,13 @@ impl<'src> Parser<'src> {
 
     fn parse_option_fields(&mut self) -> Result<Vec<(String, String)>, ParserError> {
         let mut options = vec![];
-        while self.peek_kind() == &TokenKind::Identifier {
-            let (start, size) = self.expect_token(TokenKind::Identifier).unwrap();
+        while self.peek_kind() == &Identifier {
+            let (start, size) = self.expect_token(Identifier).unwrap();
             let key = self.source[start..start + size].to_string();
-            self.expect_token(TokenKind::SingleEqual)?;
-            let (start, size) = self.expect_token(TokenKind::StringLiteral)?;
+            self.expect_token(SingleEqual)?;
+            let (start, size) = self.expect_token(StringLiteral)?;
             let value = self.source[start + 1..start + size - 1].to_string();
-            self.expect_token(TokenKind::Semicolon)?;
+            self.expect_token(Semicolon)?;
             options.push((key, value));
         }
         Ok(options)
@@ -101,49 +100,70 @@ impl<'src> Parser<'src> {
 
     fn parse_expression_statement(&mut self) -> Result<ExpressionStatemnt, ParserError> {
         let expression = self.parse_expression(Precedence::Lowest)?;
-        self.expect_token(TokenKind::Semicolon)?;
+        self.expect_token(Semicolon)?;
 
         Ok(ExpressionStatemnt { expression })
     }
 
     fn parse_expression(&mut self, precendence: Precedence) -> Result<Expression, ParserError> {
-        let mut expression = self.parse_expression_by_prefix()?;
+        let mut expression = self.parse_primary_expression()?;
         
         while precendence < self.current_precendence() {
             expression = match &self.peek_kind() {
-                TokenKind::Asterisk => self.parse_infix_expression(expression, InfixOperator::Multiply,Precedence::Product)?,
-                TokenKind::Slash => self.parse_infix_expression(expression, InfixOperator::Divide,Precedence::Product)?,
-                TokenKind::Plus => self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?,
-                TokenKind::Minus => self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?,
-                TokenKind::BitAnd => self.parse_infix_expression(expression, InfixOperator::BitAnd, Precedence::Lowest)?,
-                TokenKind::BitOr => self.parse_infix_expression(expression, InfixOperator::BitOr, Precedence::Lowest)?,
-                TokenKind::BitXor => self.parse_infix_expression(expression, InfixOperator::BitXor, Precedence::Lowest)?,
-                TokenKind::LessThan => self.parse_infix_expression(expression, InfixOperator::LessThan, Precedence::Comparison)?,
-                TokenKind::LessThanOrEqual => self.parse_infix_expression(expression, InfixOperator::LessThanOrEqual, Precedence::Comparison)?,
-                TokenKind::GreaterThan => self.parse_infix_expression(expression, InfixOperator::GreaterThan, Precedence::Comparison)?,
-                TokenKind::GreaterThanOrEqual => self.parse_infix_expression(expression, InfixOperator::GreaterThanOrEqual, Precedence::Comparison)?,
-                TokenKind::DoubleEqual => self.parse_infix_expression(expression, InfixOperator::Equal, Precedence::Comparison)?,
-                TokenKind::NotEqual => self.parse_infix_expression(expression, InfixOperator::NotEqual, Precedence::Comparison)?,
+                Asterisk => self.parse_infix_expression(expression, InfixOperator::Multiply,Precedence::Product)?,
+                Slash => self.parse_infix_expression(expression, InfixOperator::Divide,Precedence::Product)?,
+                Plus => self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?,
+                Minus => self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?,
+                BitAnd => self.parse_infix_expression(expression, InfixOperator::BitAnd, Precedence::Lowest)?,
+                BitOr => self.parse_infix_expression(expression, InfixOperator::BitOr, Precedence::Lowest)?,
+                BitXor => self.parse_infix_expression(expression, InfixOperator::BitXor, Precedence::Lowest)?,
+                LessThan => self.parse_infix_expression(expression, InfixOperator::LessThan, Precedence::Comparison)?,
+                LessThanOrEqual => self.parse_infix_expression(expression, InfixOperator::LessThanOrEqual, Precedence::Comparison)?,
+                GreaterThan => self.parse_infix_expression(expression, InfixOperator::GreaterThan, Precedence::Comparison)?,
+                GreaterThanOrEqual => self.parse_infix_expression(expression, InfixOperator::GreaterThanOrEqual, Precedence::Comparison)?,
+                DoubleEqual => self.parse_infix_expression(expression, InfixOperator::Equal, Precedence::Comparison)?,
+                NotEqual => self.parse_infix_expression(expression, InfixOperator::NotEqual, Precedence::Comparison)?,
                 token => return Err(ParserError::syntax_err(&format!("Invalid operator: {}", token)))
             }
         }
         Ok(expression)
     }
 
-    fn parse_expression_by_prefix(&mut self) -> Result<Expression, ParserError> {
+    fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.peek_kind()  {
-            TokenKind::IntLiteral => Ok(self.parse_int_literal()?),
-            TokenKind::ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNot)?),
-            TokenKind::Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
+            IntLiteral => Ok(self.parse_int_literal()?),
+            True | False => Ok(self.parse_bool_literal()?),
+            ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNot)?),
+            Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
+            LParen => Ok(self.parse_group_expression()?),
             _ => Err(ParserError::syntax_err("Invalid prefix expression"))
         }
+    }
+
+    fn parse_bool_literal(&mut self) -> Result<Expression, ParserError> {
+        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
+        let start = token.start;
+        let size = token.size;
+
+        match &token.kind {
+            True => {
+                self.lexer.next();
+                Ok(Expression::new(ExpressionKind::BooleanLiteral(true), start, size))
+            }
+            False => {
+                self.lexer.next();
+                Ok(Expression::new(ExpressionKind::BooleanLiteral(false), start, size))
+            }
+            kind => Err(ParserError::expected("boolean literal", &kind.to_string()))
+        }
+
     }
 
     fn parse_int_literal(&mut self) -> Result<Expression, ParserError> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
         let start = token.start;
         let size = token.size;
-        if token.kind == TokenKind::IntLiteral {
+        if token.kind == IntLiteral {
             self.lexer.next();
             let number = (&self.source[start..start+size]).parse().unwrap();
             Ok(Expression { kind: ExpressionKind::IntLiteral(number), start, size })
@@ -152,17 +172,30 @@ impl<'src> Parser<'src> {
         }
     }
 
+    fn parse_group_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.expect_token(LParen).unwrap().0;
+        let expression = self.parse_expression(Precedence::Lowest)?;
+        match self.peek_kind() {
+            RParen => {
+                let end = self.expect_token(RParen).unwrap().0;
+                Ok(Expression::new(expression.kind, start, (end + 1) - start))
+            }
+            kind => Err(ParserError::Expected { expected: ")".to_string(), got: kind.to_string()})
+        }
+    }
 
     fn parse_prefix_expression(&mut self, operator: PrefixOperator) -> Result<Expression, ParserError> {
         let (start, size) = self.expect_token(match operator {
-            PrefixOperator::LogicalNot => TokenKind::ExclamationMark,
-            PrefixOperator::Negative => TokenKind::Minus,
+            PrefixOperator::LogicalNot => ExclamationMark,
+            PrefixOperator::Negative => Minus,
         })?;
         let expression = self.parse_expression(Precedence::Prefix)?;
+        let size = size + expression.size;
         Ok(Expression::new(ExpressionKind::Prefix { operator, expression: Box::new(expression) }, start, size))
     }
 
     fn parse_infix_expression(&mut self, left: Expression, operator: InfixOperator, precendence: Precedence) -> Result<Expression, ParserError> {
+        println!("Op: {:?}", operator);
         self.lexer.next();
         let right= self.parse_expression(precendence)?;
         let start = left.start;
@@ -180,23 +213,24 @@ impl<'src> Parser<'src> {
     fn expect_token(&mut self, kind: TokenKind) -> Result<(usize, usize), ParserError> {
         let token = self.lexer.next().ok_or(ParserError::UnexpectedEOF)?;
         if token.kind != kind {
-            Err(ParserError::Syntax(format!("Error: Expected {} but got {}", kind, token.kind)))
+            Err(ParserError::syntax_err(&format!("Error: Expected {} but got {}", kind, token.kind)))
         } else {
             Ok((token.start, token.size))
         }
     }
 
     fn peek_kind(&mut self) -> &TokenKind {
-        self.lexer.peek().map_or(&TokenKind::Eof, |t| &t.kind)
+        self.lexer.peek().map_or(&Eof, |t| &t.kind)
     }
 
     fn current_precendence(&mut self) -> Precedence {
         match self.peek_kind() {
-            TokenKind::DoubleEqual | TokenKind::NotEqual => Precedence::Equality,
-            TokenKind::LessThan | TokenKind::GreaterThan | TokenKind::LessThanOrEqual | TokenKind::GreaterThanOrEqual => Precedence::Comparison,
-            TokenKind::Plus | TokenKind::Minus => Precedence::Sum,
-            TokenKind::Asterisk | TokenKind::Slash => Precedence::Product,
-            TokenKind::LParen => Precedence::Group,
+            DoubleEqual | NotEqual => Precedence::Equality,
+            LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual => Precedence::Comparison,
+            BitAnd | BitOr | BitXor => Precedence::Bitwise,
+            Plus | Minus => Precedence::Sum,
+            Asterisk | Slash => Precedence::Product,
+            LParen => Precedence::Group,
             _ => Precedence::Lowest
         }
     }

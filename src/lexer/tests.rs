@@ -36,10 +36,10 @@ mod lexer_tests {
 
     #[test]
     fn lex_string_tokens() {
-        let program = "generate @output $uuid john \"Peter\" 123";
+        let program = "generate @output $uuid john \"Peter\" 123 true false";
         let mut lexer = Lexer::new(program);
         expect_token(&mut lexer, vec![
-            Generate, Output, Uuid, Identifier, StringLiteral, IntLiteral
+            Generate, Output, Uuid, Identifier, StringLiteral, IntLiteral, True, False
         ]);
     }
 

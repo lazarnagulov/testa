@@ -17,6 +17,8 @@ pub enum TokenKind {
     Template,
     Resource,
     Enum,
+    False,
+    True,
 
     // syntax
     LParen,      // (
@@ -93,6 +95,8 @@ impl Display for TokenKind {
             TokenKind::Pick => "pick",
             TokenKind::Uuid => "uuid",
             TokenKind::Enum => "enum",
+            TokenKind::False => "false",
+            TokenKind::True => "true"
         };
         f.write_str(str)
     }

@@ -3,7 +3,7 @@ mod parser_tests {
     use core::panic;
     use std::vec;
 
-    use crate::parser::{ast::{Expression, ExpressionKind, ExpressionStatemnt, InfixOperator, Statement}, parser::Parser, parser_error::ParserError};
+    use crate::parser::{ast::{Expression, ExpressionKind, ExpressionStatemnt, InfixOperator, PrefixOperator, Program, Statement}, parser::Parser, parser_error::ParserError};
 
 
     #[test]
@@ -63,12 +63,61 @@ mod parser_tests {
                 }, 4, 7)),
             }, 0, 11)
         };
+        expect_expression(&mut parser, solution);
+    }
+
+    #[test]
+    fn parse_grouped_expression() {
+        let program = "(2 + 3) * 5;";
+        let mut parser = Parser::new(program);
+        let solution = ExpressionStatemnt {
+            expression: Expression::new(ExpressionKind::Infix {
+                left : Box::new(Expression::new(ExpressionKind::Infix { 
+                    left: Box::new(Expression::new(ExpressionKind::IntLiteral(2), 1, 1)), 
+                    operator: InfixOperator::Plus, 
+                    right: Box::new(Expression::new(ExpressionKind::IntLiteral(3), 5, 1)) 
+                }, 0 , 7)),
+                operator : InfixOperator::Multiply,
+                right : Box::new(Expression::new(ExpressionKind::IntLiteral(5), 10, 1))
+            }, 0, 11)
+        };
+        expect_expression(&mut parser, solution);
+    }
+
+    #[test]
+    fn parse_missing_paren() {
+        let program = "(2 + 3 & 5 ;";
+        let mut parser = Parser::new(program);
         match parser.parse() {
-            Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Expression(solution)]);
-            },
-            Err(err) => handle_error(err),
+            Ok(_) => panic!("Program should have returned err."),
+            Err(err) => match err {
+                ParserError::Expected { expected, got } => {
+                    assert_eq!(expected, ")".to_string());
+                    assert_eq!(got, ";".to_string())
+                },
+                _ => panic!("Program should have returned exprected error")
+            }
         }
+    }
+
+    #[test]
+    fn parse_prefix_expression() {
+        let program = "-5; !true;";
+        let mut parser = Parser::new(program);
+        let negative_statement = Statement::Expression(ExpressionStatemnt { 
+            expression: Expression::new(ExpressionKind::Prefix { 
+                operator: PrefixOperator::Negative, 
+                expression: Box::new(Expression::new(ExpressionKind::IntLiteral(5), 1, 1)) 
+            }, 0, 2),
+        });
+        let logical_not_statement = Statement::Expression(ExpressionStatemnt { 
+            expression: Expression::new(ExpressionKind::Prefix { 
+                operator: PrefixOperator::LogicalNot, 
+                expression: Box::new(Expression::new(ExpressionKind::BooleanLiteral(true), 5, 4)) 
+            }, 4, 5),
+        });
+        let program =  Program(vec![negative_statement, logical_not_statement]);
+        expect_program(&mut parser, program);
     }
 
     #[test]
@@ -96,6 +145,25 @@ mod parser_tests {
                     argument: "csv".to_string(), 
                     options: vec![("delimiter".to_string(), ";".to_string())]
                 }]);
+            },
+            Err(err) => handle_error(err),
+        }
+    }
+
+    fn expect_program(parser: &mut Parser, program: Program) {
+        match parser.parse() {
+            Ok(p) => {
+                assert_eq!(p, program);
+            },
+            Err(err) => handle_error(err),
+        }
+
+    }
+
+    fn expect_expression(parser: &mut Parser, expression: ExpressionStatemnt) {
+        match parser.parse() {
+            Ok(program) => {
+                assert_eq!(program.0, vec![Statement::Expression(expression)]);
             },
             Err(err) => handle_error(err),
         }

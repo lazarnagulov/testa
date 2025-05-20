@@ -115,6 +115,8 @@ impl<'src> Lexer<'src> {
                     "generate" => Token::new(Generate, current_index, 8),
                     "template" => Token::new(Template, current_index, 8),
                     "resource" => Token::new(Resource, current_index, 8),
+                    "true" => Token::new(True, current_index, 4),
+                    "false" => Token::new(False, current_index, 4),
                     "enum" => Token::new(Enum, current_index, 4),
                     ident=> Token::new(Identifier, current_index, ident.len())
                 }
