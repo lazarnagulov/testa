@@ -20,17 +20,26 @@ mod lexer_tests {
         let mut lexer = Lexer::new(program);   
         expect_token(&mut lexer, vec![
             LParen, RParen, LBrace, RBrace, Colon, LBracket, RBracket,
-            Comma, Period, Semicolon, SingleEqual, ExclamationMark,
+            Comma, SinglePeriod, Semicolon, SingleEqual, ExclamationMark,
             Plus, Minus, Slash, Asterisk, BitAnd, BitOr, BitXor, LessThan, GreaterThan, BitNegate
         ]);
     }
 
     #[test]
     fn lex_two_char_tokens() {
-        let program = "==!=<=>=<<>>&&||";
+        let program = "==!=<=>=<<>>&&||..";
         let mut lexer = Lexer::new(program);
         expect_token(&mut lexer, vec![
-            DoubleEqual, NotEqual, LessThanOrEqual, GreaterThanOrEqual, BitLShift, BitRShift, And, Or
+            DoubleEqual, NotEqual, LessThanOrEqual, GreaterThanOrEqual, BitLShift, BitRShift, And, Or, DoublePeriod
+        ]);
+    }
+
+    #[test]
+    fn lex_three_char_tokens() {
+        let program = "..=";
+        let mut lexer = Lexer::new(program);
+        expect_token(&mut lexer, vec![
+            DoublePeriodEqual
         ]);
     }
 

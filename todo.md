@@ -1,5 +1,8 @@
 ## DSL features
 
+- [ ] Lookup
+- [ ] Better error messages
+
 ### Lexer
 - [x] Arithmetic operators : +, -, *, /.
 - [x] Bitwise operators : &, |, ^, <<, >>, ~.
@@ -8,13 +11,12 @@
 - [x] Integers
 - [x] Strings
 - [ ] Floats
-- [ ] Range .., ..=
+- [x] Range .., ..=
 - [x] Directives
 - [x] Built-ins
-- [ ] Lookup
 
 ### Parser
-- [ ] Infix expressions : arithmetic, bitwise (expect ~) operators, range 
+- [x] Infix expressions : arithmetic, bitwise (expect ~) operators, range? 
 - [x] Prefix expressions : -, ~, !
 - [x] Grouped expressions : ()
 - [x] Fields : `string`: `expression` list
@@ -23,4 +25,3 @@
 - [ ] Generate statement
 - [ ] Resource statement
 - [ ] Template statement
-- [ ] Lookup

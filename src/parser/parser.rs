@@ -25,6 +25,7 @@ impl<'src> Parser<'src> {
         let mut statements = vec![];
         while self.lexer.peek().is_some() {
             let stmt = self.parse_statement()?;
+            println!("{:?}", stmt);
             statements.push(stmt);
         }
         Ok(Program(statements))
@@ -127,6 +128,8 @@ impl<'src> Parser<'src> {
                 GreaterThanOrEqual => self.parse_infix_expression(expression, InfixOperator::GreaterThanOrEqual, Precedence::Comparison)?,
                 DoubleEqual => self.parse_infix_expression(expression, InfixOperator::Equal, Precedence::Comparison)?,
                 NotEqual => self.parse_infix_expression(expression, InfixOperator::NotEqual, Precedence::Comparison)?,
+                DoublePeriod => self.parse_infix_expression(expression, InfixOperator::ExclusiveRange, Precedence::Range)?,
+                DoublePeriodEqual => self.parse_infix_expression(expression, InfixOperator::InclusiveRange, Precedence::Range)?,
                 token => return Err(ParserError::syntax_err(&format!("Invalid operator: {}", token)))
             }
         }
@@ -247,6 +250,7 @@ impl<'src> Parser<'src> {
     fn current_precendence(&mut self) -> Precedence {
         match self.peek_kind() {
             DoubleEqual | NotEqual => Precedence::Equality,
+            DoublePeriod | DoublePeriodEqual => Precedence::Range,
             LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual | And | Or => Precedence::Comparison,
             BitAnd | BitOr | BitXor | BitLShift | BitRShift => Precedence::Bitwise,
             Plus | Minus => Precedence::Sum,

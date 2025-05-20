@@ -105,12 +105,15 @@ pub enum InfixOperator {
     GreaterThan,
     LessThanOrEqual,
     GreaterThanOrEqual,
+    ExclusiveRange,
+    InclusiveRange
 }
 
 #[derive(Ord, Eq, PartialEq, PartialOrd, Debug)]
 pub enum Precedence {
     Lowest,
     Equality,   // == or !=
+    Range,      // .. or ..=
     Comparison, // <, <=, >, >=
     Bitwise,    // &, |, ^
     Sum,        // + or -

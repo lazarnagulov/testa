@@ -21,17 +21,19 @@ pub enum TokenKind {
     True,
 
     // syntax
-    LParen,      // (
-    RParen,      // )
-    LBrace,      // {
-    RBrace,      // }
-    LBracket,    // [
-    RBracket,    // ]
-    Colon,       // :
-    Comma,       // ,
-    Period,      // .
-    Semicolon,   // ;
-    SingleEqual, // =
+    LParen,            // (
+    RParen,            // )
+    LBrace,            // {
+    RBrace,            // }
+    LBracket,          // [
+    RBracket,          // ]
+    Colon,             // :
+    Comma,             // ,
+    SinglePeriod,            // .
+    Semicolon,         // ;
+    SingleEqual,       // =
+    DoublePeriod,      // ..
+    DoublePeriodEqual, //..=
 
     // operators:
     ExclamationMark,    // !
@@ -101,7 +103,9 @@ impl Display for TokenKind {
             TokenKind::LBracket => "[",
             TokenKind::RBracket => "]",
             TokenKind::StringLiteral => "string literal",
-            TokenKind::Period => ".",
+            TokenKind::SinglePeriod => ".",
+            TokenKind::DoublePeriod => "..",
+            TokenKind::DoublePeriodEqual => "..=",
             TokenKind::Pick => "pick",
             TokenKind::Uuid => "uuid",
             TokenKind::Enum => "enum",

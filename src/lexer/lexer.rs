@@ -38,7 +38,18 @@ impl<'src> Lexer<'src> {
             ';' => self.make_single_char_token(current_index, Semicolon),
             '[' => self.make_single_char_token(current_index, LBracket),
             ']' => self.make_single_char_token(current_index, RBracket),
-            '.' => self.make_single_char_token(current_index, Period),
+            '.' => {
+                self.next();
+                if self.chars.next_if(|(_, next_char)| *next_char == '.').is_some() {
+                    if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
+                        Token::new(DoublePeriodEqual, current_index, 3)
+                    } else {
+                        Token::new(DoublePeriod, current_index, 2)
+                    }
+                } else {
+                    Token::new(SinglePeriod, current_index, 1)
+                }
+            }
             '+' => self.make_single_char_token(current_index, Plus),
             '-' => self.make_single_char_token(current_index, Minus),
             '*' => self.make_single_char_token(current_index, Asterisk),
