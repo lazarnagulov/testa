@@ -68,8 +68,7 @@ pub enum ExpressionKind {
     StringLiteral(String),
     BooleanLiteral(bool),
     Identifier(String),
-    // TODO: add type constraints e.g. int<0..=32> [ range = 0..=100 ]
-    Type(String),
+    Type(DataType),
     Prefix {
         operator: PrefixOperator,
         expression: Box<Expression>
@@ -138,6 +137,13 @@ impl fmt::Display for InfixOperator {
             InfixOperator::InclusiveRange => write!(f, "inclusive range"),
         }
     }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum DataType {
+    Int,
+    Str,
+    Float
 }
 
 #[derive(Ord, Eq, PartialEq, PartialOrd, Debug)]

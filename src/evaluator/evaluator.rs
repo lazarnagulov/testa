@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use crate::parser::ast::{Expression, ExpressionKind::*, InfixOperator, PrefixOperator, Program, Statement};
+use rand::{distr::Alphanumeric, Rng};
+
+use crate::parser::ast::{DataType, Expression, ExpressionKind::*, InfixOperator, PrefixOperator, Program, Statement};
 
 use super::object::{EvalError, Object};
 
@@ -36,21 +38,37 @@ fn evaluate_expression(expression: &Expression) -> Result<Rc<Object>, EvalError>
         StringLiteral(value) => Ok(Rc::from(Object::new(value.to_owned()))),
         BooleanLiteral(value) => Ok(Rc::from(Object::new(*value))),
         Identifier(_) => todo!(),
-        Type(_) => todo!(),
+        Type(data_type) => evaluate_data_type(*data_type),
         Prefix { operator, expression } => {
             let right = evaluate_expression(expression)?;
-            evaluate_prefix_expression(operator, &right)
+            evaluate_prefix_expression(*operator, &right)
         },
         Infix { left, operator, right } => {
             let left = evaluate_expression(left)?;
             let right = evaluate_expression(right)?;
-            evaluate_infix_expression(&left, operator, &right)
+            evaluate_infix_expression(&left, *operator, &right)
         }
-        FuncCall { .. } => todo!(),
+        FuncCall { .. } => todo!()
     }
 }
 
-fn evaluate_prefix_expression(operator: &PrefixOperator, right: &Rc<Object>) -> Result<Rc<Object>, EvalError> {
+fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, String> {
+    let mut rng = rand::rng();
+    match data_type {
+        DataType::Int => Ok(Rc::from(Object::new(rng.random::<i32>() as isize))),
+        DataType::Str => {
+            let size = rng.random_range(1..=16);
+            let value: String = rng.sample_iter(&Alphanumeric)
+                            .take(size)
+                            .map(char::from)
+                            .collect();
+            Ok(Rc::from(Object::new(value)))
+        },
+        DataType::Float => Ok(Rc::from(Object::new(rng.random::<f32>()))),
+    }
+}
+
+fn evaluate_prefix_expression(operator: PrefixOperator, right: &Rc<Object>) -> Result<Rc<Object>, EvalError> {
     match operator {
         PrefixOperator::BitNegate => evaluate_bit_negate(right),
         PrefixOperator::LogicalNegate => evaluate_logical_negate(right),
@@ -58,11 +76,11 @@ fn evaluate_prefix_expression(operator: &PrefixOperator, right: &Rc<Object>) -> 
     }
 }
 
-fn evaluate_infix_expression(left: &Object, operator: &InfixOperator, right: &Object) -> Result<Rc<Object>, EvalError> {
+fn evaluate_infix_expression(left: &Object, operator: InfixOperator, right: &Object) -> Result<Rc<Object>, EvalError> {
     match (left, right) {
-        (Object::Int(left), Object::Int(right)) => evaluate_integer_infix(*left, *operator, *right),
-        (Object::Float(left), Object::Float(right)) => evaluate_float_infix(*left, *operator, *right),
-        (Object::String(left), Object::String(right)) => evaluate_string_infix(left, *operator, right),
+        (Object::Int(left), Object::Int(right)) => evaluate_integer_infix(*left, operator, *right),
+        (Object::Float(left), Object::Float(right)) => evaluate_float_infix(*left, operator, *right),
+        (Object::String(left), Object::String(right)) => evaluate_string_infix(left, operator, right),
         (left, right) => Err(format!("Unsupported operand type(s) for {}: {} and {}", operator, left, right))
     }
 }

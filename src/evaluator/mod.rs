@@ -1,3 +1,3 @@
-pub mod eveluator;
+pub mod evaluator;
 pub mod object;
 pub mod tests;

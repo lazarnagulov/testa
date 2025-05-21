@@ -192,14 +192,14 @@ impl<'src> Parser<'src> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
         let start = token.start;
         let size = token.size;
-        match &token.kind {
-            Int | Float | Str => {
-                self.lexer.next();
-                let literal = self.source[start..start+size].to_string();
-                Ok(Expression::new(ExpressionKind::Type(literal), start, size))
-            },
-            kind => Err(ParserError::expected("type", &kind.to_string()))
-        }
+        let data_type = match token.kind {
+            Int => DataType::Int,
+            Float => DataType::Float,
+            Str => DataType::Str,
+            _ => unreachable!()
+        };
+        self.lexer.next();
+        Ok(Expression::new(ExpressionKind::Type(data_type), start, size))
     }
 
     fn parse_identifier(&mut self) -> Result<Expression, ParserError> {

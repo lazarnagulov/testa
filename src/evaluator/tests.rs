@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod evaluator_tests {
-    use crate::{evaluator::{eveluator::evaluate, object::Object}, parser::parser::Parser};
+    use crate::{evaluator::{evaluator::evaluate, object::Object}, parser::parser::Parser};
 
 
     #[test]
@@ -18,6 +18,13 @@ mod evaluator_tests {
         expect_object("2 << 31;", Object::Int(4294967296));
         expect_object("\"-27.252\" + \"str\";", Object::String("-27.252str".to_string()));
         expect_object("\"same\" == \"same\";", Object::Boolean(true));
+    }
+
+    #[test]
+    fn evalute_data_types() {
+        let program = Parser::new("int;").parse().unwrap();
+        let result = evaluate(program).unwrap();
+        println!("{}", result);
     }
 
     fn expect_object(source: &str, object: Object) {

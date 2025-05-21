@@ -3,7 +3,7 @@ mod parser_tests {
     use core::panic;
     use std::vec;
 
-    use crate::parser::{ast::{Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program, Statement}, parser::Parser, parser_error::ParserError};
+    use crate::parser::{ast::{DataType, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program, Statement}, parser::Parser, parser_error::ParserError};
 
 
     #[test]
@@ -22,7 +22,7 @@ mod parser_tests {
     fn parse_single_field_template() {
         let program = "template User { name = string; }";
         let mut parser = Parser::new(program);
-        let field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type("string".to_string()), 23, 6));
+        let field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type(DataType::Str), 23, 6));
         match parser.parse() {
             Ok(program) => {
                 assert_eq!(program.0, vec![Statement::Template { name: "User".to_string(), body: vec![field] }]);
@@ -35,9 +35,9 @@ mod parser_tests {
     fn parse_template() {
         let program = "template Product { name = string; quantity = int; price = float; }";
         let mut parser = Parser::new(program);
-        let name_field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type("string".to_string()), 26, 6));
-        let quantity_field = Field::new("quantity".to_string(), Expression::new(ExpressionKind::Type("int".to_string()), 45, 3));
-        let price_field = Field::new("price".to_string(), Expression::new(ExpressionKind::Type("float".to_string()), 58, 5));
+        let name_field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type(DataType::Str), 26, 6));
+        let quantity_field = Field::new("quantity".to_string(), Expression::new(ExpressionKind::Type(DataType::Int), 45, 3));
+        let price_field = Field::new("price".to_string(), Expression::new(ExpressionKind::Type(DataType::Float), 58, 5));
         match parser.parse() {
             Ok(program) => {
                 assert_eq!(program.0, vec![Statement::Template { name: "Product".to_string(), body: vec![name_field, quantity_field, price_field] }]);
@@ -57,8 +57,8 @@ mod parser_tests {
     fn parse_anonymus_generate() {
         let program = "generate _ [10] { name = string; price = float; }";
         let mut parser = Parser::new(program);
-        let name_field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type("string".to_string()), 25, 6));
-        let price_field = Field::new("price".to_string(), Expression::new(ExpressionKind::Type("float".to_string()), 41, 5));
+        let name_field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type(DataType::Str), 25, 6));
+        let price_field = Field::new("price".to_string(), Expression::new(ExpressionKind::Type(DataType::Float), 41, 5));
         match parser.parse() {
             Ok(program) => {
                 assert_eq!(program.0, vec![Statement::Generate { 
