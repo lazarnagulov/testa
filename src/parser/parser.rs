@@ -33,7 +33,7 @@ impl<'src> Parser<'src> {
 
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.peek_kind() {
-            Output => self.parse_output_directive(),
+            Output => todo!(),
             Seed => todo!(),
             Template => self.parse_template(),
             Resource => todo!(),
@@ -45,41 +45,19 @@ impl<'src> Parser<'src> {
 
     fn parse_template(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
-        let (start, size) = self.expect_token(Identifier)?;
-        let name = self.source[start..start + size].to_string();
-        self.expect_token(LBrace)?;
+        let name = self.parse_identifier_as_string()?;
         let fields = self.parse_fields()?;
-        self.expect_token(RBrace)?;
         Ok(Statement::Template { name, body: fields })
-    }
-
-    fn parse_output_directive(&mut self) -> Result<Statement, ParserError> {
-        todo!()
-        // let (start, size) = self.expect_token(OutputDirective)?;
-        // let mut options = vec![];
-        
-        // if self.peek_kind() == &LBrace {
-        //     self.lexer.next();
-        //     options = self.parse_fields()?;
-        //     self.expect_token(RBrace)?;
-        // } else {
-        //     self.expect_token(Semicolon)?;
-        // }
-
-        // Ok(Statement::OutputDirective { argument: self.source[start..start + size].to_string(), options: options })
     }
 
     fn parse_generate(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
-        let (start, size) = self.expect_token(Identifier)?;
-        let name = self.source[start..start + size].to_string();
+        let name = self.parse_identifier_as_string()?;
         self.expect_token(LBracket)?;
         let count = self.parse_expression(Precedence::Lowest)?;
         self.expect_token(RBracket)?;
         if name == "_" {
-            self.expect_token(LBrace)?;
             let fields = self.parse_fields()?;
-            self.lexer.next();
             Ok(Statement::Generate { template_name: None, body: fields, count })
         } else {
             self.expect_token(Semicolon)?;
@@ -90,8 +68,7 @@ impl<'src> Parser<'src> {
 
     fn parse_enum(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
-        let (start, size) = self.expect_token(Identifier)?;
-        let name = self.source[start..start + size].to_string();
+        let name = self.parse_identifier_as_string()?;
         self.expect_token(LBrace)?;
         let variants = self.parse_parameters(RBrace)?;
         Ok(Statement::Enum { name, variants })
@@ -100,28 +77,33 @@ impl<'src> Parser<'src> {
     fn parse_parameters(&mut self, delimiter: TokenKind) -> Result<Vec<String>, ParserError> {
         let mut parameters = vec![];
         while self.peek_kind() == &Identifier {
-            let (start, size) = self.expect_token(Identifier).unwrap();
-            parameters.push(self.source[start..start + size].to_string());
+            parameters.push(self.parse_identifier_as_string()?);
             if self.peek_kind() == &delimiter {
                 break;
             }
             self.expect_token(Comma)?;
         }
-        self.lexer.next();
+        self.expect_token(delimiter)?;
         Ok(parameters)
     }
 
     fn parse_fields(&mut self) -> Result<Vec<Field>, ParserError> {
+        self.expect_token(LBrace)?;
         let mut options = vec![];
         while self.peek_kind() == &Identifier {
-            let (start, size) = self.expect_token(Identifier).unwrap();
-            let name = self.source[start..start + size].to_string();
+            let name = self.parse_identifier_as_string()?;
             self.expect_token(SingleEqual)?;
             let expression = self.parse_expression(Precedence::Lowest)?;
             self.expect_token(Semicolon)?;
             options.push(Field::new(name, expression));
         }
+        self.expect_token(RBrace)?;
         Ok(options)
+    }
+
+    fn parse_identifier_as_string(&mut self) -> Result<String, ParserError> {
+        let (start, size) = self.expect_token(Identifier)?;
+        Ok(self.source[start..start + size].to_string())
     }
 
     fn parse_expression_statement(&mut self) -> Result<ExpressionStatemnt, ParserError> {
@@ -186,7 +168,7 @@ impl<'src> Parser<'src> {
                 let literal = self.source[start..start+size].to_string();
                 Ok(Expression::new(ExpressionKind::Type(literal), start, size))
             },
-            kind => Err(ParserError::expected("string literal", &kind.to_string()))
+            kind => Err(ParserError::expected("type", &kind.to_string()))
         }
     }
 
@@ -292,7 +274,7 @@ impl<'src> Parser<'src> {
     fn expect_token(&mut self, kind: TokenKind) -> Result<(usize, usize), ParserError> {
         let token = self.lexer.next().ok_or(ParserError::UnexpectedEOF)?;
         if token.kind != kind {
-            Err(ParserError::syntax_err(&format!("Error: Expected {} but got {}", kind, token.kind)))
+            Err(ParserError::syntax_err(&format!("Expected {} but got {}", kind, token.kind)))
         } else {
             Ok((token.start, token.size))
         }

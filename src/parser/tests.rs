@@ -47,6 +47,13 @@ mod parser_tests {
     }
 
     #[test]
+    fn parse_missing_paren_template() {
+        let program = "template Invalid { name = string;";
+        let mut parser = Parser::new(program);
+        expect_missing_paren(&mut parser);
+    }
+
+    #[test]
     fn parse_anonymus_generate() {
         let program = "generate _ [10] { name = string; price = float; }";
         let mut parser = Parser::new(program);
@@ -80,6 +87,14 @@ mod parser_tests {
         }
 
     }
+
+    #[test]
+    fn parse_missing_paren_generate() {
+        let program = "generate _ [10] { name = string; price = float;";
+        let mut parser = Parser::new(program);
+        expect_missing_paren(&mut parser);
+    }
+
 
     #[test]
     fn parse_empty_enum() {
@@ -124,6 +139,13 @@ mod parser_tests {
     }
 
     #[test]
+    fn parse_missing_paren_enum() {
+        let program = "enum Role { User, Admin, Moderator,";
+        let mut parser = Parser::new(program);
+        expect_missing_paren(&mut parser);
+    }
+
+    #[test]
     fn parse_infix_expression() {
         let program = "2 + 10 * 20;";
         let mut parser = Parser::new(program);
@@ -160,7 +182,7 @@ mod parser_tests {
     }
 
     #[test]
-    fn parse_missing_paren() {
+    fn parse_missing_paren_expression() {
         let program = "(2 << 3 & 5 >> 1;";
         let mut parser = Parser::new(program);
         match parser.parse() {
@@ -227,12 +249,21 @@ mod parser_tests {
         }
     }
 
+    fn expect_missing_paren(parser: &mut Parser) {
+        match parser.parse() {
+            Ok(_) => panic!("Program should have returned err."),
+            Err(err) => match err {
+                ParserError::UnexpectedEOF => {}
+                err => panic!("Program should have returned unexpected EOF instead of {:?}", err)
+            },
+        }
+    }
+
     fn expect_program(parser: &mut Parser, program: Program) {
         match parser.parse() {
             Ok(p) => assert_eq!(p, program),
             Err(err) => handle_error(err),
         }
-
     }
 
     fn expect_expression(parser: &mut Parser, expression: ExpressionStatemnt) {

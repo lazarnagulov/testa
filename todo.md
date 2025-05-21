@@ -23,7 +23,7 @@
 - [x] Fields : `string`: `expression` list
 - [ ] Directives
 - [ ] Built-ins 
-- [ ] Generate statement
+- [x] Generate statement
 - [ ] Resource statement
 - [x] Template statement
 
