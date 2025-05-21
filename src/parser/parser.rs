@@ -25,7 +25,6 @@ impl<'src> Parser<'src> {
         let mut statements = vec![];
         while self.lexer.peek().is_some() {
             let stmt = self.parse_statement()?;
-            println!("{:?}", stmt);
             statements.push(stmt);
         }
         Ok(Program(statements))

@@ -1,3 +1,5 @@
+use core::fmt;
+
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program(pub Vec<Statement>);
@@ -66,7 +68,7 @@ pub enum ExpressionKind {
     StringLiteral(String),
     BooleanLiteral(bool),
     Identifier(String),
-    // TODO: add type options e.g. int { 0..=100 }
+    // TODO: add type constraints e.g. int<0..=32> [ range = 0..=100 ]
     Type(String),
     Prefix {
         operator: PrefixOperator,
@@ -110,6 +112,32 @@ pub enum InfixOperator {
     GreaterThanOrEqual,
     ExclusiveRange,
     InclusiveRange
+}
+
+impl fmt::Display for InfixOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InfixOperator::Plus => write!(f, "+"),
+            InfixOperator::Minus => write!(f, "-"),
+            InfixOperator::Divide => write!(f, "/"),
+            InfixOperator::Multiply => write!(f, "*"),
+            InfixOperator::BitAnd => write!(f, "&"),
+            InfixOperator::BitOr => write!(f, "|"),
+            InfixOperator::BitXor => write!(f, "^"),
+            InfixOperator::BitLShift => write!(f, "<<"),
+            InfixOperator::BitRShift => write!(f, ">>"),
+            InfixOperator::Equal => write!(f, "="),
+            InfixOperator::And => write!(f, "&&"),
+            InfixOperator::Or => write!(f, "||"),
+            InfixOperator::NotEqual => write!(f, "!="),
+            InfixOperator::LessThan => write!(f, "<"),
+            InfixOperator::GreaterThan => write!(f, ">"),
+            InfixOperator::LessThanOrEqual => write!(f, "<="),
+            InfixOperator::GreaterThanOrEqual => write!(f, ">="),
+            InfixOperator::ExclusiveRange => write!(f, "exclusive range"),
+            InfixOperator::InclusiveRange => write!(f, "inclusive range"),
+        }
+    }
 }
 
 #[derive(Ord, Eq, PartialEq, PartialOrd, Debug)]

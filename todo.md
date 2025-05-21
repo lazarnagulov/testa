@@ -27,9 +27,18 @@
 - [ ] Resource statement
 - [x] Template statement
 
+### Evaluator
+- [x] Infix expressions : arithmetic, bitwise (expect ~) operators, range? 
+- [x] Prefix expressions : -, ~, !
+- [ ] Directives
+- [ ] Template statement
+- [ ] Generate statement
+- [ ] Identifiers
+
 ### Questions
 
 - Should ranges be infix expression or its own kind?
 - Should directive and built-ins be seperated from TokenKind -- Directive(DirectiveKind)?
 - How should constraints be added to types?
 - Floats is AST ast String?
+- Type chacker?
