@@ -16,19 +16,27 @@ pub enum TokenKind {
     Generate,
     Template,
     Resource,
+    Enum,
+    False,
+    True,
+    Int,
+    Float,
+    Str,
 
     // syntax
-    LParen,      // (
-    RParen,      // )
-    LBrace,      // {
-    RBrace,      // }
-    LBracket,    // [
-    RBracket,    // ]
-    Colon,       // :
-    Comma,       // ,
-    Period,      // .
-    Semicolon,   // ;
-    SingleEqual, // =
+    LParen,            // (
+    RParen,            // )
+    LBrace,            // {
+    RBrace,            // }
+    LBracket,          // [
+    RBracket,          // ]
+    Colon,             // :
+    Comma,             // ,
+    SinglePeriod,            // .
+    Semicolon,         // ;
+    SingleEqual,       // =
+    DoublePeriod,      // ..
+    DoublePeriodEqual, //..=
 
     // operators:
     ExclamationMark,    // !
@@ -36,9 +44,14 @@ pub enum TokenKind {
     Minus,              // -
     Slash,              // /
     Asterisk,           // *
+    And,                // &&
+    Or,                 // ||
     BitAnd,             // &
     BitOr,              // |
     BitXor,             // ^
+    BitLShift,          // <<
+    BitRShift,          // >>
+    BitNegate,          // ~
     DoubleEqual,        // ==
     NotEqual,           // !=
     LessThan,           // <
@@ -49,6 +62,7 @@ pub enum TokenKind {
     Identifier,
     IntLiteral,
     StringLiteral,
+    FloatLiteral,
     Eof
 }
 
@@ -60,6 +74,9 @@ impl Display for TokenKind {
             TokenKind::Generate => "generate",
             TokenKind::Template => "template",
             TokenKind::Resource => "resource",
+            TokenKind::Int => "int",
+            TokenKind::Float => "float",
+            TokenKind::Str => "string",
             TokenKind::LParen => "(",
             TokenKind::RParen => ")",
             TokenKind::LBrace => "{",
@@ -75,12 +92,17 @@ impl Display for TokenKind {
             TokenKind::Minus => "-",
             TokenKind::Slash => "/",
             TokenKind::Asterisk => "*",
+            TokenKind::And => "&&",
+            TokenKind::Or => "||",
             TokenKind::BitAnd => "&",
+            TokenKind::BitNegate => "~",
             TokenKind::BitOr => "|",
             TokenKind::BitXor => "^",
             TokenKind::DoubleEqual => "==",
             TokenKind::NotEqual => "!=",
             TokenKind::LessThan => "<",
+            TokenKind::BitLShift => "<<",
+            TokenKind::BitRShift => ">>",
             TokenKind::GreaterThan => ">",
             TokenKind::LessThanOrEqual => "<=",
             TokenKind::GreaterThanOrEqual => ">=",
@@ -88,9 +110,15 @@ impl Display for TokenKind {
             TokenKind::LBracket => "[",
             TokenKind::RBracket => "]",
             TokenKind::StringLiteral => "string literal",
-            TokenKind::Period => ".",
+            TokenKind::FloatLiteral => "float literal",
+            TokenKind::SinglePeriod => ".",
+            TokenKind::DoublePeriod => "..",
+            TokenKind::DoublePeriodEqual => "..=",
             TokenKind::Pick => "pick",
-            TokenKind::Uuid => "uuid"
+            TokenKind::Uuid => "uuid",
+            TokenKind::Enum => "enum",
+            TokenKind::False => "false",
+            TokenKind::True => "true"
         };
         f.write_str(str)
     }

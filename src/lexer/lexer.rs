@@ -38,12 +38,38 @@ impl<'src> Lexer<'src> {
             ';' => self.make_single_char_token(current_index, Semicolon),
             '[' => self.make_single_char_token(current_index, LBracket),
             ']' => self.make_single_char_token(current_index, RBracket),
-            '.' => self.make_single_char_token(current_index, Period),
+            '.' => {
+                self.next();
+                if self.chars.next_if(|(_, next_char)| *next_char == '.').is_some() {
+                    if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
+                        Token::new(DoublePeriodEqual, current_index, 3)
+                    } else {
+                        Token::new(DoublePeriod, current_index, 2)
+                    }
+                } else {
+                    Token::new(SinglePeriod, current_index, 1)
+                }
+            }
             '+' => self.make_single_char_token(current_index, Plus),
             '-' => self.make_single_char_token(current_index, Minus),
             '*' => self.make_single_char_token(current_index, Asterisk),
-            '&' => self.make_single_char_token(current_index, BitAnd),
-            '|' => self.make_single_char_token(current_index, BitOr),
+            '&' => {
+                self.next();
+                if self.chars.next_if(|(_, next_char)| *next_char == '&').is_some() {
+                    Token::new(And, current_index, 2)
+                } else {
+                    Token::new(BitAnd, current_index, 1)
+                }
+            }
+            '~' => self.make_single_char_token(current_index, BitNegate),
+            '|' => {
+                self.next();
+                if self.chars.next_if(|(_, next_char)| *next_char == '|').is_some() {
+                    Token::new(Or, current_index, 2)
+                } else {
+                    Token::new(BitOr, current_index, 1)
+                }
+            }
             '^' => self.make_single_char_token(current_index, BitXor),
             '=' => {
                 self.next();
@@ -70,7 +96,9 @@ impl<'src> Lexer<'src> {
                 self.next();
                 if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
                     Token::new(LessThanOrEqual, current_index, 2)
-                } else {
+                } else if self.chars.next_if(|(_, next_char)| *next_char == '<').is_some() {
+                    Token::new(BitLShift, current_index, 2)
+                }else {
                     Token::new(LessThan, current_index, 1)
                 }
             }
@@ -78,6 +106,8 @@ impl<'src> Lexer<'src> {
                 self.next();
                 if self.chars.next_if(|(_, next_char)| *next_char == '=').is_some() {
                     Token::new(GreaterThanOrEqual, current_index, 2)
+                } else if self.chars.next_if(|(_, next_char)| *next_char == '>').is_some() {
+                    Token::new(BitRShift, current_index, 2)
                 } else {
                     Token::new(GreaterThan, current_index, 1)
                 }
@@ -115,13 +145,16 @@ impl<'src> Lexer<'src> {
                     "generate" => Token::new(Generate, current_index, 8),
                     "template" => Token::new(Template, current_index, 8),
                     "resource" => Token::new(Resource, current_index, 8),
+                    "true" => Token::new(True, current_index, 4),
+                    "false" => Token::new(False, current_index, 4),
+                    "enum" => Token::new(Enum, current_index, 4),
+                    "int" => Token::new(Int, current_index, 3),
+                    "float" => Token::new(Float, current_index, 5),
+                    "string" => Token::new(Str, current_index, 6),
                     ident=> Token::new(Identifier, current_index, ident.len())
                 }
             }
-            '0'..='9' =>  {
-                let size = self.read_number(current_index);
-                Token::new(IntLiteral, current_index, size)
-            }
+            '0'..='9' => self.make_number_token(current_index),
             c => panic!("Invalid token {}", c)
         }
     }
@@ -144,13 +177,26 @@ impl<'src> Lexer<'src> {
         &self.content[position..=last]
     }
 
-    fn read_number(&mut self, position: usize) -> usize {
+    fn make_number_token(&mut self, position: usize) -> Token {
         let mut last = position;
-        while self.peek().is_some_and(|(_, c)| c.is_ascii_digit()) {
+        let mut is_float = false;
+        while self.peek().is_some_and(|(_, c)| c.is_ascii_digit() || c == '.') {
             let token = self.next().unwrap();
+            if is_float && token.1 == '.' {
+                panic!("Invalid float literal");
+            } else if token.1 == '.' {
+                is_float = true;
+            }
             last = token.0;
         }
-        self.content[position..=last].len()
+
+        if let Some((_, char)) = self.peek() {
+            if !matches!(char, ' ' | ';' | ']' | ')') {
+                panic!("Invalid int or float literal");
+            }
+        }
+        
+        Token::new(if is_float { TokenKind::FloatLiteral } else { TokenKind::IntLiteral }, position, last - position + 1)
     }
 
     fn read_string(&mut self, position: usize) -> usize {
