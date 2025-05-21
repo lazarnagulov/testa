@@ -26,6 +26,7 @@
 - [x] Generate statement
 - [ ] Resource statement
 - [x] Template statement
+- [ ] Type constraint: e.g. int<32>[range=1..=16]
 
 ### Evaluator
 - [x] Infix expressions : arithmetic, bitwise (expect ~) operators, range? 
@@ -34,11 +35,12 @@
 - [ ] Template statement
 - [ ] Generate statement
 - [ ] Identifiers
+- [ ] Random generate with with constraints: e.g. int<32>[range=1..=16]
 
 ### Questions
 
 - Should ranges be infix expression or its own kind?
 - Should directive and built-ins be seperated from TokenKind -- Directive(DirectiveKind)?
 - How should constraints be added to types?
-- Floats is AST ast String?
+- Floats in AST as String?
 - Type chacker?

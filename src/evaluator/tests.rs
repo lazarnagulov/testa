@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod evaluator_tests {
-    use crate::{evaluator::{evaluator::evaluate, object::Object}, parser::parser::Parser};
+    use crate::{evaluator::{context::Context, evaluator::evaluate, object::Object}, parser::parser::Parser};
 
 
     #[test]
@@ -23,13 +23,36 @@ mod evaluator_tests {
     #[test]
     fn evalute_data_types() {
         let program = Parser::new("int;").parse().unwrap();
-        let result = evaluate(program).unwrap();
+        let mut context = Context::default();
+        let result = evaluate(program, &mut context).unwrap();
         println!("{}", result);
+    }
+
+    #[test]
+    fn evaluate_template() {
+        let program = Parser::new(r#"
+            template User {
+                name = string;
+                age = int;    
+            }
+
+            template Product {
+                id = int;
+                name = string;
+                price = float;
+            }           
+        "#).parse().unwrap();
+        let mut context = Context::default();
+        let result = evaluate(program, &mut context).unwrap();
+        assert_eq!(*result, Object::NoReturn);
+        assert!(context.get_template("Product").is_some());
+        assert!(context.get_template("User").is_some());
     }
 
     fn expect_object(source: &str, object: Object) {
         let program = Parser::new(source).parse().unwrap();
-        let result = evaluate(program).unwrap();
+        let mut context = Context::default();
+        let result = evaluate(program, &mut context).unwrap();
         assert_eq!(*result, object);
     }
 
