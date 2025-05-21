@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ParserError {
     Expected { expected: String, got: String },
+    InvalidDirective,
     UnexpectedEOF,
     Syntax(String)
 }

@@ -218,8 +218,7 @@ mod parser_tests {
     }
 
     #[test]
-    #[ignore = "will be enabled when general directive parser is made"]
-    fn parse_output_directive() {
+    fn parse_directive() {
         let program = "@output csv;";
         let mut parser = Parser::new(program);
         match parser.parse() {
@@ -234,8 +233,7 @@ mod parser_tests {
     }
 
     #[test]
-    #[ignore = "will be enabled when general directive parser is made"]
-    fn parse_output_directive_options() {
+    fn parse_directive_options() {
         let program = "@output csv { delimiter = \";\"; }";
         let mut parser = Parser::new(program);
         match parser.parse() {
@@ -279,6 +277,7 @@ mod parser_tests {
         match error {
             ParserError::Expected { expected, got } => panic!("Expected {} got {}", expected, got),
             ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
+            ParserError::InvalidDirective => panic!("Invalid directive"),
             ParserError::Syntax(message) => panic!("{}", message),
         }
     }

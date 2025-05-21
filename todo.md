@@ -21,7 +21,7 @@
 - [x] Prefix expressions : -, ~, !
 - [x] Grouped expressions : ()
 - [x] Fields : `string`: `expression` list
-- [ ] Directives
+- [x] Directives
 - [ ] Built-ins 
 - [x] Generate statement
 - [ ] Resource statement

@@ -33,13 +33,29 @@ impl<'src> Parser<'src> {
 
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.peek_kind() {
-            Output => todo!(),
-            Seed => todo!(),
+            Output | Seed => self.parse_directive(),
             Template => self.parse_template(),
             Resource => todo!(),
             Enum => self.parse_enum(),
             Generate => self.parse_generate(),
             _ => Ok(Statement::Expression(self.parse_expression_statement()?))
+        }
+    }
+
+    fn parse_directive(&mut self) -> Result<Statement, ParserError> {
+        let directive = self.lexer.next().unwrap();
+        let argument = self.parse_identifier_as_string()?;
+        let options: Vec<Field>;
+        if self.peek_kind() == &LBrace {
+            options = self.parse_fields()?;
+        } else {
+            options = vec![];
+            self.expect_token(Semicolon)?;
+        }
+        match directive.kind {
+            Output => Ok(Statement::OutputDirective { argument, options }),
+            Seed => todo!(),
+            _ => Err(ParserError::InvalidDirective)
         }
     }
 
