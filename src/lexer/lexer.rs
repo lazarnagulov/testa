@@ -154,10 +154,7 @@ impl<'src> Lexer<'src> {
                     ident=> Token::new(Identifier, current_index, ident.len())
                 }
             }
-            '0'..='9' =>  {
-                let size = self.read_number(current_index);
-                Token::new(IntLiteral, current_index, size)
-            }
+            '0'..='9' => self.make_number_token(current_index),
             c => panic!("Invalid token {}", c)
         }
     }
@@ -180,13 +177,26 @@ impl<'src> Lexer<'src> {
         &self.content[position..=last]
     }
 
-    fn read_number(&mut self, position: usize) -> usize {
+    fn make_number_token(&mut self, position: usize) -> Token {
         let mut last = position;
-        while self.peek().is_some_and(|(_, c)| c.is_ascii_digit()) {
+        let mut is_float = false;
+        while self.peek().is_some_and(|(_, c)| c.is_ascii_digit() || c == '.') {
             let token = self.next().unwrap();
+            if is_float && token.1 == '.' {
+                panic!("Invalid float literal");
+            } else if token.1 == '.' {
+                is_float = true;
+            }
             last = token.0;
         }
-        self.content[position..=last].len()
+
+        if let Some((_, char)) = self.peek() {
+            if !matches!(char, ' ' | ';' | ']' | ')') {
+                panic!("Invalid int or float literal");
+            }
+        }
+        
+        Token::new(if is_float { TokenKind::FloatLiteral } else { TokenKind::IntLiteral }, position, last - position + 1)
     }
 
     fn read_string(&mut self, position: usize) -> usize {

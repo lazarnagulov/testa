@@ -4,16 +4,6 @@ mod lexer_tests {
 
     use crate::lexer::{lexer::Lexer, token::TokenKind::{self, *}};
 
-    fn expect_token(lexer: &mut Lexer, expected: Vec<TokenKind>) {
-        let token_kinds = lexer.into_iter().map(|token| token.kind).collect::<Vec<_>>();
-        assert_eq!(token_kinds, expected);
-    }
-
-    fn expect_token_size(lexer: &mut Lexer, input: &str, expected: Vec<&str>) {
-        let token_kinds = lexer.into_iter().map(|token| &input[token.start..token.start + token.size]).collect::<Vec<_>>();
-        assert_eq!(token_kinds, expected);
-    }
-
     #[test]
     fn lex_single_char_tokens() {
         let program = "(){}:[],.;=!+-/*&|^<>~";
@@ -45,11 +35,27 @@ mod lexer_tests {
 
     #[test]
     fn lex_string_tokens() {
-        let program = "generate @output $uuid john \"Peter\" 123 true false int float string";
+        let program = "generate @output $uuid john \"Peter\" 123 true false int float string 123.123";
         let mut lexer = Lexer::new(program);
         expect_token(&mut lexer, vec![
-            Generate, Output, Uuid, Identifier, StringLiteral, IntLiteral, True, False, Int, Float, Str
+            Generate, Output, Uuid, Identifier, StringLiteral, IntLiteral, True, False, Int, Float, Str, FloatLiteral
         ]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn lex_invalid_float() {
+        let program = "123.123.234";
+        let lexer = Lexer::new(program);
+        expect_panic(lexer);
+    }
+
+    #[test]
+    #[should_panic]
+    fn lex_invalid_int() {
+        let program = "123abc";
+        let lexer = Lexer::new(program);
+        expect_panic(lexer);
     }
 
     #[test]
@@ -60,8 +66,8 @@ mod lexer_tests {
             peter
             "
         "#;
-        let mut lexer = Lexer::new(program);
-        expect_token(&mut lexer, vec![]);
+        let lexer = Lexer::new(program);
+        expect_panic(lexer);
     }
 
     #[test]
@@ -77,24 +83,38 @@ mod lexer_tests {
     #[should_panic]
     fn lex_invalid_string() {
         let program = "\"john ";
-        let mut lexer = Lexer::new(program);
-        expect_token(&mut lexer, vec![]);
+        let lexer = Lexer::new(program);
+        expect_panic(lexer);
     }
 
     #[test]
     #[should_panic]
     fn lex_invalid_directive() {
         let program = "@invalid_directive";
-        let mut lexer = Lexer::new(program);
-        expect_token(&mut lexer, vec![]);
+        let lexer = Lexer::new(program);
+        expect_panic(lexer);
     }
 
     #[test]
     #[should_panic]
     fn lex_invalid_buitin() {
         let program = "$invalid_buitin";
-        let mut lexer = Lexer::new(program);
-        expect_token(&mut lexer, vec![]);
+        let lexer = Lexer::new(program);
+        expect_panic(lexer);
+    }
+
+    fn expect_token(lexer: &mut Lexer, expected: Vec<TokenKind>) {
+        let token_kinds = lexer.into_iter().map(|token| token.kind).collect::<Vec<_>>();
+        assert_eq!(token_kinds, expected);
+    }
+
+    fn expect_token_size(lexer: &mut Lexer, input: &str, expected: Vec<&str>) {
+        let token_kinds = lexer.into_iter().map(|token| &input[token.start..token.start + token.size]).collect::<Vec<_>>();
+        assert_eq!(token_kinds, expected);
+    }
+
+    fn expect_panic(lexer: Lexer) {
+        lexer.into_iter().map(|token| token.kind).for_each(drop);
     }
 
 }

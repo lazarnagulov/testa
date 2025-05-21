@@ -62,6 +62,7 @@ impl Expression {
 #[derive(PartialEq, Eq, Debug)]
 pub enum ExpressionKind {
     IntLiteral(isize),
+    FloatLiteral(String),
     StringLiteral(String),
     BooleanLiteral(bool),
     Identifier(String),

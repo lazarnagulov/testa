@@ -147,6 +147,7 @@ impl<'src> Parser<'src> {
         match &self.peek_kind()  {
             Int | Float | Str => Ok(self.parse_type()?),
             Identifier => Ok(self.parse_identifier()?),
+            FloatLiteral => Ok(self.parse_float_literal())?,
             IntLiteral => Ok(self.parse_int_literal()?),
             StringLiteral => Ok(self.parse_string_literal()?),
             True | False => Ok(self.parse_bool_literal()?),
@@ -155,6 +156,20 @@ impl<'src> Parser<'src> {
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
             LParen => Ok(self.parse_group_expression()?),
             kind => Err(ParserError::syntax_err(&format!("Invalid primary expression: {}", kind)))
+        }
+    }
+
+    fn parse_float_literal(&mut self) -> Result<Expression, ParserError> {
+        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
+        let start = token.start;
+        let size = token.size;
+        match &token.kind {
+            FloatLiteral => {
+                self.lexer.next();
+                let literal = self.source[start..start+size].to_string();
+                Ok(Expression::new(ExpressionKind::FloatLiteral(literal), start, size))
+            },
+            kind => Err(ParserError::expected("float literal", &kind.to_string()))
         }
     }
 
@@ -184,7 +199,6 @@ impl<'src> Parser<'src> {
             },
             kind => Err(ParserError::expected("string literal", &kind.to_string()))
         }
-
     }
 
     fn parse_string_literal(&mut self) -> Result<Expression, ParserError> {

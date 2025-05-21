@@ -10,8 +10,8 @@
 - [x] Comparison: ==, !=, <, >, <=, >=.
 - [x] Integers
 - [x] Strings
-- [x] Type keywords (int, string, float...)
-- [ ] Floats
+- [x] Type keywords: int, string, float...
+- [x] Floats
 - [x] Range .., ..=
 - [x] Directives
 - [x] Built-ins
@@ -32,3 +32,4 @@
 - Should ranges be infix expression or its own kind?
 - Should directive and built-ins be seperated from TokenKind -- Directive(DirectiveKind)?
 - How should constraints be added to types?
+- Floats is AST ast String?

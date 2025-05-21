@@ -7,7 +7,7 @@ fn main() -> Result<(), ParserError> {
 r#"
             generate _ [10] {
                 name = int;
-                age = float;
+                age = 12.3 + 10;
             }
         "#
     );
