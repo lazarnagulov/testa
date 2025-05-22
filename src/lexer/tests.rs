@@ -6,12 +6,12 @@ mod lexer_tests {
 
     #[test]
     fn lex_single_char_tokens() {
-        let program = "(){}:[],.;=!+-/*&|^<>~";
+        let program = "(){}:[],.;=!+-/*&|^<>~%";
         let mut lexer = Lexer::new(program);   
         expect_token(&mut lexer, vec![
             LParen, RParen, LBrace, RBrace, Colon, LBracket, RBracket,
             Comma, SinglePeriod, Semicolon, SingleEqual, ExclamationMark,
-            Plus, Minus, Slash, Asterisk, BitAnd, BitOr, BitXor, LessThan, GreaterThan, BitNegate
+            Plus, Minus, Slash, Asterisk, BitAnd, BitOr, BitXor, LessThan, GreaterThan, BitNegate, Percent
         ]);
     }
 

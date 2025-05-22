@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::parser::ast::Field;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Template {
     pub fields: Vec<Field>
 }
@@ -19,10 +19,29 @@ impl Template {
 
 }
 
+#[derive(Debug, Default)]
+pub struct Enum {
+    pub variants: Vec<String>
+}
+
+impl Enum {
+
+    pub fn new(variants: Vec<String>) -> Self {
+        Enum { variants }
+    }
+
+    pub fn insert_field(&mut self, variant: &str) {
+        self.variants.push(variant.to_owned())
+    }
+
+}
+
+
 // TODO: Consider changing String to &str
 #[derive(Debug, Default)]
 pub struct Context {
-    pub templates: HashMap<String, Template>
+    pub templates: HashMap<String, Template>,
+    pub enums: HashMap<String, Enum>,
 }
 
 impl Context {
@@ -33,6 +52,14 @@ impl Context {
 
     pub fn get_template(&self, key: &str) -> Option<&Template> {
         self.templates.get(key)
+    }
+
+    pub fn insert_enum(&mut self, key: &str, enumeration: Enum) -> Option<Enum> {
+        self.enums.insert(key.to_owned(), enumeration)
+    }
+
+    pub fn get_enum(&self, key: &str) -> Option<&Enum> {
+        self.enums.get(key)
     }
 
 }

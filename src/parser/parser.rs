@@ -135,6 +135,7 @@ impl<'src> Parser<'src> {
             expression = match &self.peek_kind() {
                 Asterisk => self.parse_infix_expression(expression, InfixOperator::Multiply,Precedence::Product)?,
                 Slash => self.parse_infix_expression(expression, InfixOperator::Divide,Precedence::Product)?,
+                Percent => self.parse_infix_expression(expression, InfixOperator::Mod, Precedence::Product)?,
                 Plus => self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?,
                 Minus => self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?,
                 BitAnd => self.parse_infix_expression(expression, InfixOperator::BitAnd, Precedence::Bitwise)?,

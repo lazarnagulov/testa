@@ -36,6 +36,7 @@ impl<'src> Lexer<'src> {
             ':' => self.make_single_char_token(current_index, Colon),
             ',' => self.make_single_char_token(current_index, Comma),
             ';' => self.make_single_char_token(current_index, Semicolon),
+            '%' => self.make_single_char_token(current_index, Percent),
             '[' => self.make_single_char_token(current_index, LBracket),
             ']' => self.make_single_char_token(current_index, RBracket),
             '.' => {

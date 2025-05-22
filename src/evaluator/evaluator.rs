@@ -4,7 +4,7 @@ use rand::{distr::Alphanumeric, Rng};
 
 use crate::parser::ast::{DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program, Statement};
 
-use super::{context::{Context, Template}, object::{EvalError, Object}};
+use super::{context::{Context, Enum, Template}, object::{EvalError, Object}};
 
 pub fn evaluate(program: Program, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     let mut result = Rc::from(Object::NoReturn);
@@ -16,13 +16,19 @@ pub fn evaluate(program: Program, context: &mut Context) -> Result<Rc<Object>, E
 
 fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     match statment {
-        Statement::Expression(expression_statement) => evaluate_expression(expression_statement.expression),
+        Statement::Expression(expression_statement) => evaluate_expression(&expression_statement.expression),
         Statement::Template { name, body} => evaluate_template(&name, body, context),
         Statement::OutputDirective { .. } => todo!(),
-        Statement::Enum { .. } => todo!(),
+        Statement::Enum { name, variants } => evaluate_enum(&name, variants, context),
         Statement::Resource { .. } => todo!(),
         Statement::Generate { .. } => todo!(),
     }
+}
+
+fn evaluate_enum(name: &str, variants: Vec<String>, context: &mut Context) -> Result<Rc<Object>, String> {
+    let enumeration = Enum::new(variants);
+    context.insert_enum(name, enumeration);
+    Ok(Rc::from(Object::NoReturn))
 }
 
 fn evaluate_template(name: &str, body: Vec<Field>, context: &mut Context) -> Result<Rc<Object>, EvalError> {
@@ -31,9 +37,9 @@ fn evaluate_template(name: &str, body: Vec<Field>, context: &mut Context) -> Res
     Ok(Rc::from(Object::NoReturn))
 }
 
-fn evaluate_expression(expression: Expression) -> Result<Rc<Object>, EvalError> {
-    match expression.kind {
-        IntLiteral(value) => Ok(Rc::from(Object::new(value))),
+fn evaluate_expression(expression: &Expression) -> Result<Rc<Object>, EvalError> {
+    match &expression.kind {
+        IntLiteral(value) => Ok(Rc::from(Object::new(*value))),
         FloatLiteral(value) => {
             let parsed = match value.parse::<f32>() {
                 Ok(val) => val,
@@ -42,17 +48,17 @@ fn evaluate_expression(expression: Expression) -> Result<Rc<Object>, EvalError> 
             Ok(Rc::from(Object::new(parsed)))
         },
         StringLiteral(value) => Ok(Rc::from(Object::new(value.to_owned()))),
-        BooleanLiteral(value) => Ok(Rc::from(Object::new(value))),
+        BooleanLiteral(value) => Ok(Rc::from(Object::new(*value))),
         Identifier(_) => todo!(),
-        Type(data_type) => evaluate_data_type(data_type),
+        Type(data_type) => evaluate_data_type(*data_type),
         Prefix { operator, expression } => {
-            let right = evaluate_expression(*expression)?;
-            evaluate_prefix_expression(operator, &right)
+            let right = evaluate_expression(&expression)?;
+            evaluate_prefix_expression(*operator, &right)
         },
         Infix { left, operator, right } => {
-            let left = evaluate_expression(*left)?;
-            let right = evaluate_expression(*right)?;
-            evaluate_infix_expression(&left, operator, &right)
+            let left = evaluate_expression(&left)?;
+            let right = evaluate_expression(&right)?;
+            evaluate_infix_expression(&left, *operator, &right)
         }
         FuncCall { .. } => todo!()
     }
@@ -126,6 +132,7 @@ fn evaluate_integer_infix(left: isize, operator: InfixOperator, right: isize) ->
         InfixOperator::Plus => Ok(Rc::from(Object::new(left + right))),
         InfixOperator::Minus => Ok(Rc::from(Object::new(left - right))),
         InfixOperator::Divide => Ok(Rc::from(Object::new(left / right))),
+        InfixOperator::Mod => Ok(Rc::from(Object::new(left % right))),
         InfixOperator::Multiply => Ok(Rc::from(Object::new(left * right))),
         InfixOperator::BitAnd => Ok(Rc::from(Object::new(left & right))),
         InfixOperator::BitOr => Ok(Rc::from(Object::new(left | right))),

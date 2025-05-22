@@ -32,7 +32,7 @@ pub enum TokenKind {
     RBracket,          // ]
     Colon,             // :
     Comma,             // ,
-    SinglePeriod,            // .
+    SinglePeriod,      // .
     Semicolon,         // ;
     SingleEqual,       // =
     DoublePeriod,      // ..
@@ -43,6 +43,7 @@ pub enum TokenKind {
     Plus,               // +
     Minus,              // -
     Slash,              // /
+    Percent,            // %
     Asterisk,           // *
     And,                // &&
     Or,                 // ||
@@ -91,6 +92,7 @@ impl Display for TokenKind {
             TokenKind::Plus => "+",
             TokenKind::Minus => "-",
             TokenKind::Slash => "/",
+            TokenKind::Percent => "%",
             TokenKind::Asterisk => "*",
             TokenKind::And => "&&",
             TokenKind::Or => "||",
