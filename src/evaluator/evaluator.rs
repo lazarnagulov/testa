@@ -1,4 +1,4 @@
-use std::{rc::Rc};
+use std::{fs::File, io::Write, rc::Rc};
 
 use rand::{distr::Alphanumeric, Rng};
 
@@ -18,12 +18,45 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Rc<O
     match statment {
         Statement::Expression(expression_statement) => evaluate_expression(&expression_statement.expression),
         Statement::Template { name, body} => evaluate_template(&name, body, context),
-        Statement::OutputDirective { .. } => todo!(),
+        Statement::Generate { template_name, body, count } => evaluate_generate(template_name, body, &count, context),
         Statement::Enum { name, variants } => evaluate_enum(&name, variants, context),
+        Statement::OutputDirective { .. } => todo!(),
         Statement::Resource { .. } => todo!(),
-        Statement::Generate { .. } => todo!(),
     }
 }
+
+fn evaluate_generate(template_name: Option<String>, body: Vec<Field>, count: &Expression, context: &mut Context) -> Result<Rc<Object>, EvalError> {
+    // TODO: properly use Rc<> ?
+    let cardinality = match &*evaluate_expression(count)? {
+        Object::Int(value) => Ok(*value),
+        obj => Err(format!("Expected 'int' but got {} ", obj))
+    }?;
+    let template = template_name
+        .map_or_else(
+        || Ok(Template::new(body)),
+        |name| {
+            context.get_template(&name)
+                .map(|template| Ok(template.clone()))
+                .unwrap_or_else(|| Err(format!("Template {} is not defined", name)))
+            }
+        )?;
+    Ok(generate_csv(&template, cardinality, context)?)
+}
+
+// TODO: Better error handling ad
+fn generate_csv(template: &Template, cardinality: isize, _context: &Context) -> Result<Rc<Object>, EvalError> {
+    let mut file = File::create("test.csv").expect("creation failed");
+    let header = template.fields.iter().map(|field| field.name.as_str()).collect::<Vec<&str>>().join(",");
+    writeln!(file, "{}", header).expect("write failed");
+    for _ in 0..cardinality {
+        let line = template.fields.iter().map(|field| {
+            format!("{}", *evaluate_expression(&field.value).unwrap())  
+        }).collect::<Vec<String>>().join(",");
+        writeln!(file, "{}", line).expect("write failed");
+    }
+    Ok(Rc::new(Object::NoReturn))
+}
+
 
 fn evaluate_enum(name: &str, variants: Vec<String>, context: &mut Context) -> Result<Rc<Object>, String> {
     let enumeration = Enum::new(variants);

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::parser::ast::Field;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Template {
     pub fields: Vec<Field>
 }

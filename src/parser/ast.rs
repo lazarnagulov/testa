@@ -30,7 +30,7 @@ pub enum Statement {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Field {
     pub name: String,
     pub value: Expression,
@@ -48,7 +48,7 @@ pub struct ExpressionStatemnt {
     pub expression: Expression
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Expression {
     pub kind: ExpressionKind,
     pub start: usize,
@@ -61,7 +61,7 @@ impl Expression {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum ExpressionKind {
     IntLiteral(isize),
     FloatLiteral(String),

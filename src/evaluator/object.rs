@@ -15,6 +15,7 @@ impl Object {
     pub fn new<T : Into<Object>>(value: T) -> Self {
         value.into()
     }
+
 }
 
 impl From<isize> for Object {

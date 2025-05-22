@@ -4,7 +4,7 @@
 - [ ] Better error messages
 
 ### Lexer
-- [x] Arithmetic operators : +, -, *, /.
+- [x] Arithmetic operators : +, -, *, /, %.
 - [x] Bitwise operators : &, |, ^, <<, >>, ~.
 - [x] Logical operators: &&, ||.
 - [x] Comparison: ==, !=, <, >, <=, >=.
@@ -32,9 +32,13 @@
 - [x] Infix expressions : arithmetic, bitwise (expect ~) operators, range? 
 - [x] Prefix expressions : -, ~, !
 - [ ] Directives
-- [ ] Template statement
-- [ ] Generate statement
+- [x] Enum statement
+- [x] Template statement
+- [x] Anonymous Generate statement
+- [x] Named Generate statement
 - [ ] Identifiers
+- [ ] Built-ins
+- [ ] Type constraint: e.g. int<32>[range=1..=16]
 - [ ] Random generate with with constraints: e.g. int<32>[range=1..=16]
 
 ### Questions
@@ -44,3 +48,4 @@
 - How should constraints be added to types?
 - Floats in AST as String?
 - Type chacker?
+- Should I change String to &'src str?
