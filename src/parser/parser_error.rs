@@ -9,8 +9,8 @@ pub enum ParserError {
 impl ParserError {
      pub fn expected(expected: &str, got: &str) -> Self {
         Self::Expected {
-            expected: expected.to_string(),
-            got: got.to_string(),
+            expected: expected.to_owned(),
+            got: got.to_owned(),
         }
     }
 

@@ -17,6 +17,13 @@ impl Template {
         self.fields.push(field)
     }
 
+    pub fn get_field_names(&self) -> Vec<&str> {
+        self.fields
+            .iter()
+            .map(|field| field.name.as_str())
+            .collect::<Vec<&str>>()
+    }
+
 }
 
 #[derive(Debug, Default)]

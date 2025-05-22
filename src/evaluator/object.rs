@@ -1,7 +1,5 @@
 use core::fmt;
 
-pub type EvalError = String;
-
 #[derive(PartialEq, Debug)]
 pub enum Object {
     Int(isize),
@@ -15,7 +13,6 @@ impl Object {
     pub fn new<T : Into<Object>>(value: T) -> Self {
         value.into()
     }
-
 }
 
 impl From<isize> for Object {

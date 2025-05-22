@@ -4,7 +4,7 @@ use rand::{distr::Alphanumeric, Rng};
 
 use crate::parser::ast::{DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program, Statement};
 
-use super::{context::{Context, Enum, Template}, object::{EvalError, Object}};
+use super::{context::{Context, Enum, Template}, object::Object, eval_error::EvalError};
 
 pub fn evaluate(program: Program, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     let mut result = Rc::from(Object::NoReturn);
@@ -29,7 +29,7 @@ fn evaluate_generate(template_name: Option<String>, body: Vec<Field>, count: &Ex
     // TODO: properly use Rc<> ?
     let cardinality = match &*evaluate_expression(count)? {
         Object::Int(value) => Ok(*value),
-        obj => Err(format!("Expected 'int' but got {} ", obj))
+        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", *obj)))
     }?;
     let template = template_name
         .map_or_else(
@@ -37,28 +37,36 @@ fn evaluate_generate(template_name: Option<String>, body: Vec<Field>, count: &Ex
         |name| {
             context.get_template(&name)
                 .map(|template| Ok(template.clone()))
-                .unwrap_or_else(|| Err(format!("Template {} is not defined", name)))
+                .unwrap_or_else(|| Err(EvalError::NotDefined(name)))
             }
         )?;
     Ok(generate_csv(&template, cardinality, context)?)
 }
 
-// TODO: Better error handling ad
 fn generate_csv(template: &Template, cardinality: isize, _context: &Context) -> Result<Rc<Object>, EvalError> {
-    let mut file = File::create("test.csv").expect("creation failed");
-    let header = template.fields.iter().map(|field| field.name.as_str()).collect::<Vec<&str>>().join(",");
+    let mut file = match File::create("test.csv") {
+        Ok(file) => Ok(file),
+        Err(error) => Err(EvalError::General(format!("Failed to create file: {}", error))),
+    }?;
+    
+    let header = template.get_field_names().join(",");
+    // TODO: Handle error
     writeln!(file, "{}", header).expect("write failed");
     for _ in 0..cardinality {
-        let line = template.fields.iter().map(|field| {
-            format!("{}", *evaluate_expression(&field.value).unwrap())  
-        }).collect::<Vec<String>>().join(",");
+        let line = template.fields
+            .iter()
+            // TODO: Remove unwrap()
+            .map(|field| format!("{}", *evaluate_expression(&field.value).unwrap()))
+            .collect::<Vec<String>>()
+            .join(",");
+        
         writeln!(file, "{}", line).expect("write failed");
     }
     Ok(Rc::new(Object::NoReturn))
 }
 
 
-fn evaluate_enum(name: &str, variants: Vec<String>, context: &mut Context) -> Result<Rc<Object>, String> {
+fn evaluate_enum(name: &str, variants: Vec<String>, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     let enumeration = Enum::new(variants);
     context.insert_enum(name, enumeration);
     Ok(Rc::from(Object::NoReturn))
@@ -76,7 +84,7 @@ fn evaluate_expression(expression: &Expression) -> Result<Rc<Object>, EvalError>
         FloatLiteral(value) => {
             let parsed = match value.parse::<f32>() {
                 Ok(val) => val,
-                Err(_) => return Err("Error parsing float literal".to_string()),
+                Err(_) => return Err(EvalError::General("Error parsing float literal".to_owned())),
             };
             Ok(Rc::from(Object::new(parsed)))
         },
@@ -97,7 +105,7 @@ fn evaluate_expression(expression: &Expression) -> Result<Rc<Object>, EvalError>
     }
 }
 
-fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, String> {
+fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, EvalError> {
     let mut rng = rand::rng();
     match data_type {
         DataType::Int => Ok(Rc::from(Object::new(rng.random::<i32>() as isize))),
@@ -126,11 +134,11 @@ fn evaluate_infix_expression(left: &Object, operator: InfixOperator, right: &Obj
         (Object::Int(left), Object::Int(right)) => evaluate_integer_infix(*left, operator, *right),
         (Object::Float(left), Object::Float(right)) => evaluate_float_infix(*left, operator, *right),
         (Object::String(left), Object::String(right)) => evaluate_string_infix(left, operator, right),
-        (left, right) => Err(format!("Unsupported operand type(s) for {}: {} and {}", operator, left, right))
+        (left, right) => Err(EvalError::unsupported_infix_operator(format!("{}", *left), operator, format!("{}", *right)))
     }
 }
 
-fn evaluate_string_infix(left: &str, operator: InfixOperator, right: &str) -> Result<Rc<Object>, String> {
+fn evaluate_string_infix(left: &str, operator: InfixOperator, right: &str) -> Result<Rc<Object>, EvalError> {
     match operator {
         InfixOperator::Plus => Ok(Rc::from(Object::new(format!("{}{}", left, right)))),
         InfixOperator::Equal => Ok(Rc::from(Object::new(left == right))),
@@ -139,11 +147,11 @@ fn evaluate_string_infix(left: &str, operator: InfixOperator, right: &str) -> Re
         InfixOperator::GreaterThan => Ok(Rc::from(Object::new(left > right))),
         InfixOperator::LessThanOrEqual => Ok(Rc::from(Object::new(left <= right))),
         InfixOperator::GreaterThanOrEqual => Ok(Rc::from(Object::new(left >= right))),
-        op => Err(format!("Unsupported operand type(s) for {}: string and string", op))    
+        _ => Err(EvalError::unsupported_infix_operator(left, operator, right))
     }
 }
 
-fn evaluate_float_infix(left: f32, operator: InfixOperator, right: f32) -> Result<Rc<Object>, String> {
+fn evaluate_float_infix(left: f32, operator: InfixOperator, right: f32) -> Result<Rc<Object>, EvalError> {
     match operator {
         InfixOperator::Plus => Ok(Rc::from(Object::new(left + right))),
         InfixOperator::Minus => Ok(Rc::from(Object::new(left - right))),
@@ -155,7 +163,7 @@ fn evaluate_float_infix(left: f32, operator: InfixOperator, right: f32) -> Resul
         InfixOperator::GreaterThan => Ok(Rc::from(Object::new(left > right))),
         InfixOperator::LessThanOrEqual => Ok(Rc::from(Object::new(left <= right))),
         InfixOperator::GreaterThanOrEqual => Ok(Rc::from(Object::new(left >= right))),
-        op => Err(format!("Unsupported operand type(s) for {}: int and int", op))
+        _ => Err(EvalError::unsupported_infix_operator(left, operator, right))
     }
 }
 
@@ -180,7 +188,7 @@ fn evaluate_integer_infix(left: isize, operator: InfixOperator, right: isize) ->
         InfixOperator::GreaterThanOrEqual => Ok(Rc::from(Object::new(left >= right))),
         InfixOperator::ExclusiveRange => todo!(),
         InfixOperator::InclusiveRange => todo!(),
-        op => Err(format!("Unsupported operand type(s) for {}: int and int", op))
+        _ => Err(EvalError::unsupported_infix_operator(left, operator, right))
     }
 }
 
@@ -188,21 +196,21 @@ fn evaluate_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
     match right {
         Object::Int(value) => Ok(Rc::from(Object::new(-value))),
         Object::Float(value) => Ok(Rc::from(Object::new(-value))),
-        obj => Err(format!("Bad operand type for unary -: '{}'", obj))
+        _ => Err(EvalError::unsupported_prefix_operator(PrefixOperator::BitNegate, format!("{}", right)))
     }
 }
 
 fn evaluate_logical_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
     match right {
         Object::Boolean(value) => Ok(Rc::from(Object::new(!value))),
-        obj => Err(format!("Bad operand type for unary !: '{}'", obj))
+        _ => Err(EvalError::unsupported_prefix_operator(PrefixOperator::LogicalNegate, format!("{}", right)))
     }
 }
 
 fn evaluate_bit_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
     match right {
         Object::Int(value) => Ok(Rc::from(Object::new(!value))),
-        obj => Err(format!("Bad operand type for unary ~: '{}'", obj))
+        _ => Err(EvalError::unsupported_prefix_operator(PrefixOperator::BitNegate, format!("{}", right)))
     }
 }
 
