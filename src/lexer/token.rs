@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-
 // TODO: Add lookup table for directives, keywords and builtins.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TokenKind {
@@ -32,7 +31,7 @@ pub enum TokenKind {
     RBracket,          // ]
     Colon,             // :
     Comma,             // ,
-    SinglePeriod,            // .
+    SinglePeriod,      // .
     Semicolon,         // ;
     SingleEqual,       // =
     DoublePeriod,      // ..
@@ -43,6 +42,7 @@ pub enum TokenKind {
     Plus,               // +
     Minus,              // -
     Slash,              // /
+    Percent,            // %
     Asterisk,           // *
     And,                // &&
     Or,                 // ||
@@ -63,7 +63,7 @@ pub enum TokenKind {
     IntLiteral,
     StringLiteral,
     FloatLiteral,
-    Eof
+    Eof,
 }
 
 impl Display for TokenKind {
@@ -91,6 +91,7 @@ impl Display for TokenKind {
             TokenKind::Plus => "+",
             TokenKind::Minus => "-",
             TokenKind::Slash => "/",
+            TokenKind::Percent => "%",
             TokenKind::Asterisk => "*",
             TokenKind::And => "&&",
             TokenKind::Or => "||",
@@ -118,12 +119,11 @@ impl Display for TokenKind {
             TokenKind::Uuid => "uuid",
             TokenKind::Enum => "enum",
             TokenKind::False => "false",
-            TokenKind::True => "true"
+            TokenKind::True => "true",
         };
         f.write_str(str)
     }
 }
-
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Token {

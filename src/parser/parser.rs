@@ -1,23 +1,25 @@
 #[allow(dead_code)]
-use std::{iter::Peekable};
+use std::iter::Peekable;
 
-use crate::lexer::{lexer::Lexer, token::TokenKind::{self, *}};
+use crate::lexer::{
+    lexer::Lexer,
+    token::TokenKind::{self, *},
+};
 
 use super::{ast::*, parser_error::ParserError};
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
     lexer: Peekable<Lexer<'src>>,
-    source: &'src str
+    source: &'src str,
 }
 
 impl<'src> Parser<'src> {
-
     pub fn new(program: &'src str) -> Self {
         let lexer = Lexer::new(program).peekable();
         Parser {
             lexer,
-            source: program
+            source: program,
         }
     }
 
@@ -25,7 +27,6 @@ impl<'src> Parser<'src> {
         let mut statements = vec![];
         while self.lexer.peek().is_some() {
             let stmt = self.parse_statement()?;
-            println!("{:?}", stmt);
             statements.push(stmt);
         }
         Ok(Program(statements))
@@ -38,7 +39,7 @@ impl<'src> Parser<'src> {
             Resource => todo!(),
             Enum => self.parse_enum(),
             Generate => self.parse_generate(),
-            _ => Ok(Statement::Expression(self.parse_expression_statement()?))
+            _ => Ok(Statement::Expression(self.parse_expression_statement()?)),
         }
     }
 
@@ -55,7 +56,7 @@ impl<'src> Parser<'src> {
         match directive.kind {
             Output => Ok(Statement::OutputDirective { argument, options }),
             Seed => todo!(),
-            _ => Err(ParserError::InvalidDirective)
+            _ => Err(ParserError::InvalidDirective),
         }
     }
 
@@ -74,13 +75,20 @@ impl<'src> Parser<'src> {
         self.expect_token(RBracket)?;
         if name == "_" {
             let fields = self.parse_fields()?;
-            Ok(Statement::Generate { template_name: None, body: fields, count })
+            Ok(Statement::Generate {
+                template_name: None,
+                body: fields,
+                count,
+            })
         } else {
             self.expect_token(Semicolon)?;
-            Ok(Statement::Generate { template_name: Some(name), body: vec![], count })
+            Ok(Statement::Generate {
+                template_name: Some(name),
+                body: vec![],
+                count,
+            })
         }
     }
-
 
     fn parse_enum(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
@@ -131,36 +139,118 @@ impl<'src> Parser<'src> {
 
     fn parse_expression(&mut self, precendence: Precedence) -> Result<Expression, ParserError> {
         let mut expression = self.parse_primary_expression()?;
-        
+
         while precendence < self.current_precendence() {
             expression = match &self.peek_kind() {
-                Asterisk => self.parse_infix_expression(expression, InfixOperator::Multiply,Precedence::Product)?,
-                Slash => self.parse_infix_expression(expression, InfixOperator::Divide,Precedence::Product)?,
-                Plus => self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?,
-                Minus => self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?,
-                BitAnd => self.parse_infix_expression(expression, InfixOperator::BitAnd, Precedence::Bitwise)?,
-                BitOr => self.parse_infix_expression(expression, InfixOperator::BitOr, Precedence::Bitwise)?,
-                BitXor => self.parse_infix_expression(expression, InfixOperator::BitXor, Precedence::Bitwise)?,
-                BitLShift => self.parse_infix_expression(expression, InfixOperator::BitLShift, Precedence::Bitwise)?,
-                BitRShift => self.parse_infix_expression(expression, InfixOperator::BitRShift, Precedence::Bitwise)?,
-                And => self.parse_infix_expression(expression, InfixOperator::And, Precedence::Comparison)?,
-                Or => self.parse_infix_expression(expression, InfixOperator::Or, Precedence::Comparison)?,
-                LessThan => self.parse_infix_expression(expression, InfixOperator::LessThan, Precedence::Comparison)?,
-                LessThanOrEqual => self.parse_infix_expression(expression, InfixOperator::LessThanOrEqual, Precedence::Comparison)?,
-                GreaterThan => self.parse_infix_expression(expression, InfixOperator::GreaterThan, Precedence::Comparison)?,
-                GreaterThanOrEqual => self.parse_infix_expression(expression, InfixOperator::GreaterThanOrEqual, Precedence::Comparison)?,
-                DoubleEqual => self.parse_infix_expression(expression, InfixOperator::Equal, Precedence::Comparison)?,
-                NotEqual => self.parse_infix_expression(expression, InfixOperator::NotEqual, Precedence::Comparison)?,
-                DoublePeriod => self.parse_infix_expression(expression, InfixOperator::ExclusiveRange, Precedence::Range)?,
-                DoublePeriodEqual => self.parse_infix_expression(expression, InfixOperator::InclusiveRange, Precedence::Range)?,
-                token => return Err(ParserError::syntax_err(&format!("Invalid operator: {}", token)))
+                Asterisk => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::Multiply,
+                    Precedence::Product,
+                )?,
+                Slash => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::Divide,
+                    Precedence::Product,
+                )?,
+                Percent => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::Mod,
+                    Precedence::Product,
+                )?,
+                Plus => {
+                    self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?
+                }
+                Minus => {
+                    self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?
+                }
+                BitAnd => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::BitAnd,
+                    Precedence::Bitwise,
+                )?,
+                BitOr => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::BitOr,
+                    Precedence::Bitwise,
+                )?,
+                BitXor => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::BitXor,
+                    Precedence::Bitwise,
+                )?,
+                BitLShift => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::BitLShift,
+                    Precedence::Bitwise,
+                )?,
+                BitRShift => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::BitRShift,
+                    Precedence::Bitwise,
+                )?,
+                And => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::And,
+                    Precedence::Comparison,
+                )?,
+                Or => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::Or,
+                    Precedence::Comparison,
+                )?,
+                LessThan => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::LessThan,
+                    Precedence::Comparison,
+                )?,
+                LessThanOrEqual => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::LessThanOrEqual,
+                    Precedence::Comparison,
+                )?,
+                GreaterThan => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::GreaterThan,
+                    Precedence::Comparison,
+                )?,
+                GreaterThanOrEqual => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::GreaterThanOrEqual,
+                    Precedence::Comparison,
+                )?,
+                DoubleEqual => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::Equal,
+                    Precedence::Comparison,
+                )?,
+                NotEqual => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::NotEqual,
+                    Precedence::Comparison,
+                )?,
+                DoublePeriod => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::ExclusiveRange,
+                    Precedence::Range,
+                )?,
+                DoublePeriodEqual => self.parse_infix_expression(
+                    expression,
+                    InfixOperator::InclusiveRange,
+                    Precedence::Range,
+                )?,
+                token => {
+                    return Err(ParserError::syntax_err(&format!(
+                        "Invalid operator: {}",
+                        token
+                    )));
+                }
             }
         }
         Ok(expression)
     }
 
     fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
-        match &self.peek_kind()  {
+        match &self.peek_kind() {
             Int | Float | Str => Ok(self.parse_type()?),
             Identifier => Ok(self.parse_identifier()?),
             FloatLiteral => Ok(self.parse_float_literal())?,
@@ -171,7 +261,10 @@ impl<'src> Parser<'src> {
             ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
             LParen => Ok(self.parse_group_expression()?),
-            kind => Err(ParserError::syntax_err(&format!("Invalid primary expression: {}", kind)))
+            kind => Err(ParserError::syntax_err(&format!(
+                "Invalid primary expression: {}",
+                kind
+            ))),
         }
     }
 
@@ -182,10 +275,14 @@ impl<'src> Parser<'src> {
         match &token.kind {
             FloatLiteral => {
                 self.lexer.next();
-                let literal = self.source[start..start+size].to_string();
-                Ok(Expression::new(ExpressionKind::FloatLiteral(literal), start, size))
-            },
-            kind => Err(ParserError::expected("float literal", &kind.to_string()))
+                let literal = self.source[start..start + size].to_string();
+                Ok(Expression::new(
+                    ExpressionKind::FloatLiteral(literal),
+                    start,
+                    size,
+                ))
+            }
+            kind => Err(ParserError::expected("float literal", &kind.to_string())),
         }
     }
 
@@ -193,14 +290,18 @@ impl<'src> Parser<'src> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
         let start = token.start;
         let size = token.size;
-        match &token.kind {
-            Int | Float | Str => {
-                self.lexer.next();
-                let literal = self.source[start..start+size].to_string();
-                Ok(Expression::new(ExpressionKind::Type(literal), start, size))
-            },
-            kind => Err(ParserError::expected("type", &kind.to_string()))
-        }
+        let data_type = match token.kind {
+            Int => DataType::Int,
+            Float => DataType::Float,
+            Str => DataType::Str,
+            _ => unreachable!(),
+        };
+        self.lexer.next();
+        Ok(Expression::new(
+            ExpressionKind::Type(data_type),
+            start,
+            size,
+        ))
     }
 
     fn parse_identifier(&mut self) -> Result<Expression, ParserError> {
@@ -210,10 +311,14 @@ impl<'src> Parser<'src> {
         match &token.kind {
             Identifier => {
                 self.lexer.next();
-                let literal = self.source[start+1..start+size-1].to_string();
-                Ok(Expression::new(ExpressionKind::Identifier(literal), start, size))
-            },
-            kind => Err(ParserError::expected("string literal", &kind.to_string()))
+                let literal = self.source[start..start + size].to_string();
+                Ok(Expression::new(
+                    ExpressionKind::Identifier(literal),
+                    start,
+                    size,
+                ))
+            }
+            kind => Err(ParserError::expected("string literal", &kind.to_string())),
         }
     }
 
@@ -224,10 +329,14 @@ impl<'src> Parser<'src> {
         match &token.kind {
             StringLiteral => {
                 self.lexer.next();
-                let literal = self.source[start+1..start+size-1].to_string();
-                Ok(Expression::new(ExpressionKind::StringLiteral(literal), start, size))
-            },
-            kind => Err(ParserError::expected("string literal", &kind.to_string()))
+                let literal = self.source[start + 1..start + size - 1].to_string();
+                Ok(Expression::new(
+                    ExpressionKind::StringLiteral(literal),
+                    start,
+                    size,
+                ))
+            }
+            kind => Err(ParserError::expected("string literal", &kind.to_string())),
         }
     }
 
@@ -239,15 +348,22 @@ impl<'src> Parser<'src> {
         match &token.kind {
             True => {
                 self.lexer.next();
-                Ok(Expression::new(ExpressionKind::BooleanLiteral(true), start, size))
+                Ok(Expression::new(
+                    ExpressionKind::BooleanLiteral(true),
+                    start,
+                    size,
+                ))
             }
             False => {
                 self.lexer.next();
-                Ok(Expression::new(ExpressionKind::BooleanLiteral(false), start, size))
+                Ok(Expression::new(
+                    ExpressionKind::BooleanLiteral(false),
+                    start,
+                    size,
+                ))
             }
-            kind => Err(ParserError::expected("boolean literal", &kind.to_string()))
+            kind => Err(ParserError::expected("boolean literal", &kind.to_string())),
         }
-
     }
 
     fn parse_int_literal(&mut self) -> Result<Expression, ParserError> {
@@ -256,10 +372,17 @@ impl<'src> Parser<'src> {
         let size = token.size;
         if token.kind == IntLiteral {
             self.lexer.next();
-            let number = (&self.source[start..start+size]).parse().unwrap();
-            Ok(Expression { kind: ExpressionKind::IntLiteral(number), start, size })
+            let number = (&self.source[start..start + size]).parse().unwrap();
+            Ok(Expression {
+                kind: ExpressionKind::IntLiteral(number),
+                start,
+                size,
+            })
         } else {
-            Err(ParserError::Expected { expected: "int litral".to_string(), got: token.kind.to_string()})
+            Err(ParserError::Expected {
+                expected: "int litral".to_string(),
+                got: token.kind.to_string(),
+            })
         }
     }
 
@@ -271,11 +394,17 @@ impl<'src> Parser<'src> {
                 let end = self.expect_token(RParen).unwrap().0;
                 Ok(Expression::new(expression.kind, start, (end + 1) - start))
             }
-            kind => Err(ParserError::Expected { expected: ")".to_string(), got: kind.to_string()})
+            kind => Err(ParserError::Expected {
+                expected: ")".to_string(),
+                got: kind.to_string(),
+            }),
         }
     }
 
-    fn parse_prefix_expression(&mut self, operator: PrefixOperator) -> Result<Expression, ParserError> {
+    fn parse_prefix_expression(
+        &mut self,
+        operator: PrefixOperator,
+    ) -> Result<Expression, ParserError> {
         let (start, size) = self.expect_token(match operator {
             PrefixOperator::LogicalNegate => ExclamationMark,
             PrefixOperator::Negative => Minus,
@@ -283,28 +412,45 @@ impl<'src> Parser<'src> {
         })?;
         let expression = self.parse_expression(Precedence::Prefix)?;
         let size = size + expression.size;
-        Ok(Expression::new(ExpressionKind::Prefix { operator, expression: Box::new(expression) }, start, size))
+        Ok(Expression::new(
+            ExpressionKind::Prefix {
+                operator,
+                expression: Box::new(expression),
+            },
+            start,
+            size,
+        ))
     }
 
-    fn parse_infix_expression(&mut self, left: Expression, operator: InfixOperator, precendence: Precedence) -> Result<Expression, ParserError> {
+    fn parse_infix_expression(
+        &mut self,
+        left: Expression,
+        operator: InfixOperator,
+        precendence: Precedence,
+    ) -> Result<Expression, ParserError> {
         self.lexer.next();
-        let right= self.parse_expression(precendence)?;
+        let right = self.parse_expression(precendence)?;
         let start = left.start;
-        let end = right.start + right.size; 
+        let end = right.start + right.size;
 
-        Ok(Expression::new(ExpressionKind::Infix {
-            left: Box::new(left), 
-            operator, 
-            right: Box::new(right)}, 
+        Ok(Expression::new(
+            ExpressionKind::Infix {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            },
             start,
-            end - start
+            end - start,
         ))
     }
 
     fn expect_token(&mut self, kind: TokenKind) -> Result<(usize, usize), ParserError> {
         let token = self.lexer.next().ok_or(ParserError::UnexpectedEOF)?;
         if token.kind != kind {
-            Err(ParserError::syntax_err(&format!("Expected {} but got {}", kind, token.kind)))
+            Err(ParserError::syntax_err(&format!(
+                "Expected {} but got {}",
+                kind, token.kind
+            )))
         } else {
             Ok((token.start, token.size))
         }
@@ -318,13 +464,14 @@ impl<'src> Parser<'src> {
         match self.peek_kind() {
             DoubleEqual | NotEqual => Precedence::Equality,
             DoublePeriod | DoublePeriodEqual => Precedence::Range,
-            LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual | And | Or => Precedence::Comparison,
+            LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual | And | Or => {
+                Precedence::Comparison
+            }
             BitAnd | BitOr | BitXor | BitLShift | BitRShift => Precedence::Bitwise,
             Plus | Minus => Precedence::Sum,
             Asterisk | Slash => Precedence::Product,
             LParen => Precedence::Group,
-            _ => Precedence::Lowest
+            _ => Precedence::Lowest,
         }
     }
-
 }

@@ -1,0 +1,7 @@
+generate _ [10] {
+    id = int;
+    name = string;
+    password = string;
+    age = int;
+    balance = float;
+}

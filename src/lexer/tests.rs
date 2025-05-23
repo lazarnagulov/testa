@@ -2,44 +2,94 @@
 mod lexer_tests {
     use std::vec;
 
-    use crate::lexer::{lexer::Lexer, token::TokenKind::{self, *}};
+    use crate::lexer::{
+        lexer::Lexer,
+        token::TokenKind::{self, *},
+    };
 
     #[test]
     fn lex_single_char_tokens() {
-        let program = "(){}:[],.;=!+-/*&|^<>~";
-        let mut lexer = Lexer::new(program);   
-        expect_token(&mut lexer, vec![
-            LParen, RParen, LBrace, RBrace, Colon, LBracket, RBracket,
-            Comma, SinglePeriod, Semicolon, SingleEqual, ExclamationMark,
-            Plus, Minus, Slash, Asterisk, BitAnd, BitOr, BitXor, LessThan, GreaterThan, BitNegate
-        ]);
+        let program = "(){}:[],.;=!+-/*&|^<>~%";
+        let mut lexer = Lexer::new(program);
+        expect_token(
+            &mut lexer,
+            vec![
+                LParen,
+                RParen,
+                LBrace,
+                RBrace,
+                Colon,
+                LBracket,
+                RBracket,
+                Comma,
+                SinglePeriod,
+                Semicolon,
+                SingleEqual,
+                ExclamationMark,
+                Plus,
+                Minus,
+                Slash,
+                Asterisk,
+                BitAnd,
+                BitOr,
+                BitXor,
+                LessThan,
+                GreaterThan,
+                BitNegate,
+                Percent,
+            ],
+        );
     }
 
     #[test]
     fn lex_two_char_tokens() {
         let program = "==!=<=>=<<>>&&||..";
         let mut lexer = Lexer::new(program);
-        expect_token(&mut lexer, vec![
-            DoubleEqual, NotEqual, LessThanOrEqual, GreaterThanOrEqual, BitLShift, BitRShift, And, Or, DoublePeriod
-        ]);
+        expect_token(
+            &mut lexer,
+            vec![
+                DoubleEqual,
+                NotEqual,
+                LessThanOrEqual,
+                GreaterThanOrEqual,
+                BitLShift,
+                BitRShift,
+                And,
+                Or,
+                DoublePeriod,
+            ],
+        );
     }
 
     #[test]
     fn lex_three_char_tokens() {
         let program = "..=";
         let mut lexer = Lexer::new(program);
-        expect_token(&mut lexer, vec![
-            DoublePeriodEqual
-        ]);
+        expect_token(&mut lexer, vec![DoublePeriodEqual]);
     }
 
     #[test]
     fn lex_string_tokens() {
-        let program = "generate @output $uuid john \"Peter\" 123 true false int float string 123.123";
+        let program =
+            "generate @output $uuid john \"Peter\" 123 true false int float string 123.123";
         let mut lexer = Lexer::new(program);
-        expect_token(&mut lexer, vec![
-            Generate, Output, Uuid, Identifier, StringLiteral, IntLiteral, True, False, Int, Float, Str, FloatLiteral
-        ]);
+        expect_token(
+            &mut lexer,
+            vec![
+                Generate,
+                Output,
+                Uuid,
+                Identifier,
+                StringLiteral,
+                IntLiteral,
+                True,
+                False,
+                Int,
+                Float,
+                Str,
+                FloatLiteral,
+            ],
+        );
     }
 
     #[test]
@@ -74,9 +124,7 @@ mod lexer_tests {
     fn lex_literal_size() {
         let program = "john \"Peter\" 123";
         let mut lexer = Lexer::new(program);
-        expect_token_size(&mut lexer, program, vec![
-            "john", "\"Peter\"", "123"
-        ]); 
+        expect_token_size(&mut lexer, program, vec!["john", "\"Peter\"", "123"]);
     }
 
     #[test]
@@ -104,17 +152,22 @@ mod lexer_tests {
     }
 
     fn expect_token(lexer: &mut Lexer, expected: Vec<TokenKind>) {
-        let token_kinds = lexer.into_iter().map(|token| token.kind).collect::<Vec<_>>();
+        let token_kinds = lexer
+            .into_iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>();
         assert_eq!(token_kinds, expected);
     }
 
     fn expect_token_size(lexer: &mut Lexer, input: &str, expected: Vec<&str>) {
-        let token_kinds = lexer.into_iter().map(|token| &input[token.start..token.start + token.size]).collect::<Vec<_>>();
+        let token_kinds = lexer
+            .into_iter()
+            .map(|token| &input[token.start..token.start + token.size])
+            .collect::<Vec<_>>();
         assert_eq!(token_kinds, expected);
     }
 
     fn expect_panic(lexer: Lexer) {
         lexer.into_iter().map(|token| token.kind).for_each(drop);
     }
-
 }

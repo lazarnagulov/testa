@@ -1,0 +1,9 @@
+enum Role { User, Admin, Developer }
+
+template User {
+    name = string;
+    age = int;
+    role = Role;
+}
+
+generate User[10];

@@ -3,8 +3,14 @@ mod parser_tests {
     use core::panic;
     use std::vec;
 
-    use crate::parser::{ast::{Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program, Statement}, parser::Parser, parser_error::ParserError};
-
+    use crate::parser::{
+        ast::{
+            DataType, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator,
+            PrefixOperator, Program, Statement,
+        },
+        parser::Parser,
+        parser_error::ParserError,
+    };
 
     #[test]
     fn parse_empty_template() {
@@ -12,8 +18,14 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Template { name: "User".to_string(), body: vec![] }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Template {
+                        name: "User".to_string(),
+                        body: vec![]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -22,11 +34,20 @@ mod parser_tests {
     fn parse_single_field_template() {
         let program = "template User { name = string; }";
         let mut parser = Parser::new(program);
-        let field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type("string".to_string()), 23, 6));
+        let field = Field::new(
+            "name".to_string(),
+            Expression::new(ExpressionKind::Type(DataType::Str), 23, 6),
+        );
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Template { name: "User".to_string(), body: vec![field] }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Template {
+                        name: "User".to_string(),
+                        body: vec![field]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -35,13 +56,28 @@ mod parser_tests {
     fn parse_template() {
         let program = "template Product { name = string; quantity = int; price = float; }";
         let mut parser = Parser::new(program);
-        let name_field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type("string".to_string()), 26, 6));
-        let quantity_field = Field::new("quantity".to_string(), Expression::new(ExpressionKind::Type("int".to_string()), 45, 3));
-        let price_field = Field::new("price".to_string(), Expression::new(ExpressionKind::Type("float".to_string()), 58, 5));
+        let name_field = Field::new(
+            "name".to_string(),
+            Expression::new(ExpressionKind::Type(DataType::Str), 26, 6),
+        );
+        let quantity_field = Field::new(
+            "quantity".to_string(),
+            Expression::new(ExpressionKind::Type(DataType::Int), 45, 3),
+        );
+        let price_field = Field::new(
+            "price".to_string(),
+            Expression::new(ExpressionKind::Type(DataType::Float), 58, 5),
+        );
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Template { name: "Product".to_string(), body: vec![name_field, quantity_field, price_field] }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Template {
+                        name: "Product".to_string(),
+                        body: vec![name_field, quantity_field, price_field]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -57,16 +93,25 @@ mod parser_tests {
     fn parse_anonymus_generate() {
         let program = "generate _ [10] { name = string; price = float; }";
         let mut parser = Parser::new(program);
-        let name_field = Field::new("name".to_string(), Expression::new(ExpressionKind::Type("string".to_string()), 25, 6));
-        let price_field = Field::new("price".to_string(), Expression::new(ExpressionKind::Type("float".to_string()), 41, 5));
+        let name_field = Field::new(
+            "name".to_string(),
+            Expression::new(ExpressionKind::Type(DataType::Str), 25, 6),
+        );
+        let price_field = Field::new(
+            "price".to_string(),
+            Expression::new(ExpressionKind::Type(DataType::Float), 41, 5),
+        );
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Generate { 
-                    template_name: None, 
-                    body: vec![name_field, price_field], 
-                    count: Expression::new(ExpressionKind::IntLiteral(10), 12, 2) 
-                }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Generate {
+                        template_name: None,
+                        body: vec![name_field, price_field],
+                        count: Expression::new(ExpressionKind::IntLiteral(10), 12, 2)
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -77,15 +122,17 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Generate { 
-                    template_name: Some("User".to_string()), 
-                    body: vec![], 
-                    count: Expression::new(ExpressionKind::IntLiteral(10), 15, 2) 
-                }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Generate {
+                        template_name: Some("User".to_string()),
+                        body: vec![],
+                        count: Expression::new(ExpressionKind::IntLiteral(10), 15, 2)
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
-
     }
 
     #[test]
@@ -95,15 +142,20 @@ mod parser_tests {
         expect_missing_paren(&mut parser);
     }
 
-
     #[test]
     fn parse_empty_enum() {
         let program = "enum Role {}";
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Enum { name: "Role".to_string(), variants: vec![] }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Enum {
+                        name: "Role".to_string(),
+                        variants: vec![]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -114,11 +166,14 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Enum { 
-                    name: "Role".to_string(), 
-                    variants: vec!["User".to_string()] 
-                }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Enum {
+                        name: "Role".to_string(),
+                        variants: vec!["User".to_string()]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -129,11 +184,18 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::Enum { 
-                    name: "Role".to_string(), 
-                    variants: vec!["User".to_string(), "Admin".to_string(), "Moderator".to_string()] 
-                }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Enum {
+                        name: "Role".to_string(),
+                        variants: vec![
+                            "User".to_string(),
+                            "Admin".to_string(),
+                            "Moderator".to_string()
+                        ]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -150,15 +212,23 @@ mod parser_tests {
         let program = "2 + 10 * 20;";
         let mut parser = Parser::new(program);
         let solution = ExpressionStatemnt {
-            expression: Expression::new(ExpressionKind::Infix{
-                left: Box::new(Expression::new(ExpressionKind::IntLiteral(2), 0, 1)),
-                operator: InfixOperator::Plus,
-                right: Box::new(Expression::new(ExpressionKind::Infix { 
-                    left: Box::new(Expression::new(ExpressionKind::IntLiteral(10), 4, 2)), 
-                    operator: InfixOperator::Multiply, 
-                    right: Box::new(Expression::new(ExpressionKind::IntLiteral(20), 9, 2))
-                }, 4, 7)),
-            }, 0, 11)
+            expression: Expression::new(
+                ExpressionKind::Infix {
+                    left: Box::new(Expression::new(ExpressionKind::IntLiteral(2), 0, 1)),
+                    operator: InfixOperator::Plus,
+                    right: Box::new(Expression::new(
+                        ExpressionKind::Infix {
+                            left: Box::new(Expression::new(ExpressionKind::IntLiteral(10), 4, 2)),
+                            operator: InfixOperator::Multiply,
+                            right: Box::new(Expression::new(ExpressionKind::IntLiteral(20), 9, 2)),
+                        },
+                        4,
+                        7,
+                    )),
+                },
+                0,
+                11,
+            ),
         };
         expect_expression(&mut parser, solution);
     }
@@ -168,15 +238,23 @@ mod parser_tests {
         let program = "(2 + 3) * 5;";
         let mut parser = Parser::new(program);
         let solution = ExpressionStatemnt {
-            expression: Expression::new(ExpressionKind::Infix {
-                left : Box::new(Expression::new(ExpressionKind::Infix { 
-                    left: Box::new(Expression::new(ExpressionKind::IntLiteral(2), 1, 1)), 
-                    operator: InfixOperator::Plus, 
-                    right: Box::new(Expression::new(ExpressionKind::IntLiteral(3), 5, 1)) 
-                }, 0 , 7)),
-                operator : InfixOperator::Multiply,
-                right : Box::new(Expression::new(ExpressionKind::IntLiteral(5), 10, 1))
-            }, 0, 11)
+            expression: Expression::new(
+                ExpressionKind::Infix {
+                    left: Box::new(Expression::new(
+                        ExpressionKind::Infix {
+                            left: Box::new(Expression::new(ExpressionKind::IntLiteral(2), 1, 1)),
+                            operator: InfixOperator::Plus,
+                            right: Box::new(Expression::new(ExpressionKind::IntLiteral(3), 5, 1)),
+                        },
+                        0,
+                        7,
+                    )),
+                    operator: InfixOperator::Multiply,
+                    right: Box::new(Expression::new(ExpressionKind::IntLiteral(5), 10, 1)),
+                },
+                0,
+                11,
+            ),
         };
         expect_expression(&mut parser, solution);
     }
@@ -191,9 +269,9 @@ mod parser_tests {
                 ParserError::Expected { expected, got } => {
                     assert_eq!(expected, ")".to_string());
                     assert_eq!(got, ";".to_string())
-                },
-                _ => panic!("Program should have returned exprected error")
-            }
+                }
+                _ => panic!("Program should have returned exprected error"),
+            },
         }
     }
 
@@ -201,19 +279,31 @@ mod parser_tests {
     fn parse_prefix_expression() {
         let program = "-5; !true;";
         let mut parser = Parser::new(program);
-        let negative_statement = Statement::Expression(ExpressionStatemnt { 
-            expression: Expression::new(ExpressionKind::Prefix { 
-                operator: PrefixOperator::Negative, 
-                expression: Box::new(Expression::new(ExpressionKind::IntLiteral(5), 1, 1)) 
-            }, 0, 2),
+        let negative_statement = Statement::Expression(ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::Prefix {
+                    operator: PrefixOperator::Negative,
+                    expression: Box::new(Expression::new(ExpressionKind::IntLiteral(5), 1, 1)),
+                },
+                0,
+                2,
+            ),
         });
-        let logical_not_statement = Statement::Expression(ExpressionStatemnt { 
-            expression: Expression::new(ExpressionKind::Prefix { 
-                operator: PrefixOperator::LogicalNegate, 
-                expression: Box::new(Expression::new(ExpressionKind::BooleanLiteral(true), 5, 4)) 
-            }, 4, 5),
+        let logical_not_statement = Statement::Expression(ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::Prefix {
+                    operator: PrefixOperator::LogicalNegate,
+                    expression: Box::new(Expression::new(
+                        ExpressionKind::BooleanLiteral(true),
+                        5,
+                        4,
+                    )),
+                },
+                4,
+                5,
+            ),
         });
-        let program =  Program(vec![negative_statement, logical_not_statement]);
+        let program = Program(vec![negative_statement, logical_not_statement]);
         expect_program(&mut parser, program);
     }
 
@@ -223,11 +313,14 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::OutputDirective { 
-                    argument: "csv".to_string(), 
-                    options: vec![]
-                }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::OutputDirective {
+                        argument: "csv".to_string(),
+                        options: vec![]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -238,11 +331,17 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
-                assert_eq!(program.0, vec![Statement::OutputDirective { 
-                    argument: "csv".to_string(), 
-                    options: vec![Field::new("delimiter".to_string(), Expression::new(ExpressionKind::StringLiteral(";".to_string()), 26, 3))]
-                }]);
-            },
+                assert_eq!(
+                    program.0,
+                    vec![Statement::OutputDirective {
+                        argument: "csv".to_string(),
+                        options: vec![Field::new(
+                            "delimiter".to_string(),
+                            Expression::new(ExpressionKind::StringLiteral(";".to_string()), 26, 3)
+                        )]
+                    }]
+                );
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -252,7 +351,10 @@ mod parser_tests {
             Ok(_) => panic!("Program should have returned err."),
             Err(err) => match err {
                 ParserError::UnexpectedEOF => {}
-                err => panic!("Program should have returned unexpected EOF instead of {:?}", err)
+                err => panic!(
+                    "Program should have returned unexpected EOF instead of {:?}",
+                    err
+                ),
             },
         }
     }
@@ -268,7 +370,7 @@ mod parser_tests {
         match parser.parse() {
             Ok(program) => {
                 assert_eq!(program.0, vec![Statement::Expression(expression)]);
-            },
+            }
             Err(err) => handle_error(err),
         }
     }
@@ -281,5 +383,4 @@ mod parser_tests {
             ParserError::Syntax(message) => panic!("{}", message),
         }
     }
-
 }
