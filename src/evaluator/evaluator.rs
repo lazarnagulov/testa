@@ -44,23 +44,17 @@ fn evaluate_generate(template_name: Option<String>, body: Vec<Field>, count: &Ex
 }
 
 fn generate_csv(template: &Template, cardinality: isize, _context: &Context) -> Result<Rc<Object>, EvalError> {
-    let mut file = match File::create("test.csv") {
-        Ok(file) => Ok(file),
-        Err(error) => Err(EvalError::General(format!("Failed to create file: {}", error))),
-    }?;
-    
+    let mut file = File::create("test.csv").map_err(|error| EvalError::General(format!("Failed to create file: {}", error)))?;
     let header = template.get_field_names().join(",");
-    // TODO: Handle error
-    writeln!(file, "{}", header).expect("write failed");
+    
+    writeln!(file, "{}", header).map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
     for _ in 0..cardinality {
         let line = template.fields
-            .iter()
-            // TODO: Remove unwrap()
-            .map(|field| format!("{}", *evaluate_expression(&field.value).unwrap()))
-            .collect::<Vec<String>>()
-            .join(",");
-        
-        writeln!(file, "{}", line).expect("write failed");
+                    .iter()
+                    .map(|field| evaluate_expression(&field.value).map(|result| format!("{}", result)))
+                    .collect::<Result<Vec<String>, EvalError>>()
+                    .map(|fields| fields.join(","))?;
+        writeln!(file, "{}", line).map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
     }
     Ok(Rc::new(Object::NoReturn))
 }
@@ -82,10 +76,8 @@ fn evaluate_expression(expression: &Expression) -> Result<Rc<Object>, EvalError>
     match &expression.kind {
         IntLiteral(value) => Ok(Rc::from(Object::new(*value))),
         FloatLiteral(value) => {
-            let parsed = match value.parse::<f32>() {
-                Ok(val) => val,
-                Err(_) => return Err(EvalError::General("Error parsing float literal".to_owned())),
-            };
+            let parsed = value.parse::<f32>()
+                .map_err(|error| EvalError::General(format!("Error parsing float literal: {}", error)))?;
             Ok(Rc::from(Object::new(parsed)))
         },
         StringLiteral(value) => Ok(Rc::from(Object::new(value.to_owned()))),
@@ -110,7 +102,7 @@ fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, EvalError> {
     match data_type {
         DataType::Int => Ok(Rc::from(Object::new(rng.random::<i32>() as isize))),
         DataType::Str => {
-            let size = rng.random_range(1..=16);
+            let size = rng.random_range(6..=20);
             let value: String = rng.sample_iter(&Alphanumeric)
                             .take(size)
                             .map(char::from)
