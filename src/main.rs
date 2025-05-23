@@ -1,7 +1,9 @@
 use std::{env, fs::File, io::Read};
 
-use testa::{evaluator::{context::Context, evaluator::evaluate, eval_error::*}, parser::{parser::Parser, parser_error::*}};
-
+use testa::{
+    evaluator::{context::Context, eval_error::*, evaluator::evaluate},
+    parser::{parser::Parser, parser_error::*},
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect::<Vec<_>>();
@@ -9,7 +11,7 @@ fn main() {
         eprintln!("Expected file path");
         std::process::exit(1);
     }
-    let file_path= &args[1];
+    let file_path = &args[1];
 
     let mut file = File::open(file_path).unwrap_or_else(|err| {
         eprintln!("Failed to open file: {}", err);
@@ -24,7 +26,9 @@ fn main() {
     let mut parser = Parser::new(source.as_str());
     let program = parser.parse().unwrap_or_else(|err| {
         let error_message = match err {
-            ParserError::Expected { expected, got } => format!("Expected '{}' but got '{}'", expected, got),
+            ParserError::Expected { expected, got } => {
+                format!("Expected '{}' but got '{}'", expected, got)
+            }
             ParserError::InvalidDirective => format!("Invalid directive"),
             ParserError::UnexpectedEOF => format!("Missing enclosing \" or ;"),
             ParserError::Syntax(error) => error,
@@ -39,16 +43,23 @@ fn main() {
             EvalError::UnsupportedPrefixOperator { operator, object } => {
                 format!("Bad operand type for unary {}: '{}'", operator, object)
             }
-            EvalError::UnsupportedInfixOperand { left, operator, right } => {
-                format!("Unsupported operand type(s) for {}: {} and {}", operator, left, right)
+            EvalError::UnsupportedInfixOperand {
+                left,
+                operator,
+                right,
+            } => {
+                format!(
+                    "Unsupported operand type(s) for {}: {} and {}",
+                    operator, left, right
+                )
             }
-            EvalError::TypeError { expected, got } => format!("Expected '{}' but got '{}'", expected, got),
+            EvalError::TypeError { expected, got } => {
+                format!("Expected '{}' but got '{}'", expected, got)
+            }
             EvalError::NotDefined(name) => format!("{} is not defined", name),
             EvalError::General(error) => error,
         };
         eprintln!("{}", error_message);
         std::process::exit(1);
     });
-    
 }
-

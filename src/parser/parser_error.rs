@@ -3,11 +3,11 @@ pub enum ParserError {
     Expected { expected: String, got: String },
     InvalidDirective,
     UnexpectedEOF,
-    Syntax(String)
+    Syntax(String),
 }
 
 impl ParserError {
-     pub fn expected(expected: &str, got: &str) -> Self {
+    pub fn expected(expected: &str, got: &str) -> Self {
         Self::Expected {
             expected: expected.to_owned(),
             got: got.to_owned(),

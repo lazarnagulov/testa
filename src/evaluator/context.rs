@@ -4,11 +4,10 @@ use crate::parser::ast::Field;
 
 #[derive(Debug, Default, Clone)]
 pub struct Template {
-    pub fields: Vec<Field>
+    pub fields: Vec<Field>,
 }
 
 impl Template {
-
     pub fn new(fields: Vec<Field>) -> Self {
         Template { fields }
     }
@@ -23,16 +22,14 @@ impl Template {
             .map(|field| field.name.as_str())
             .collect::<Vec<&str>>()
     }
-
 }
 
 #[derive(Debug, Default)]
 pub struct Enum {
-    pub variants: Vec<String>
+    pub variants: Vec<String>,
 }
 
 impl Enum {
-
     pub fn new(variants: Vec<String>) -> Self {
         Enum { variants }
     }
@@ -44,9 +41,7 @@ impl Enum {
     pub fn get_variant(&self, index: usize) -> Option<&String> {
         self.variants.get(index)
     }
-
 }
-
 
 // TODO: Consider changing String to &str
 #[derive(Debug, Default)]
@@ -56,7 +51,6 @@ pub struct Context {
 }
 
 impl Context {
-    
     pub fn insert_template(&mut self, key: &str, template: Template) -> Option<Template> {
         self.templates.insert(key.to_owned(), template)
     }
@@ -72,5 +66,4 @@ impl Context {
     pub fn get_enum(&self, key: &str) -> Option<&Enum> {
         self.enums.get(key)
     }
-
 }

@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod evaluator_tests {
-    use crate::{evaluator::{context::Context, evaluator::evaluate, object::Object}, parser::parser::Parser};
-
+    use crate::{
+        evaluator::{context::Context, evaluator::evaluate, object::Object},
+        parser::parser::Parser,
+    };
 
     #[test]
     fn evalute_simple_expression() {
@@ -16,7 +18,10 @@ mod evaluator_tests {
         expect_object("-27 + (-3);", Object::Int(-30));
         expect_object("1024 >> 10;", Object::Int(1));
         expect_object("2 << 31;", Object::Int(4294967296));
-        expect_object("\"-27.252\" + \"str\";", Object::String("-27.252str".to_string()));
+        expect_object(
+            "\"-27.252\" + \"str\";",
+            Object::String("-27.252str".to_string()),
+        );
         expect_object("\"same\" == \"same\";", Object::Boolean(true));
     }
 
@@ -30,10 +35,14 @@ mod evaluator_tests {
 
     #[test]
     fn evaluate_enum() {
-        let program = Parser::new(r#"
+        let program = Parser::new(
+            r#"
             enum Role { User, Admin, Moderator }
             enum Seniority { Junior, Medior, Senior }          
-        "#).parse().unwrap();
+        "#,
+        )
+        .parse()
+        .unwrap();
         let mut context = Context::default();
         let result = evaluate(program, &mut context).unwrap();
         assert_eq!(*result, Object::NoReturn);
@@ -43,7 +52,8 @@ mod evaluator_tests {
 
     #[test]
     fn evaluate_template() {
-        let program = Parser::new(r#"
+        let program = Parser::new(
+            r#"
             template User {
                 name = string;
                 age = int;    
@@ -54,7 +64,10 @@ mod evaluator_tests {
                 name = string;
                 price = float;
             }           
-        "#).parse().unwrap();
+        "#,
+        )
+        .parse()
+        .unwrap();
         let mut context = Context::default();
         let result = evaluate(program, &mut context).unwrap();
         assert_eq!(*result, Object::NoReturn);
@@ -68,5 +81,4 @@ mod evaluator_tests {
         let result = evaluate(program, &mut context).unwrap();
         assert_eq!(*result, object);
     }
-
 }

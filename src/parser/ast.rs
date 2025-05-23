@@ -1,6 +1,5 @@
 use core::fmt;
 
-
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program(pub Vec<Statement>);
 
@@ -9,32 +8,32 @@ pub enum Statement {
     Expression(ExpressionStatemnt),
     Template {
         name: String,
-        body: Vec<Field>
+        body: Vec<Field>,
     },
     OutputDirective {
         argument: String,
-        options: Vec<Field>
+        options: Vec<Field>,
     },
     Enum {
         name: String,
-        variants: Vec<String>
+        variants: Vec<String>,
     },
     Resource {
         name: String,
-        body: Vec<Field>
+        body: Vec<Field>,
     },
     Generate {
         template_name: Option<String>,
         body: Vec<Field>,
         count: Expression,
-    }
+    },
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Field {
     pub name: String,
     pub value: Expression,
-} 
+}
 
 impl Field {
     pub fn new(name: String, value: Expression) -> Self {
@@ -42,17 +41,16 @@ impl Field {
     }
 }
 
-
 #[derive(PartialEq, Eq, Debug)]
 pub struct ExpressionStatemnt {
-    pub expression: Expression
+    pub expression: Expression,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Expression {
     pub kind: ExpressionKind,
     pub start: usize,
-    pub size: usize
+    pub size: usize,
 }
 
 impl Expression {
@@ -71,16 +69,16 @@ pub enum ExpressionKind {
     Type(DataType),
     Prefix {
         operator: PrefixOperator,
-        expression: Box<Expression>
+        expression: Box<Expression>,
     },
     Infix {
         left: Box<Expression>,
         operator: InfixOperator,
-        right: Box<Expression>
+        right: Box<Expression>,
     },
     FuncCall {
-        arguments: Vec<Expression>
-    }
+        arguments: Vec<Expression>,
+    },
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -121,7 +119,7 @@ pub enum InfixOperator {
     LessThanOrEqual,
     GreaterThanOrEqual,
     ExclusiveRange,
-    InclusiveRange
+    InclusiveRange,
 }
 
 impl fmt::Display for InfixOperator {
@@ -155,7 +153,7 @@ impl fmt::Display for InfixOperator {
 pub enum DataType {
     Int,
     Str,
-    Float
+    Float,
 }
 
 #[derive(Ord, Eq, PartialEq, PartialOrd, Debug)]
@@ -170,5 +168,3 @@ pub enum Precedence {
     Group,      // ( )
     Prefix,     // -X or !X
 }
-
-

@@ -6,11 +6,11 @@ pub enum Object {
     Float(f32),
     String(String),
     Boolean(bool),
-    NoReturn
+    NoReturn,
 }
 
 impl Object {
-    pub fn new<T : Into<Object>>(value: T) -> Self {
+    pub fn new<T: Into<Object>>(value: T) -> Self {
         value.into()
     }
 }
@@ -52,7 +52,7 @@ impl fmt::Display for Object {
             Object::Float(value) => write!(f, "{}", value),
             Object::String(value) => write!(f, "{}", value),
             Object::Boolean(value) => write!(f, "{}", value),
-            _ => write!(f, "Nothing")
-        }   
+            _ => write!(f, "Nothing"),
+        }
     }
 }
