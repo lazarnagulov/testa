@@ -210,7 +210,7 @@ impl<'src> Parser<'src> {
         match &token.kind {
             Identifier => {
                 self.lexer.next();
-                let literal = self.source[start+1..start+size-1].to_string();
+                let literal = self.source[start..start+size].to_string();
                 Ok(Expression::new(ExpressionKind::Identifier(literal), start, size))
             },
             kind => Err(ParserError::expected("string literal", &kind.to_string()))

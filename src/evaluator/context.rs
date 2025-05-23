@@ -37,8 +37,12 @@ impl Enum {
         Enum { variants }
     }
 
-    pub fn insert_field(&mut self, variant: &str) {
+    pub fn insert_variant(&mut self, variant: &str) {
         self.variants.push(variant.to_owned())
+    }
+
+    pub fn get_variant(&self, index: usize) -> Option<&String> {
+        self.variants.get(index)
     }
 
 }

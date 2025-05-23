@@ -95,6 +95,11 @@ Enums are declareed using `enum <name> { <variant1>, <variant2> ... }`
 
 ```
 enum Role { User, Admin, Developer }
+
+// Generates random variant of 'Role'
+template User {
+    role = Role;
+}
 ```
 
 ## Resource

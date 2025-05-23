@@ -4,7 +4,7 @@ use rand::{distr::Alphanumeric, Rng};
 
 use crate::parser::ast::{DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program, Statement};
 
-use super::{context::{Context, Enum, Template}, object::Object, eval_error::EvalError};
+use super::{context::{Context, Enum, Template}, eval_error::EvalError, object::Object};
 
 pub fn evaluate(program: Program, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     let mut result = Rc::from(Object::NoReturn);
@@ -16,7 +16,7 @@ pub fn evaluate(program: Program, context: &mut Context) -> Result<Rc<Object>, E
 
 fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     match statment {
-        Statement::Expression(expression_statement) => evaluate_expression(&expression_statement.expression),
+        Statement::Expression(expression_statement) => evaluate_expression(&expression_statement.expression, context),
         Statement::Template { name, body} => evaluate_template(&name, body, context),
         Statement::Generate { template_name, body, count } => evaluate_generate(template_name, body, &count, context),
         Statement::Enum { name, variants } => evaluate_enum(&name, variants, context),
@@ -27,7 +27,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Rc<O
 
 fn evaluate_generate(template_name: Option<String>, body: Vec<Field>, count: &Expression, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     // TODO: properly use Rc<> ?
-    let cardinality = match &*evaluate_expression(count)? {
+    let cardinality = match &*evaluate_expression(count, context)? {
         Object::Int(value) => Ok(*value),
         obj => Err(EvalError::type_error("int".to_owned(), format!("{}", *obj)))
     }?;
@@ -43,7 +43,7 @@ fn evaluate_generate(template_name: Option<String>, body: Vec<Field>, count: &Ex
     Ok(generate_csv(&template, cardinality, context)?)
 }
 
-fn generate_csv(template: &Template, cardinality: isize, _context: &Context) -> Result<Rc<Object>, EvalError> {
+fn generate_csv(template: &Template, cardinality: isize, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     let mut file = File::create("test.csv").map_err(|error| EvalError::General(format!("Failed to create file: {}", error)))?;
     let header = template.get_field_names().join(",");
     
@@ -51,7 +51,7 @@ fn generate_csv(template: &Template, cardinality: isize, _context: &Context) -> 
     for _ in 0..cardinality {
         let line = template.fields
                     .iter()
-                    .map(|field| evaluate_expression(&field.value).map(|result| format!("{}", result)))
+                    .map(|field| evaluate_expression(&field.value, context).map(|result| format!("{}", result)))
                     .collect::<Result<Vec<String>, EvalError>>()
                     .map(|fields| fields.join(","))?;
         writeln!(file, "{}", line).map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
@@ -72,7 +72,7 @@ fn evaluate_template(name: &str, body: Vec<Field>, context: &mut Context) -> Res
     Ok(Rc::from(Object::NoReturn))
 }
 
-fn evaluate_expression(expression: &Expression) -> Result<Rc<Object>, EvalError> {
+fn evaluate_expression(expression: &Expression, context: &mut Context) -> Result<Rc<Object>, EvalError> {
     match &expression.kind {
         IntLiteral(value) => Ok(Rc::from(Object::new(*value))),
         FloatLiteral(value) => {
@@ -82,19 +82,28 @@ fn evaluate_expression(expression: &Expression) -> Result<Rc<Object>, EvalError>
         },
         StringLiteral(value) => Ok(Rc::from(Object::new(value.to_owned()))),
         BooleanLiteral(value) => Ok(Rc::from(Object::new(*value))),
-        Identifier(_) => todo!(),
+        Identifier(name) => evaluate_identifier(name, context),
         Type(data_type) => evaluate_data_type(*data_type),
         Prefix { operator, expression } => {
-            let right = evaluate_expression(&expression)?;
+            let right = evaluate_expression(&expression, context)?;
             evaluate_prefix_expression(*operator, &right)
         },
         Infix { left, operator, right } => {
-            let left = evaluate_expression(&left)?;
-            let right = evaluate_expression(&right)?;
+            let left = evaluate_expression(&left, context)?;
+            let right = evaluate_expression(&right, context)?;
             evaluate_infix_expression(&left, *operator, &right)
         }
         FuncCall { .. } => todo!()
     }
+}
+
+fn evaluate_identifier(name: &str, context: &mut Context) -> Result<Rc<Object>, EvalError> {
+    let enumeration = context.get_enum(name)
+            .ok_or_else(|| EvalError::General("Only enums are supported for now".to_owned()))?;
+    // TODO: create only one of these?
+    let mut rng = rand::rng();
+    let index = rng.random_range(0..enumeration.variants.len());
+    Ok(Rc::from(Object::new(enumeration.get_variant(index).unwrap().clone())))
 }
 
 fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, EvalError> {
@@ -205,4 +214,3 @@ fn evaluate_bit_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
         _ => Err(EvalError::unsupported_prefix_operator(PrefixOperator::BitNegate, format!("{}", right)))
     }
 }
-
