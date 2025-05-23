@@ -1,0 +1,9 @@
+template User {
+    id = int;
+    name = string;
+    password = string;
+    age = int;
+    balance = float;
+}
+
+generate User[10];

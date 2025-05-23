@@ -90,6 +90,16 @@ pub enum PrefixOperator {
     Negative,
 }
 
+impl fmt::Display for PrefixOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PrefixOperator::BitNegate => write!(f, "~"),
+            PrefixOperator::LogicalNegate => write!(f, "!"),
+            PrefixOperator::Negative => write!(f, "-"),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum InfixOperator {
     Plus,
