@@ -43,7 +43,7 @@ mod lexer_tests {
 
     #[test]
     fn lex_two_char_tokens() {
-        let program = "==!=<=>=<<>>&&||..";
+        let program = "==!=<=>=<<>>&&||=>..";
         let mut lexer = Lexer::new(program);
         expect_token(
             &mut lexer,
@@ -56,6 +56,7 @@ mod lexer_tests {
                 BitRShift,
                 And,
                 Or,
+                Arrow,
                 DoublePeriod,
             ],
         );

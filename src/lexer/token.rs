@@ -32,6 +32,7 @@ pub enum TokenKind {
     Colon,             // :
     Comma,             // ,
     SinglePeriod,      // .
+    Arrow,             // =>
     Semicolon,         // ;
     SingleEqual,       // =
     DoublePeriod,      // ..
@@ -85,6 +86,7 @@ impl Display for TokenKind {
             TokenKind::Comma => ",",
             TokenKind::Semicolon => ";",
             TokenKind::SingleEqual => "=",
+            TokenKind::Arrow => "=>",
             TokenKind::Identifier => "identifier",
             TokenKind::Eof => "EOF",
             TokenKind::ExclamationMark => "!",

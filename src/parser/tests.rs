@@ -6,7 +6,7 @@ mod parser_tests {
     use crate::parser::{
         ast::{
             DataType, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator,
-            PrefixOperator, Program, Statement,
+            PrefixOperator, Program, Statement, Variant,
         },
         parser::Parser,
         parser_error::ParserError,
@@ -143,6 +143,29 @@ mod parser_tests {
     }
 
     #[test]
+    fn parse_weighted_variant_enum() {
+        let program = "enum Role { User => 50, Admin => 10, Developer => 30 }";
+        let mut parser = Parser::new(program);
+        match parser.parse() {
+            Ok(program) => {
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Enum {
+                        name: "Role".to_string(),
+                        variants: vec![
+                            Variant::new("User".to_string(), Some(Expression::new(ExpressionKind::IntLiteral(50), 20, 2))),
+                            Variant::new("Admin".to_string(), Some(Expression::new(ExpressionKind::IntLiteral(10), 33, 2))),
+                            Variant::new("Developer".to_string(), Some(Expression::new(ExpressionKind::IntLiteral(30), 50, 2))),
+                        ]
+                    }]
+                );
+            }
+            Err(err) => handle_error(err),
+        }
+
+    }
+
+    #[test]
     fn parse_empty_enum() {
         let program = "enum Role {}";
         let mut parser = Parser::new(program);
@@ -170,7 +193,7 @@ mod parser_tests {
                     program.0,
                     vec![Statement::Enum {
                         name: "Role".to_string(),
-                        variants: vec!["User".to_string()]
+                        variants: vec![Variant::new("User".to_string(), None)]
                     }]
                 );
             }
@@ -189,9 +212,9 @@ mod parser_tests {
                     vec![Statement::Enum {
                         name: "Role".to_string(),
                         variants: vec![
-                            "User".to_string(),
-                            "Admin".to_string(),
-                            "Moderator".to_string()
+                            Variant::new("User".to_string(), None),
+                            Variant::new("Admin".to_string(), None),
+                            Variant::new("Moderator".to_string(), None),
                         ]
                     }]
                 );

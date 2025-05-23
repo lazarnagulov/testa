@@ -4,7 +4,7 @@ use rand::{Rng, distr::Alphanumeric};
 
 use crate::parser::ast::{
     DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
-    Statement,
+    Statement, Variant,
 };
 
 use super::{
@@ -89,7 +89,7 @@ fn generate_csv(
 
 fn evaluate_enum(
     name: &str,
-    variants: Vec<String>,
+    variants: Vec<Variant>,
     context: &mut Context,
 ) -> Result<Rc<Object>, EvalError> {
     let enumeration = Enum::new(variants);
@@ -144,15 +144,16 @@ fn evaluate_expression(
 }
 
 fn evaluate_identifier(name: &str, context: &mut Context) -> Result<Rc<Object>, EvalError> {
-    let enumeration = context
+    let _enumeration = context
         .get_enum(name)
         .ok_or_else(|| EvalError::General("Only enums are supported for now".to_owned()))?;
     // TODO: create only one of these?
-    let mut rng = rand::rng();
-    let index = rng.random_range(0..enumeration.variants.len());
-    Ok(Rc::from(Object::new(
-        enumeration.get_variant(index).unwrap().clone(),
-    )))
+    todo!("random weight")    
+    // let mut rng = rand::rng();
+    // let index = rng.random_range(0..enumeration.variants.len());
+    // Ok(Rc::from(Object::new(
+    //     enumeration.get_variant(index).unwrap().clone(),
+    // )))
 }
 
 fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, EvalError> {

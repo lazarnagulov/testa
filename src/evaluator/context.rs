@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::parser::ast::Field;
+use crate::parser::ast::{Field, Variant};
 
 #[derive(Debug, Default, Clone)]
 pub struct Template {
@@ -26,19 +26,19 @@ impl Template {
 
 #[derive(Debug, Default)]
 pub struct Enum {
-    pub variants: Vec<String>,
+    pub variants: Vec<Variant>,
 }
 
 impl Enum {
-    pub fn new(variants: Vec<String>) -> Self {
+    pub fn new(variants: Vec<Variant>) -> Self {
         Enum { variants }
     }
 
-    pub fn insert_variant(&mut self, variant: &str) {
-        self.variants.push(variant.to_owned())
+    pub fn insert_variant(&mut self, variant: Variant) {
+        self.variants.push(variant)
     }
 
-    pub fn get_variant(&self, index: usize) -> Option<&String> {
+    pub fn get_variant(&self, index: usize) -> Option<&Variant> {
         self.variants.get(index)
     }
 }
