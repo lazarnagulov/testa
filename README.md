@@ -1,4 +1,4 @@
-# TestA
+# testA
 
 ## Overview
 
@@ -6,8 +6,8 @@ TestA is a domain-specific language designed for generating structured test data
 
 ```
 @output csv {
-    header = false,
-    delimiter = "\n"
+    header = false;
+    delimiter = "\n";
 }
 
 enum Role { Admin, User, Guest }
@@ -19,7 +19,7 @@ resource Names {
 
 template User {
     id = $uuid();
-    name = $pick(Names.first) + " " + pick(Names.last);
+    name = $pick(Names.first) + " " + $pick(Names.last);
     role = $pick(Role);
 }
 
@@ -38,7 +38,7 @@ Directives are declared using the `@<directive> <value>;` syntax:
 @locale "en_US";
 ```
 
-You add additional options for directive with `{ key = value; ... }`
+You add additional options for directive with `{ key = <value:expr>; ... }`.
 
 ```
 @output csv {
@@ -47,13 +47,62 @@ You add additional options for directive with `{ key = value; ... }`
     header = true;
 }
 ```
-## Template
-todo...
+
+## Data Types
+
+Currently, there are 4 available data types that can be used to express and generate random values:
+- int
+- string
+- float
+- double
+
+### Adding Constraints
+
+You can also add constraints to these data types to further control the values they generate. The syntax for adding a constraint is:
+
+```
+<type> [<condition>]
+```
+
+Example:
+
+```
+// Generate integers from 1 to 18 (inclusive)
+int [range = 1..=18]
+```
+
+In the above example:
+
+- The `range` constraint ensures that the generated integer will be between 1 and 18 (inclusive).
+
+You can apply similar constraints to other data types as well.
+
+## Templates
+
+Templates are declared using `template <name> { key = <value:expr> }`.
+
+```
+template User {
+    first_name = string;
+    last_name = string;
+    age = int;
+}
+```
+
 ## Enum
-todo...
+
+Enums are declareed using `enum <name> { <variant1>, <variant2> ... }`
+
+```
+enum Role { User, Admin, Developer }
+```
+
 ## Resource
 todo...
+
 ## Generate
 todo...
-
+```
+generate <template_name|_> [<count>] ; | { key = <value:expr> }
+```
 
