@@ -91,10 +91,15 @@ template User {
 
 ## Enum
 
-Enums are declareed using `enum <name> { <variant1>, <variant2> ... }`
+Enums are declareed using `enum <name> { <variant1> [=> <wight:expr>], <variant2> [=> <wight:expr>] ... }`
 
 ```
-enum Role { User, Admin, Developer }
+// Admin has default weight (1)
+enum Role { 
+    User => 20, 
+    Admin, 
+    Developer => 30 
+}
 
 // Generates random variant of 'Role'
 template User {
@@ -111,3 +116,6 @@ todo...
 generate <template_name|_> [<count>] ; | { key = <value:expr> }
 ```
 
+## References:
+- [Interpreter in GO](https://interpreterbook.com/)
+- [Crafting interpreters](https://craftinginterpreters.com/)

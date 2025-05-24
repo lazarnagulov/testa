@@ -153,16 +153,24 @@ mod parser_tests {
                     vec![Statement::Enum {
                         name: "Role".to_string(),
                         variants: vec![
-                            Variant::new("User".to_string(), Some(Expression::new(ExpressionKind::IntLiteral(50), 20, 2))),
-                            Variant::new("Admin".to_string(), Some(Expression::new(ExpressionKind::IntLiteral(10), 33, 2))),
-                            Variant::new("Developer".to_string(), Some(Expression::new(ExpressionKind::IntLiteral(30), 50, 2))),
+                            Variant::new(
+                                "User".to_string(),
+                                Some(Expression::new(ExpressionKind::IntLiteral(50), 20, 2))
+                            ),
+                            Variant::new(
+                                "Admin".to_string(),
+                                Some(Expression::new(ExpressionKind::IntLiteral(10), 33, 2))
+                            ),
+                            Variant::new(
+                                "Developer".to_string(),
+                                Some(Expression::new(ExpressionKind::IntLiteral(30), 50, 2))
+                            ),
                         ]
                     }]
                 );
             }
             Err(err) => handle_error(err),
         }
-
     }
 
     #[test]

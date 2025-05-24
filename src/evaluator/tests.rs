@@ -45,7 +45,7 @@ mod evaluator_tests {
         .unwrap();
         let mut context = Context::default();
         let result = evaluate(program, &mut context).unwrap();
-        assert_eq!(*result, Object::NoReturn);
+        assert_eq!(result, Object::NoReturn);
         assert!(context.get_enum("Role").is_some());
         assert!(context.get_enum("Seniority").is_some());
     }
@@ -70,7 +70,7 @@ mod evaluator_tests {
         .unwrap();
         let mut context = Context::default();
         let result = evaluate(program, &mut context).unwrap();
-        assert_eq!(*result, Object::NoReturn);
+        assert_eq!(result, Object::NoReturn);
         assert!(context.get_template("Product").is_some());
         assert!(context.get_template("User").is_some());
     }
@@ -79,6 +79,6 @@ mod evaluator_tests {
         let program = Parser::new(source).parse().unwrap();
         let mut context = Context::default();
         let result = evaluate(program, &mut context).unwrap();
-        assert_eq!(*result, object);
+        assert_eq!(result, object);
     }
 }

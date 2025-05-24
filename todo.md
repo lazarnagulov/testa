@@ -80,3 +80,4 @@ enum Role { User => 9; Admin => 1; Developer => 5 }
 - Type chacker?
 - Should I change String to &'src str?
 - How to properly use Rc<> in evaluator?
+- Enum variants ';' intead of ','?

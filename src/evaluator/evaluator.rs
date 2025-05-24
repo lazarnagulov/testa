@@ -1,10 +1,13 @@
-use std::{fs::File, io::Write, rc::Rc};
+use std::{fs::File, io::Write};
 
 use rand::{Rng, distr::Alphanumeric};
 
-use crate::parser::ast::{
-    DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
-    Statement, Variant,
+use crate::{
+    evaluator::context::EvaluatedVariant,
+    parser::ast::{
+        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
+        Statement, Variant,
+    },
 };
 
 use super::{
@@ -13,15 +16,15 @@ use super::{
     object::Object,
 };
 
-pub fn evaluate(program: Program, context: &mut Context) -> Result<Rc<Object>, EvalError> {
-    let mut result = Rc::from(Object::NoReturn);
+pub fn evaluate(program: Program, context: &mut Context) -> Result<Object, EvalError> {
+    let mut result = Object::NoReturn;
     for statement in program.0 {
         result = evaluate_statement(statement, context)?;
     }
     Ok(result)
 }
 
-fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Rc<Object>, EvalError> {
+fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Object, EvalError> {
     match statment {
         Statement::Expression(expression_statement) => {
             evaluate_expression(&expression_statement.expression, context)
@@ -43,9 +46,8 @@ fn evaluate_generate(
     body: Vec<Field>,
     count: &Expression,
     context: &mut Context,
-) -> Result<Rc<Object>, EvalError> {
-    // TODO: properly use Rc<> ?
-    let cardinality = match &*evaluate_expression(count, context)? {
+) -> Result<Object, EvalError> {
+    let cardinality = match &evaluate_expression(count, context)? {
         Object::Int(value) => Ok(*value),
         obj => Err(EvalError::type_error("int".to_owned(), format!("{}", *obj))),
     }?;
@@ -65,10 +67,10 @@ fn generate_csv(
     template: &Template,
     cardinality: isize,
     context: &mut Context,
-) -> Result<Rc<Object>, EvalError> {
+) -> Result<Object, EvalError> {
     let mut file = File::create("test.csv")
         .map_err(|error| EvalError::General(format!("Failed to create file: {}", error)))?;
-    let header = template.get_field_names().join(",");
+    let header = template.field_names().collect::<Vec<_>>().join(",");
 
     writeln!(file, "{}", header)
         .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
@@ -84,43 +86,73 @@ fn generate_csv(
         writeln!(file, "{}", line)
             .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
     }
-    Ok(Rc::new(Object::NoReturn))
+    Ok(Object::NoReturn)
 }
 
 fn evaluate_enum(
     name: &str,
     variants: Vec<Variant>,
     context: &mut Context,
-) -> Result<Rc<Object>, EvalError> {
-    let enumeration = Enum::new(variants);
+) -> Result<Object, EvalError> {
+    let evaluated_variants = variants
+        .iter()
+        .map(|variant| match &variant.weight {
+            Some(expr) => {
+                let result = evaluate_expression(&expr, context);
+                match result {
+                    Ok(Object::Int(value)) => Ok(EvaluatedVariant::new(&variant.name, value)),
+                    Ok(obj) => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
+                    Err(err) => Err(err),
+                }
+            }
+            None => Ok(EvaluatedVariant::new(&variant.name, 1)),
+        })
+        .collect::<Result<Vec<EvaluatedVariant>, EvalError>>()?;
+    let total_weights = evaluated_variants
+        .iter()
+        .fold(0, |acc, variant| acc + variant.weight);
+    let cummulative_weights = evaluated_variants
+        .iter()
+        .scan(0, |weight, current| {
+            *weight += current.weight;
+            Some(*weight)
+        })
+        .collect::<Vec<_>>();
+    let cummulative_weights = evaluated_variants
+        .iter()
+        .map(|v| v.name.clone())
+        .zip(cummulative_weights)
+        .collect::<Vec<_>>();
+
+    let enumeration = Enum::new(evaluated_variants, cummulative_weights, total_weights);
     context.insert_enum(name, enumeration);
-    Ok(Rc::from(Object::NoReturn))
+    Ok(Object::NoReturn)
 }
 
 fn evaluate_template(
     name: &str,
     body: Vec<Field>,
     context: &mut Context,
-) -> Result<Rc<Object>, EvalError> {
+) -> Result<Object, EvalError> {
     let template = Template::new(body);
     context.insert_template(name, template);
-    Ok(Rc::from(Object::NoReturn))
+    Ok(Object::NoReturn)
 }
 
-fn evaluate_expression(
+pub fn evaluate_expression(
     expression: &Expression,
     context: &mut Context,
-) -> Result<Rc<Object>, EvalError> {
+) -> Result<Object, EvalError> {
     match &expression.kind {
-        IntLiteral(value) => Ok(Rc::from(Object::new(*value))),
+        IntLiteral(value) => Ok(Object::new(*value)),
         FloatLiteral(value) => {
             let parsed = value.parse::<f32>().map_err(|error| {
                 EvalError::General(format!("Error parsing float literal: {}", error))
             })?;
-            Ok(Rc::from(Object::new(parsed)))
+            Ok(Object::new(parsed))
         }
-        StringLiteral(value) => Ok(Rc::from(Object::new(value.to_owned()))),
-        BooleanLiteral(value) => Ok(Rc::from(Object::new(*value))),
+        StringLiteral(value) => Ok(Object::new(value.to_owned())),
+        BooleanLiteral(value) => Ok(Object::new(*value)),
         Identifier(name) => evaluate_identifier(name, context),
         Type(data_type) => evaluate_data_type(*data_type),
         Prefix {
@@ -143,23 +175,28 @@ fn evaluate_expression(
     }
 }
 
-fn evaluate_identifier(name: &str, context: &mut Context) -> Result<Rc<Object>, EvalError> {
-    let _enumeration = context
+fn evaluate_identifier(name: &str, context: &mut Context) -> Result<Object, EvalError> {
+    let enumeration = context
         .get_enum(name)
         .ok_or_else(|| EvalError::General("Only enums are supported for now".to_owned()))?;
-    // TODO: create only one of these?
-    todo!("random weight")    
-    // let mut rng = rand::rng();
-    // let index = rng.random_range(0..enumeration.variants.len());
-    // Ok(Rc::from(Object::new(
-    //     enumeration.get_variant(index).unwrap().clone(),
-    // )))
+
+    let mut rng = rand::rng();
+    let random_number = rng.random_range(0..enumeration.total_weight as usize);
+    println!("{}", random_number);
+    let value = enumeration
+        .cummulative_weights
+        .iter()
+        .find(|(_, weight)| *weight >= random_number as isize)
+        .unwrap()
+        .0
+        .clone();
+    Ok(Object::new(value))
 }
 
-fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, EvalError> {
+fn evaluate_data_type(data_type: DataType) -> Result<Object, EvalError> {
     let mut rng = rand::rng();
     match data_type {
-        DataType::Int => Ok(Rc::from(Object::new(rng.random::<i32>() as isize))),
+        DataType::Int => Ok(Object::new(rng.random::<i32>() as isize)),
         DataType::Str => {
             let size = rng.random_range(6..=20);
             let value: String = rng
@@ -167,16 +204,16 @@ fn evaluate_data_type(data_type: DataType) -> Result<Rc<Object>, EvalError> {
                 .take(size)
                 .map(char::from)
                 .collect();
-            Ok(Rc::from(Object::new(value)))
+            Ok(Object::new(value))
         }
-        DataType::Float => Ok(Rc::from(Object::new(rng.random::<f32>()))),
+        DataType::Float => Ok(Object::new(rng.random::<f32>())),
     }
 }
 
 fn evaluate_prefix_expression(
     operator: PrefixOperator,
-    right: &Rc<Object>,
-) -> Result<Rc<Object>, EvalError> {
+    right: &Object,
+) -> Result<Object, EvalError> {
     match operator {
         PrefixOperator::BitNegate => evaluate_bit_negate(right),
         PrefixOperator::LogicalNegate => evaluate_logical_negate(right),
@@ -188,7 +225,7 @@ fn evaluate_infix_expression(
     left: &Object,
     operator: InfixOperator,
     right: &Object,
-) -> Result<Rc<Object>, EvalError> {
+) -> Result<Object, EvalError> {
     match (left, right) {
         (Object::Int(left), Object::Int(right)) => evaluate_integer_infix(*left, operator, *right),
         (Object::Float(left), Object::Float(right)) => {
@@ -209,15 +246,15 @@ fn evaluate_string_infix(
     left: &str,
     operator: InfixOperator,
     right: &str,
-) -> Result<Rc<Object>, EvalError> {
+) -> Result<Object, EvalError> {
     match operator {
-        InfixOperator::Plus => Ok(Rc::from(Object::new(format!("{}{}", left, right)))),
-        InfixOperator::Equal => Ok(Rc::from(Object::new(left == right))),
-        InfixOperator::NotEqual => Ok(Rc::from(Object::new(left != right))),
-        InfixOperator::LessThan => Ok(Rc::from(Object::new(left < right))),
-        InfixOperator::GreaterThan => Ok(Rc::from(Object::new(left > right))),
-        InfixOperator::LessThanOrEqual => Ok(Rc::from(Object::new(left <= right))),
-        InfixOperator::GreaterThanOrEqual => Ok(Rc::from(Object::new(left >= right))),
+        InfixOperator::Plus => Ok(Object::new(format!("{}{}", left, right))),
+        InfixOperator::Equal => Ok(Object::new(left == right)),
+        InfixOperator::NotEqual => Ok(Object::new(left != right)),
+        InfixOperator::LessThan => Ok(Object::new(left < right)),
+        InfixOperator::GreaterThan => Ok(Object::new(left > right)),
+        InfixOperator::LessThanOrEqual => Ok(Object::new(left <= right)),
+        InfixOperator::GreaterThanOrEqual => Ok(Object::new(left >= right)),
         _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
     }
 }
@@ -226,18 +263,18 @@ fn evaluate_float_infix(
     left: f32,
     operator: InfixOperator,
     right: f32,
-) -> Result<Rc<Object>, EvalError> {
+) -> Result<Object, EvalError> {
     match operator {
-        InfixOperator::Plus => Ok(Rc::from(Object::new(left + right))),
-        InfixOperator::Minus => Ok(Rc::from(Object::new(left - right))),
-        InfixOperator::Divide => Ok(Rc::from(Object::new(left / right))),
-        InfixOperator::Multiply => Ok(Rc::from(Object::new(left * right))),
-        InfixOperator::Equal => Ok(Rc::from(Object::new(left == right))),
-        InfixOperator::NotEqual => Ok(Rc::from(Object::new(left != right))),
-        InfixOperator::LessThan => Ok(Rc::from(Object::new(left < right))),
-        InfixOperator::GreaterThan => Ok(Rc::from(Object::new(left > right))),
-        InfixOperator::LessThanOrEqual => Ok(Rc::from(Object::new(left <= right))),
-        InfixOperator::GreaterThanOrEqual => Ok(Rc::from(Object::new(left >= right))),
+        InfixOperator::Plus => Ok(Object::new(left + right)),
+        InfixOperator::Minus => Ok(Object::new(left - right)),
+        InfixOperator::Divide => Ok(Object::new(left / right)),
+        InfixOperator::Multiply => Ok(Object::new(left * right)),
+        InfixOperator::Equal => Ok(Object::new(left == right)),
+        InfixOperator::NotEqual => Ok(Object::new(left != right)),
+        InfixOperator::LessThan => Ok(Object::new(left < right)),
+        InfixOperator::GreaterThan => Ok(Object::new(left > right)),
+        InfixOperator::LessThanOrEqual => Ok(Object::new(left <= right)),
+        InfixOperator::GreaterThanOrEqual => Ok(Object::new(left >= right)),
         _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
     }
 }
@@ -246,34 +283,34 @@ fn evaluate_integer_infix(
     left: isize,
     operator: InfixOperator,
     right: isize,
-) -> Result<Rc<Object>, EvalError> {
+) -> Result<Object, EvalError> {
     match operator {
-        InfixOperator::Plus => Ok(Rc::from(Object::new(left + right))),
-        InfixOperator::Minus => Ok(Rc::from(Object::new(left - right))),
-        InfixOperator::Divide => Ok(Rc::from(Object::new(left / right))),
-        InfixOperator::Mod => Ok(Rc::from(Object::new(left % right))),
-        InfixOperator::Multiply => Ok(Rc::from(Object::new(left * right))),
-        InfixOperator::BitAnd => Ok(Rc::from(Object::new(left & right))),
-        InfixOperator::BitOr => Ok(Rc::from(Object::new(left | right))),
-        InfixOperator::BitXor => Ok(Rc::from(Object::new(left ^ right))),
-        InfixOperator::BitLShift => Ok(Rc::from(Object::new(left << right))),
-        InfixOperator::BitRShift => Ok(Rc::from(Object::new(left >> right))),
-        InfixOperator::Equal => Ok(Rc::from(Object::new(left == right))),
-        InfixOperator::NotEqual => Ok(Rc::from(Object::new(left != right))),
-        InfixOperator::LessThan => Ok(Rc::from(Object::new(left < right))),
-        InfixOperator::GreaterThan => Ok(Rc::from(Object::new(left > right))),
-        InfixOperator::LessThanOrEqual => Ok(Rc::from(Object::new(left <= right))),
-        InfixOperator::GreaterThanOrEqual => Ok(Rc::from(Object::new(left >= right))),
+        InfixOperator::Plus => Ok(Object::new(left + right)),
+        InfixOperator::Minus => Ok(Object::new(left - right)),
+        InfixOperator::Divide => Ok(Object::new(left / right)),
+        InfixOperator::Mod => Ok(Object::new(left % right)),
+        InfixOperator::Multiply => Ok(Object::new(left * right)),
+        InfixOperator::BitAnd => Ok(Object::new(left & right)),
+        InfixOperator::BitOr => Ok(Object::new(left | right)),
+        InfixOperator::BitXor => Ok(Object::new(left ^ right)),
+        InfixOperator::BitLShift => Ok(Object::new(left << right)),
+        InfixOperator::BitRShift => Ok(Object::new(left >> right)),
+        InfixOperator::Equal => Ok(Object::new(left == right)),
+        InfixOperator::NotEqual => Ok(Object::new(left != right)),
+        InfixOperator::LessThan => Ok(Object::new(left < right)),
+        InfixOperator::GreaterThan => Ok(Object::new(left > right)),
+        InfixOperator::LessThanOrEqual => Ok(Object::new(left <= right)),
+        InfixOperator::GreaterThanOrEqual => Ok(Object::new(left >= right)),
         InfixOperator::ExclusiveRange => todo!(),
         InfixOperator::InclusiveRange => todo!(),
         _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
     }
 }
 
-fn evaluate_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
+fn evaluate_negate(right: &Object) -> Result<Object, EvalError> {
     match right {
-        Object::Int(value) => Ok(Rc::from(Object::new(-value))),
-        Object::Float(value) => Ok(Rc::from(Object::new(-value))),
+        Object::Int(value) => Ok(Object::new(-value)),
+        Object::Float(value) => Ok(Object::new(-value)),
         _ => Err(EvalError::unsupported_prefix_operator(
             PrefixOperator::BitNegate,
             format!("{}", right),
@@ -281,9 +318,9 @@ fn evaluate_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
     }
 }
 
-fn evaluate_logical_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
+fn evaluate_logical_negate(right: &Object) -> Result<Object, EvalError> {
     match right {
-        Object::Boolean(value) => Ok(Rc::from(Object::new(!value))),
+        Object::Boolean(value) => Ok(Object::new(!value)),
         _ => Err(EvalError::unsupported_prefix_operator(
             PrefixOperator::LogicalNegate,
             format!("{}", right),
@@ -291,9 +328,9 @@ fn evaluate_logical_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
     }
 }
 
-fn evaluate_bit_negate(right: &Object) -> Result<Rc<Object>, EvalError> {
+fn evaluate_bit_negate(right: &Object) -> Result<Object, EvalError> {
     match right {
-        Object::Int(value) => Ok(Rc::from(Object::new(!value))),
+        Object::Int(value) => Ok(Object::new(!value)),
         _ => Err(EvalError::unsupported_prefix_operator(
             PrefixOperator::BitNegate,
             format!("{}", right),

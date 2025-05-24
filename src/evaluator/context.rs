@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::parser::ast::{Field, Variant};
+use crate::parser::ast::Field;
 
 #[derive(Debug, Default, Clone)]
 pub struct Template {
@@ -16,30 +16,56 @@ impl Template {
         self.fields.push(field)
     }
 
-    pub fn get_field_names(&self) -> Vec<&str> {
-        self.fields
-            .iter()
-            .map(|field| field.name.as_str())
-            .collect::<Vec<&str>>()
+    pub fn field_names(&self) -> impl Iterator<Item = &str> {
+        self.fields.iter().map(|field| field.name.as_str())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct EvaluatedVariant {
+    pub name: String,
+    pub weight: isize,
+}
+
+impl EvaluatedVariant {
+    pub fn new(name: &str, weight: isize) -> Self {
+        EvaluatedVariant {
+            name: name.to_owned(),
+            weight,
+        }
     }
 }
 
 #[derive(Debug, Default)]
 pub struct Enum {
-    pub variants: Vec<Variant>,
+    pub variants: Vec<EvaluatedVariant>,
+    pub cummulative_weights: Vec<(String, isize)>,
+    pub total_weight: isize,
 }
 
 impl Enum {
-    pub fn new(variants: Vec<Variant>) -> Self {
-        Enum { variants }
+    pub fn new(
+        variants: Vec<EvaluatedVariant>,
+        cummulative_weights: Vec<(String, isize)>,
+        total_weight: isize,
+    ) -> Self {
+        Enum {
+            variants,
+            cummulative_weights,
+            total_weight,
+        }
     }
 
-    pub fn insert_variant(&mut self, variant: Variant) {
+    pub fn insert_variant(&mut self, variant: EvaluatedVariant) {
         self.variants.push(variant)
     }
 
-    pub fn get_variant(&self, index: usize) -> Option<&Variant> {
+    pub fn variant(&self, index: usize) -> Option<&EvaluatedVariant> {
         self.variants.get(index)
+    }
+
+    pub fn weights(&self) -> impl Iterator<Item = isize> {
+        self.variants.iter().map(|variant| variant.weight)
     }
 }
 
