@@ -7,11 +7,11 @@ use crate::{
     parser::ast::{
         DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
         Statement,
-    },
+    }, template::template::Template,
 };
 
 use super::{
-    context::{Context, Template, Visitor},
+    context::{Context, Visitor},
     eval_error::EvalError,
     object::Object,
 };
@@ -29,7 +29,11 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         Statement::Expression(expression_statement) => {
             evaluate_expression(&expression_statement.expression, context)
         }
-        Statement::Template { name, body } => evaluate_template(&name, body, context),
+        Statement::Template { name, body } => {
+            let template = Template::new(body);
+            context.insert_template(&name, template);
+            Ok(Object::NoReturn)
+        },
         Statement::Generate {
             template_name,
             body,
@@ -79,27 +83,10 @@ fn generate_csv(
     writeln!(file, "{}", header)
         .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
     for _ in 0..cardinality {
-        let line = template
-            .fields
-            .iter()
-            .map(|field| {
-                evaluate_expression(&field.value, context).map(|result| format!("{}", result))
-            })
-            .collect::<Result<Vec<String>, EvalError>>()
-            .map(|fields| fields.join(","))?;
+        let line = template.visit(context).map(|fields| fields.join(","))?;
         writeln!(file, "{}", line)
             .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
     }
-    Ok(Object::NoReturn)
-}
-
-fn evaluate_template(
-    name: &str,
-    body: Vec<Field>,
-    context: &mut Context,
-) -> Result<Object, EvalError> {
-    let template = Template::new(body);
-    context.insert_template(name, template);
     Ok(Object::NoReturn)
 }
 
@@ -140,6 +127,7 @@ pub fn evaluate_expression(
 }
 
 fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalError> {
+    // TODO: Add support for more identifiers - now it works only for enumerations
     let value = context
         .get_enum(name)
         .ok_or_else(|| EvalError::General("Only enums are supported for now".to_owned()))?

@@ -1,30 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{enumeration::enumeration::Enum, parser::ast::Field};
+use crate::{enumeration::enumeration::Enum, template::template::Template};
 
 use super::eval_error::EvalError;
 
 pub trait Visitor<T> {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Template {
-    pub fields: Vec<Field>,
-}
-
-impl Template {
-    pub fn new(fields: Vec<Field>) -> Self {
-        Template { fields }
-    }
-
-    pub fn insert_field(&mut self, field: Field) {
-        self.fields.push(field)
-    }
-
-    pub fn field_names(&self) -> impl Iterator<Item = &str> {
-        self.fields.iter().map(|field| field.name.as_str())
-    }
 }
 
 // TODO: Consider changing String to &str
