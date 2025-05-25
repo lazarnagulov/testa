@@ -1,0 +1,15 @@
+\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8\relax}]
+\PYG{k}{template}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{n}{name}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{o}{\PYGZlt{}}\PYG{n}{name1}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{n}{expr}\PYG{o}{\PYGZgt{}}\PYG{p}{;}
+\PYG{+w}{    }\PYG{o}{\PYGZlt{}}\PYG{n}{name1}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{n}{expr}\PYG{o}{\PYGZgt{}}\PYG{p}{;}
+\PYG{+w}{    }\PYG{p}{.}\PYG{p}{.}\PYG{p}{.}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{template}\PYG{+w}{ }\PYG{n}{User}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{id}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{k+kt}{int}\PYG{p}{;}
+\PYG{+w}{    }\PYG{n}{name}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{esc}{\textcolor{purple}{string}}\PYG{p}{;}
+\PYG{+w}{    }\PYG{n}{password}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{esc}{\textcolor{purple}{string}}\PYG{p}{;}
+\PYG{+w}{    }\PYG{n}{age}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{k+kt}{int}\PYG{p}{;}
+\PYG{+w}{    }\PYG{n}{balance}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{k+kt}{float}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

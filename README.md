@@ -1,6 +1,8 @@
 # testA
 
-## Overview
+<p align=center>
+  <img src="./logo/logo.png" width=400>
+</p>
 
 TestA is a domain-specific language designed for generating structured test data in formats like JSON, CSV, and XML. It provides a simple, C-like syntax for defining templates, resources, enums, and generation rules, enabling quick and expressive data mockups for testing, prototyping, or seeding.
 

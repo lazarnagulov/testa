@@ -1,0 +1,13 @@
+\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8\relax}]
+\PYG{k}{enum}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{n}{name}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{     }\PYG{o}{\PYGZlt{}}\PYG{n}{variant1}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{p}{[}\PYG{o}{=}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{n}{expr}\PYG{o}{:}\PYG{k+kt}{int}\PYG{o}{\PYGZgt{}}\PYG{p}{]}\PYG{p}{;}
+\PYG{+w}{     }\PYG{o}{\PYGZlt{}}\PYG{n}{variant2}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{p}{[}\PYG{o}{=}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{n}{expr}\PYG{o}{:}\PYG{k+kt}{int}\PYG{o}{\PYGZgt{}}\PYG{p}{]}\PYG{p}{;}
+\PYG{+w}{     }\PYG{p}{.}\PYG{p}{.}\PYG{p}{.}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{enum}\PYG{+w}{ }\PYG{n+nc}{Role}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{User}\PYG{+w}{ }\PYG{o}{=}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{l+m+mi}{8}\PYG{p}{;}
+\PYG{+w}{    }\PYG{n}{Admin}\PYG{p}{;}\PYG{+w}{ }\PYG{c+c1}{// Default weight is 1}
+\PYG{+w}{    }\PYG{n}{Developer}\PYG{+w}{ }\PYG{o}{=}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{l+m+mi}{3}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}
