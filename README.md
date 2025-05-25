@@ -88,6 +88,8 @@ template User {
 }
 ```
 
+Check examples: [template](./examples/02_generate.testa).
+
 ## Enum
 
 Enums are declareed using `enum <name> { <variant1> [=> <wight:expr>]; <variant2> [=> <wight:expr>] ... }`
@@ -105,6 +107,9 @@ template User {
     role = Role;
 }
 ```
+
+Check examples: [enum](./examples/03_enum.testa), [weight_enum](./examples/04_weight_enum.testa).
+
 
 ## Resource
 todo...
