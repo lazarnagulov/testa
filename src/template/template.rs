@@ -1,4 +1,11 @@
-use crate::{evaluator::{context::{Context, Visitor}, eval_error::EvalError, evaluator::evaluate_expression}, parser::ast::Field};
+use crate::{
+    evaluator::{
+        context::{Context, Visitor},
+        eval_error::EvalError,
+        evaluator::evaluate_expression,
+    },
+    parser::ast::Field,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct Template {
@@ -21,8 +28,7 @@ impl Template {
 
 impl Visitor<Vec<String>> for Template {
     fn visit(&self, context: &Context) -> Result<Vec<String>, EvalError> {
-        self
-            .fields
+        self.fields
             .iter()
             .map(|field| {
                 evaluate_expression(&field.value, context).map(|result| format!("{}", result))

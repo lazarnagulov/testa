@@ -7,7 +7,8 @@ use crate::{
     parser::ast::{
         DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
         Statement,
-    }, template::template::Template,
+    },
+    template::template::Template,
 };
 
 use super::{
@@ -33,7 +34,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             let template = Template::new(body);
             context.insert_template(&name, template);
             Ok(Object::NoReturn)
-        },
+        }
         Statement::Generate {
             template_name,
             body,
