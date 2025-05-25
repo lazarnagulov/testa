@@ -3,15 +3,15 @@ use std::{fs::File, io::Write};
 use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
-    evaluator::context::EvaluatedVariant,
+    enumeration::enumeration::Enum,
     parser::ast::{
         DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
-        Statement, Variant,
+        Statement,
     },
 };
 
 use super::{
-    context::{Context, Enum, Template},
+    context::{Context, Template, Visitor},
     eval_error::EvalError,
     object::Object,
 };
@@ -35,7 +35,11 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             body,
             count,
         } => evaluate_generate(template_name, body, &count, context),
-        Statement::Enum { name, variants } => evaluate_enum(&name, variants, context),
+        Statement::Enum { name, variants } => {
+            let enumeration = Enum::new(variants, context)?;
+            context.insert_enum(&name, enumeration);
+            Ok(Object::NoReturn)
+        }
         Statement::OutputDirective { .. } => todo!(),
         Statement::Resource { .. } => todo!(),
     }
@@ -45,7 +49,7 @@ fn evaluate_generate(
     template_name: Option<String>,
     body: Vec<Field>,
     count: &Expression,
-    context: &mut Context,
+    context: &Context,
 ) -> Result<Object, EvalError> {
     let cardinality = match &evaluate_expression(count, context)? {
         Object::Int(value) => Ok(*value),
@@ -66,7 +70,7 @@ fn evaluate_generate(
 fn generate_csv(
     template: &Template,
     cardinality: isize,
-    context: &mut Context,
+    context: &Context,
 ) -> Result<Object, EvalError> {
     let mut file = File::create("test.csv")
         .map_err(|error| EvalError::General(format!("Failed to create file: {}", error)))?;
@@ -89,41 +93,6 @@ fn generate_csv(
     Ok(Object::NoReturn)
 }
 
-fn evaluate_enum(
-    name: &str,
-    variants: Vec<Variant>,
-    context: &mut Context,
-) -> Result<Object, EvalError> {
-    let evaluated_variants = variants
-        .iter()
-        .map(|variant| match &variant.weight {
-            Some(expr) => evaluate_expression(expr, context).and_then(|obj| match obj {
-                Object::Int(value) => Ok(EvaluatedVariant::new(&variant.name, value)),
-                other => Err(EvalError::type_error("int".to_owned(), format!("{}", other))),
-            }),
-            None => Ok(EvaluatedVariant::new(&variant.name, 1)),
-        })
-        .collect::<Result<Vec<EvaluatedVariant>, EvalError>>()?;
-    let total_weights = evaluated_variants.iter().map(|v| v.weight).sum();
-    let cummulative_weights = evaluated_variants
-        .iter()
-        .scan(0, |weight, current| {
-            *weight += current.weight;
-            Some(*weight)
-        })
-        .collect::<Vec<_>>();
-    let cummulative_weights = evaluated_variants
-        .iter()
-        .map(|v| v.name.as_str())
-        .zip(cummulative_weights)
-        .map(|(name, weight)| EvaluatedVariant::new(name, weight))
-        .collect::<Vec<_>>();
-
-    let enumeration = Enum::new(evaluated_variants, cummulative_weights, total_weights);
-    context.insert_enum(name, enumeration);
-    Ok(Object::NoReturn)
-}
-
 fn evaluate_template(
     name: &str,
     body: Vec<Field>,
@@ -136,7 +105,7 @@ fn evaluate_template(
 
 pub fn evaluate_expression(
     expression: &Expression,
-    context: &mut Context,
+    context: &Context,
 ) -> Result<Object, EvalError> {
     match &expression.kind {
         IntLiteral(value) => Ok(Object::new(*value)),
@@ -170,20 +139,12 @@ pub fn evaluate_expression(
     }
 }
 
-fn evaluate_identifier(name: &str, context: &mut Context) -> Result<Object, EvalError> {
-    let enumeration = context
+fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalError> {
+    let value = context
         .get_enum(name)
-        .ok_or_else(|| EvalError::General("Only enums are supported for now".to_owned()))?;
+        .ok_or_else(|| EvalError::General("Only enums are supported for now".to_owned()))?
+        .visit(context)?;
 
-    let mut rng = rand::rng();
-    let random_number = rng.random_range(0..enumeration.total_weight as usize);
-    let value = enumeration
-        .cummulative_weights
-        .iter()
-        .find(|variant| variant.weight >= random_number as isize)
-        .unwrap()
-        .name
-        .clone();
     Ok(Object::new(value))
 }
 
