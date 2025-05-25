@@ -112,7 +112,7 @@ impl<'src> Parser<'src> {
             if self.peek_kind() == &RBrace {
                 break;
             }
-            self.expect_token(Comma)?;
+            self.expect_token(Semicolon)?;
         }
         self.expect_token(RBrace)?;
         Ok(parameters)

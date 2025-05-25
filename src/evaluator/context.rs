@@ -39,14 +39,14 @@ impl EvaluatedVariant {
 #[derive(Debug, Default)]
 pub struct Enum {
     pub variants: Vec<EvaluatedVariant>,
-    pub cummulative_weights: Vec<(String, isize)>,
+    pub cummulative_weights: Vec<EvaluatedVariant>,
     pub total_weight: isize,
 }
 
 impl Enum {
     pub fn new(
         variants: Vec<EvaluatedVariant>,
-        cummulative_weights: Vec<(String, isize)>,
+        cummulative_weights: Vec<EvaluatedVariant>,
         total_weight: isize,
     ) -> Self {
         Enum {

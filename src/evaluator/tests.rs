@@ -37,8 +37,8 @@ mod evaluator_tests {
     fn evaluate_enum() {
         let program = Parser::new(
             r#"
-            enum Role { User, Admin, Moderator }
-            enum Seniority { Junior, Medior, Senior }          
+            enum Role { User; Admin; Moderator; }
+            enum Seniority { Junior; Medior; Senior; }          
         "#,
         )
         .parse()

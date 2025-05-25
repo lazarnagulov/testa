@@ -144,7 +144,7 @@ mod parser_tests {
 
     #[test]
     fn parse_weighted_variant_enum() {
-        let program = "enum Role { User => 50, Admin => 10, Developer => 30 }";
+        let program = "enum Role { User => 50; Admin => 10; Developer => 30; }";
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
@@ -193,7 +193,7 @@ mod parser_tests {
 
     #[test]
     fn parse_single_variant_enum() {
-        let program = "enum Role { User }";
+        let program = "enum Role { User; }";
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
@@ -211,7 +211,7 @@ mod parser_tests {
 
     #[test]
     fn parse_enum() {
-        let program = "enum Role { User, Admin, Moderator }";
+        let program = "enum Role { User; Admin; Moderator; }";
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
@@ -233,7 +233,7 @@ mod parser_tests {
 
     #[test]
     fn parse_missing_paren_enum() {
-        let program = "enum Role { User, Admin, Moderator,";
+        let program = "enum Role { User; Admin; Moderator;";
         let mut parser = Parser::new(program);
         expect_missing_paren(&mut parser);
     }

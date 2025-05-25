@@ -97,20 +97,14 @@ fn evaluate_enum(
     let evaluated_variants = variants
         .iter()
         .map(|variant| match &variant.weight {
-            Some(expr) => {
-                let result = evaluate_expression(&expr, context);
-                match result {
-                    Ok(Object::Int(value)) => Ok(EvaluatedVariant::new(&variant.name, value)),
-                    Ok(obj) => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    Err(err) => Err(err),
-                }
-            }
+            Some(expr) => evaluate_expression(expr, context).and_then(|obj| match obj {
+                Object::Int(value) => Ok(EvaluatedVariant::new(&variant.name, value)),
+                other => Err(EvalError::type_error("int".to_owned(), format!("{}", other))),
+            }),
             None => Ok(EvaluatedVariant::new(&variant.name, 1)),
         })
         .collect::<Result<Vec<EvaluatedVariant>, EvalError>>()?;
-    let total_weights = evaluated_variants
-        .iter()
-        .fold(0, |acc, variant| acc + variant.weight);
+    let total_weights = evaluated_variants.iter().map(|v| v.weight).sum();
     let cummulative_weights = evaluated_variants
         .iter()
         .scan(0, |weight, current| {
@@ -120,8 +114,9 @@ fn evaluate_enum(
         .collect::<Vec<_>>();
     let cummulative_weights = evaluated_variants
         .iter()
-        .map(|v| v.name.clone())
+        .map(|v| v.name.as_str())
         .zip(cummulative_weights)
+        .map(|(name, weight)| EvaluatedVariant::new(name, weight))
         .collect::<Vec<_>>();
 
     let enumeration = Enum::new(evaluated_variants, cummulative_weights, total_weights);
@@ -182,13 +177,12 @@ fn evaluate_identifier(name: &str, context: &mut Context) -> Result<Object, Eval
 
     let mut rng = rand::rng();
     let random_number = rng.random_range(0..enumeration.total_weight as usize);
-    println!("{}", random_number);
     let value = enumeration
         .cummulative_weights
         .iter()
-        .find(|(_, weight)| *weight >= random_number as isize)
+        .find(|variant| variant.weight >= random_number as isize)
         .unwrap()
-        .0
+        .name
         .clone();
     Ok(Object::new(value))
 }

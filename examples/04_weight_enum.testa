@@ -1,7 +1,7 @@
 enum Role { 
-    User => 5,
-    Admin,
-    Developer => 3,
+    User => 5;
+    Admin;
+    Developer => 3;
 }
 
 template User {

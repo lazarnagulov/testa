@@ -1,4 +1,8 @@
-enum Role { User, Admin, Developer }
+enum Role { 
+    User; 
+    Admin; 
+    Developer; 
+}
 
 template User {
     name = string;

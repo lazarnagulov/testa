@@ -247,7 +247,7 @@ impl<'src> Lexer<'src> {
         }
 
         if let Some((_, char)) = self.peek() {
-            if !matches!(char, ' ' | ';' | ']' | ')' | ',') {
+            if !matches!(char, ' ' | ';' | ']' | ')') {
                 panic!("Invalid int or float literal");
             }
         }
