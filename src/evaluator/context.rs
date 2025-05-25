@@ -1,72 +1,11 @@
 use std::collections::HashMap;
 
-use crate::parser::ast::Field;
+use crate::{enumeration::enumeration::Enum, template::template::Template};
 
-#[derive(Debug, Default, Clone)]
-pub struct Template {
-    pub fields: Vec<Field>,
-}
+use super::eval_error::EvalError;
 
-impl Template {
-    pub fn new(fields: Vec<Field>) -> Self {
-        Template { fields }
-    }
-
-    pub fn insert_field(&mut self, field: Field) {
-        self.fields.push(field)
-    }
-
-    pub fn field_names(&self) -> impl Iterator<Item = &str> {
-        self.fields.iter().map(|field| field.name.as_str())
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct EvaluatedVariant {
-    pub name: String,
-    pub weight: isize,
-}
-
-impl EvaluatedVariant {
-    pub fn new(name: &str, weight: isize) -> Self {
-        EvaluatedVariant {
-            name: name.to_owned(),
-            weight,
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct Enum {
-    pub variants: Vec<EvaluatedVariant>,
-    pub cummulative_weights: Vec<EvaluatedVariant>,
-    pub total_weight: isize,
-}
-
-impl Enum {
-    pub fn new(
-        variants: Vec<EvaluatedVariant>,
-        cummulative_weights: Vec<EvaluatedVariant>,
-        total_weight: isize,
-    ) -> Self {
-        Enum {
-            variants,
-            cummulative_weights,
-            total_weight,
-        }
-    }
-
-    pub fn insert_variant(&mut self, variant: EvaluatedVariant) {
-        self.variants.push(variant)
-    }
-
-    pub fn variant(&self, index: usize) -> Option<&EvaluatedVariant> {
-        self.variants.get(index)
-    }
-
-    pub fn weights(&self) -> impl Iterator<Item = isize> {
-        self.variants.iter().map(|variant| variant.weight)
-    }
+pub trait Visitor<T> {
+    fn visit(&self, context: &Context) -> Result<T, EvalError>;
 }
 
 // TODO: Consider changing String to &str

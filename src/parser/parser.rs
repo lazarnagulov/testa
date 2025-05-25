@@ -259,11 +259,9 @@ impl<'src> Parser<'src> {
     fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.peek_kind() {
             Int | Float | Str => Ok(self.parse_type()?),
-            Identifier => Ok(self.parse_identifier()?),
-            FloatLiteral => Ok(self.parse_float_literal())?,
-            IntLiteral => Ok(self.parse_int_literal()?),
-            StringLiteral => Ok(self.parse_string_literal()?),
-            True | False => Ok(self.parse_bool_literal()?),
+            Identifier | True | False | IntLiteral | StringLiteral | FloatLiteral => {
+                Ok(self.parse_literal()?)
+            }
             BitNegate => Ok(self.parse_prefix_expression(PrefixOperator::BitNegate)?),
             ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
@@ -272,24 +270,6 @@ impl<'src> Parser<'src> {
                 "Invalid primary expression: {}",
                 kind
             ))),
-        }
-    }
-
-    fn parse_float_literal(&mut self) -> Result<Expression, ParserError> {
-        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.start;
-        let size = token.size;
-        match &token.kind {
-            FloatLiteral => {
-                self.lexer.next();
-                let literal = self.source[start..start + size].to_string();
-                Ok(Expression::new(
-                    ExpressionKind::FloatLiteral(literal),
-                    start,
-                    size,
-                ))
-            }
-            kind => Err(ParserError::expected("float literal", &kind.to_string())),
         }
     }
 
@@ -311,31 +291,12 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    fn parse_identifier(&mut self) -> Result<Expression, ParserError> {
+    fn parse_literal(&mut self) -> Result<Expression, ParserError> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
         let start = token.start;
         let size = token.size;
-        match &token.kind {
-            Identifier => {
-                self.lexer.next();
-                let literal = self.source[start..start + size].to_string();
-                Ok(Expression::new(
-                    ExpressionKind::Identifier(literal),
-                    start,
-                    size,
-                ))
-            }
-            kind => Err(ParserError::expected("string literal", &kind.to_string())),
-        }
-    }
-
-    fn parse_string_literal(&mut self) -> Result<Expression, ParserError> {
-        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.start;
-        let size = token.size;
-        match &token.kind {
+        let parsed = match &token.kind {
             StringLiteral => {
-                self.lexer.next();
                 let literal = self.source[start + 1..start + size - 1].to_string();
                 Ok(Expression::new(
                     ExpressionKind::StringLiteral(literal),
@@ -343,54 +304,44 @@ impl<'src> Parser<'src> {
                     size,
                 ))
             }
-            kind => Err(ParserError::expected("string literal", &kind.to_string())),
-        }
-    }
-
-    fn parse_bool_literal(&mut self) -> Result<Expression, ParserError> {
-        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.start;
-        let size = token.size;
-
-        match &token.kind {
-            True => {
-                self.lexer.next();
+            Identifier => {
+                let literal = self.source[start..start + size].to_string();
                 Ok(Expression::new(
-                    ExpressionKind::BooleanLiteral(true),
+                    ExpressionKind::Identifier(literal),
                     start,
                     size,
                 ))
             }
-            False => {
-                self.lexer.next();
+            FloatLiteral => {
+                let literal = self.source[start..start + size].to_string();
                 Ok(Expression::new(
-                    ExpressionKind::BooleanLiteral(false),
+                    ExpressionKind::FloatLiteral(literal),
                     start,
                     size,
                 ))
             }
-            kind => Err(ParserError::expected("boolean literal", &kind.to_string())),
-        }
-    }
-
-    fn parse_int_literal(&mut self) -> Result<Expression, ParserError> {
-        let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.start;
-        let size = token.size;
-        if token.kind == IntLiteral {
-            self.lexer.next();
-            let number = (&self.source[start..start + size]).parse().unwrap();
-            Ok(Expression {
-                kind: ExpressionKind::IntLiteral(number),
+            True => Ok(Expression::new(
+                ExpressionKind::BooleanLiteral(true),
                 start,
                 size,
-            })
-        } else {
-            Err(ParserError::Expected {
-                expected: "int litral".to_string(),
-                got: token.kind.to_string(),
-            })
-        }
+            )),
+            False => Ok(Expression::new(
+                ExpressionKind::BooleanLiteral(false),
+                start,
+                size,
+            )),
+            IntLiteral => {
+                let number = (&self.source[start..start + size]).parse().unwrap();
+                Ok(Expression {
+                    kind: ExpressionKind::IntLiteral(number),
+                    start,
+                    size,
+                })
+            }
+            kind => Err(ParserError::expected("literal", &kind.to_string())),
+        };
+        self.lexer.next();
+        parsed
     }
 
     fn parse_group_expression(&mut self) -> Result<Expression, ParserError> {
