@@ -16,7 +16,7 @@ pub enum Statement {
     },
     Enum {
         name: String,
-        variants: Vec<String>,
+        variants: Vec<Variant>,
     },
     Resource {
         name: String,
@@ -27,6 +27,18 @@ pub enum Statement {
         body: Vec<Field>,
         count: Expression,
     },
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct Variant {
+    pub name: String,
+    pub weight: Option<Expression>,
+}
+
+impl Variant {
+    pub fn new(name: String, weight: Option<Expression>) -> Self {
+        Variant { name, weight }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

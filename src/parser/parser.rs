@@ -94,20 +94,27 @@ impl<'src> Parser<'src> {
         self.lexer.next();
         let name = self.parse_identifier_as_string()?;
         self.expect_token(LBrace)?;
-        let variants = self.parse_parameters(RBrace)?;
+        let variants = self.parse_variants()?;
         Ok(Statement::Enum { name, variants })
     }
 
-    fn parse_parameters(&mut self, delimiter: TokenKind) -> Result<Vec<String>, ParserError> {
+    fn parse_variants(&mut self) -> Result<Vec<Variant>, ParserError> {
         let mut parameters = vec![];
         while self.peek_kind() == &Identifier {
-            parameters.push(self.parse_identifier_as_string()?);
-            if self.peek_kind() == &delimiter {
+            let name = self.parse_identifier_as_string()?;
+            let weight = if self.peek_kind() == &Arrow {
+                self.lexer.next();
+                Some(self.parse_expression(Precedence::Lowest)?)
+            } else {
+                None
+            };
+            parameters.push(Variant::new(name, weight));
+            if self.peek_kind() == &RBrace {
                 break;
             }
-            self.expect_token(Comma)?;
+            self.expect_token(Semicolon)?;
         }
-        self.expect_token(delimiter)?;
+        self.expect_token(RBrace)?;
         Ok(parameters)
     }
 

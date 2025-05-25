@@ -40,6 +40,7 @@
 - [ ] Built-ins
 - [ ] Type constraint: e.g. int<32>[range=1..=16]
 - [ ] Random generate with with constraints: e.g. int<32>[range=1..=16]
+- [ ] Weights
 
 ### Ideas
 
@@ -66,7 +67,10 @@ template Store {
 ```
 constraint Positive = field > 0; 
 ```
-
+- Weights
+```
+enum Role { User => 9; Admin => 1; Developer => 5 }
+```
 ### Questions
 
 - Should ranges be infix expression or its own kind?
@@ -76,3 +80,4 @@ constraint Positive = field > 0;
 - Type chacker?
 - Should I change String to &'src str?
 - How to properly use Rc<> in evaluator?
+- Enum variants ';' intead of ','?

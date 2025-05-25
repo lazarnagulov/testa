@@ -50,18 +50,17 @@ You add additional options for directive with `{ key = <value:expr>; ... }`.
 
 ## Data Types
 
-Currently, there are 4 available data types that can be used to express and generate random values:
+Currently, there are 3 available data types that can be used to express and generate random values:
 - int
 - string
 - float
-- double
 
 ### Adding Constraints
 
 You can also add constraints to these data types to further control the values they generate. The syntax for adding a constraint is:
 
 ```
-<type> [<condition>]
+<type> [<condition1>, <condition2>]
 ```
 
 Example:
@@ -79,7 +78,7 @@ You can apply similar constraints to other data types as well.
 
 ## Templates
 
-Templates are declared using `template <name> { key = <value:expr> }`.
+Templates are declared using `template <name> { key = <value:expr>; }`.
 
 ```
 template User {
@@ -89,18 +88,28 @@ template User {
 }
 ```
 
+Check examples: [template](./examples/02_generate.testa).
+
 ## Enum
 
-Enums are declareed using `enum <name> { <variant1>, <variant2> ... }`
+Enums are declareed using `enum <name> { <variant1> [=> <wight:expr>]; <variant2> [=> <wight:expr>] ... }`
 
 ```
-enum Role { User, Admin, Developer }
+// Admin has default weight (1)
+enum Role { 
+    User => 20;
+    Admin;
+    Developer => 30; 
+}
 
 // Generates random variant of 'Role'
 template User {
     role = Role;
 }
 ```
+
+Check examples: [enum](./examples/03_enum.testa), [weight_enum](./examples/04_weight_enum.testa).
+
 
 ## Resource
 todo...
@@ -111,3 +120,6 @@ todo...
 generate <template_name|_> [<count>] ; | { key = <value:expr> }
 ```
 
+## References:
+- [Interpreter in GO](https://interpreterbook.com/)
+- [Crafting interpreters](https://craftinginterpreters.com/)

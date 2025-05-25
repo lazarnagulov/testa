@@ -95,6 +95,12 @@ impl<'src> Lexer<'src> {
                     .is_some()
                 {
                     Token::new(DoubleEqual, current_index, 2)
+                } else if self
+                    .chars
+                    .next_if(|(_, next_char)| *next_char == '>')
+                    .is_some()
+                {
+                    Token::new(Arrow, current_index, 2)
                 } else {
                     Token::new(SingleEqual, current_index, 1)
                 }
