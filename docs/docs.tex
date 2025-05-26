@@ -12,6 +12,7 @@
 \usepackage{listings}
 \usepackage{fancyhdr}
 
+\definecolor{keywordColor}{rgb}{0.0, 0.5, 0.0}
 
 \author{Lazar Nagulov}
 \title{testA}
@@ -21,7 +22,7 @@
     \include{listings}
     \maketitle
     
-        \section{Templates}
+    \section{Templates}
     \par Templates are blueprints for creating reusable data structures or 
     types that are used in a "generate" expression. Each template has 
     a name and a set of fields, where each field is a pair consisting 
@@ -86,8 +87,64 @@ template User {
         \centering
         \label{listing:3}
     \end{listing}
+    \pagebreak
+    \section{Data types}
+    \par Unlike other programming languages, such as C or Java, testA data types represent random values in expressions. 
+    There are four fundamental data types available: integers (ints), floating-point numbers (floats), strings, and booleans.
+    \begin{listing}[h]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+            template User {
+                // Generates random string
+                name = |\textcolor{purple}{string}|;
+                // Generates random integer
+                age = int + 18;
+                // Generates random float
+                salary = float + 300.0;
+                // Generates random boolean
+                is_registered = !bool;
+            }
+        \end{minted}
+        \caption{Template with data types}
+        \label{listing:4}
+    \end{listing}
+    \par As demonstrated in Listing \ref{listing:4}, these types can interact with each other as well as with literals. 
+    \subsection{Type constraints}
+    \par The previous example (Listing \ref{listing:4}) does not depict a realistic individual, as the fields for age 
+    and salary could potentially contain negative values. To address this issue, we can implement type constraints to prevent such errors. 
+    These constraints can be easily added by enclosing them in brackets [ ] after the type name (Listing \ref{listing:5}), ensuring that the data 
+    conforms to the expected parameters.
+    \begin{listing}[h]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+        template User {
+            // Generates random string
+            name = |\textcolor{purple}{string}|[starts_with="A"];
+            // Generates random integers from 18 to 100 (inclusively)  
+            age = int[range=18..=100];
+            // Generates random float from 100.0 to 500.0 (exclusively)
+            salary = float[range=100..500] + 300.0;
+            // Generates random boolean with 75% change of being true
+            is_registered = bool[bias=75];
+        }
+        \end{minted}
+        \caption{Template with constrained data types}
+        \label{listing:5}
+    \end{listing}
+    \par To improve clarity and minimize redundancy, types may be effectively declared and reused (Listing \ref{listing:6}). 
+    Furthermore, user-defined types can be expanded to offer greater versatility. 
+    \begin{listing}[h]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+|\textcolor{keywordColor}{type}| <name> = <type> [<constraint1>, <constraint2>...];
+|\textcolor{keywordColor}{type}| <name> = |\textcolor{keywordColor}{extend}| <type> |\textcolor{keywordColor}{with}| [<constraint1>, <constraint2>...];
+
+|\textcolor{keywordColor}{type}| even_int = int [multiple_of=2];
+|\textcolor{keywordColor}{type}| positive_int = |\textcolor{keywordColor}{extend}| even_int |\textcolor{keywordColor}{with}| [range=0..65536];
+        \end{minted}
+        \caption{Example of defining new type}
+        \label{listing:6}
+    \end{listing}
 
     \section{Resources}
     \section{Generate}
+    
 
 \end{document}
