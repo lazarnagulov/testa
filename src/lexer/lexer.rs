@@ -19,6 +19,10 @@ impl<'src> Lexer<'src> {
         self.chars.peek().copied()
     }
 
+    fn peek_n(&self, n: usize) -> Option<(usize, char)> {
+        self.chars.clone().nth(n - 1)
+    }
+
     fn next_token(&mut self) -> Token {
         use super::token::TokenKind::*;
         self.skip_whitespaces();
@@ -201,6 +205,8 @@ impl<'src> Lexer<'src> {
                     "int" => Token::new(Int, current_index, 3),
                     "float" => Token::new(Float, current_index, 5),
                     "string" => Token::new(Str, current_index, 6),
+                    "type" => Token::new(Type, current_index, 4),
+                    "constraint" => Token::new(Constraint, current_index, 10),
                     ident => Token::new(Identifier, current_index, ident.len()),
                 }
             }
@@ -237,12 +243,24 @@ impl<'src> Lexer<'src> {
             .peek()
             .is_some_and(|(_, c)| c.is_ascii_digit() || c == '.')
         {
+            if self.peek().unwrap().1 == '.' && self.peek_n(2).is_some_and(|(_, c)| c == '.') {
+                return Token::new(
+                    if is_float {
+                        TokenKind::FloatLiteral
+                    } else {
+                        TokenKind::IntLiteral
+                    },
+                    position,
+                    last - position + 1,
+                );
+            } 
+         
             let token = self.next().unwrap();
             if is_float && token.1 == '.' {
                 panic!("Invalid float literal");
             } else if token.1 == '.' {
                 is_float = true;
-            }
+            } 
             last = token.0;
         }
 

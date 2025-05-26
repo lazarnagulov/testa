@@ -1,11 +1,9 @@
 use std::{fs::File, io::Write};
 
-use rand::{Rng, distr::Alphanumeric};
-
 use crate::{
     enumeration::enumeration::Enum,
     parser::ast::{
-        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
+        Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
         Statement,
     },
     template::template::Template,
@@ -47,6 +45,8 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         }
         Statement::OutputDirective { .. } => todo!(),
         Statement::Resource { .. } => todo!(),
+        Statement::TypeDecl { .. } => todo!(),
+        Statement::ConstraintDecl { .. } => todo!(),
     }
 }
 
@@ -106,7 +106,7 @@ pub fn evaluate_expression(
         StringLiteral(value) => Ok(Object::new(value.to_owned())),
         BooleanLiteral(value) => Ok(Object::new(*value)),
         Identifier(name) => evaluate_identifier(name, context),
-        Type(data_type) => evaluate_data_type(*data_type),
+        Type(..) => todo!(),
         Prefix {
             operator,
             expression,
@@ -137,22 +137,22 @@ fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalErro
     Ok(Object::new(value))
 }
 
-fn evaluate_data_type(data_type: DataType) -> Result<Object, EvalError> {
-    let mut rng = rand::rng();
-    match data_type {
-        DataType::Int => Ok(Object::new(rng.random::<i32>() as isize)),
-        DataType::Str => {
-            let size = rng.random_range(6..=20);
-            let value: String = rng
-                .sample_iter(&Alphanumeric)
-                .take(size)
-                .map(char::from)
-                .collect();
-            Ok(Object::new(value))
-        }
-        DataType::Float => Ok(Object::new(rng.random::<f32>())),
-    }
-}
+// fn evaluate_data_type(data_type: DataType) -> Result<Object, EvalError> {
+    // let mut rng = rand::rng();
+    // match data_type {
+    //     DataType::Int => Ok(Object::new(rng.random::<i32>() as isize)),
+    //     DataType::Str => {
+    //         let size = rng.random_range(6..=20);
+    //         let value: String = rng
+    //             .sample_iter(&Alphanumeric)
+    //             .take(size)
+    //             .map(char::from)
+    //             .collect();
+    //         Ok(Object::new(value))
+    //     }
+    //     DataType::Float => Ok(Object::new(rng.random::<f32>())),
+    // }
+// }
 
 fn evaluate_prefix_expression(
     operator: PrefixOperator,

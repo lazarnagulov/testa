@@ -14,6 +14,14 @@ pub enum Statement {
         argument: String,
         options: Vec<Field>,
     },
+    TypeDecl {
+        name: String,
+        data_type: DataType,
+    },
+    ConstraintDecl {
+        name: String,
+        constraint: ConstraintDecl,
+    },
     Enum {
         name: String,
         variants: Vec<Variant>,
@@ -161,11 +169,44 @@ impl fmt::Display for InfixOperator {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub enum DataType {
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct ConstraintDecl {
+    pub expression: Expression,
+    pub constraint_kind: ConstraintKind,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum ConstraintKind {
+    Range,
+    MultipleOf,
+    Length,
+    Matches,
+    NotMatches,
+    In,
+    NotIn,
+    Containts,
+    StartsWith,
+    EndsWith,
+    Custom
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct DataType {
+    pub data_type_kind: DataTypeKind,
+    pub constraints: Option<Vec<ConstraintDecl>>,
+}
+
+impl DataType {
+    pub fn new(data_type_kind: DataTypeKind, constraints: Option<Vec<ConstraintDecl>>) -> Self {
+        DataType { data_type_kind, constraints }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum DataTypeKind {
     Int,
     Str,
-    Float,
+    Float
 }
 
 #[derive(Ord, Eq, PartialEq, PartialOrd, Debug)]

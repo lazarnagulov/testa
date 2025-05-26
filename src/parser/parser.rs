@@ -278,17 +278,25 @@ impl<'src> Parser<'src> {
         let start = token.start;
         let size = token.size;
         let data_type = match token.kind {
-            Int => DataType::Int,
-            Float => DataType::Float,
-            Str => DataType::Str,
+            Int => DataTypeKind::Int,
+            Float => DataTypeKind::Float,
+            Str => DataTypeKind::Str,
             _ => unreachable!(),
         };
         self.lexer.next();
-        Ok(Expression::new(
-            ExpressionKind::Type(data_type),
-            start,
-            size,
-        ))
+        if self.peek_kind() == &RBrace {
+            todo!()
+        } else {
+            Ok(Expression::new(
+                ExpressionKind::Type(DataType::new(data_type, None)),
+                start,
+                size,
+            ))
+        }
+    }
+
+    fn parse_constraints(&mut self) -> Result<Vec<ConstraintDecl>, ParserError> {
+        todo!()
     }
 
     fn parse_literal(&mut self) -> Result<Expression, ParserError> {
@@ -345,7 +353,7 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_group_expression(&mut self) -> Result<Expression, ParserError> {
-        let start = self.expect_token(LParen).unwrap().0;
+        let (start, _) = self.consume_token();
         let expression = self.parse_expression(Precedence::Lowest)?;
         match self.peek_kind() {
             RParen => {
@@ -363,11 +371,7 @@ impl<'src> Parser<'src> {
         &mut self,
         operator: PrefixOperator,
     ) -> Result<Expression, ParserError> {
-        let (start, size) = self.expect_token(match operator {
-            PrefixOperator::LogicalNegate => ExclamationMark,
-            PrefixOperator::Negative => Minus,
-            PrefixOperator::BitNegate => BitNegate,
-        })?;
+        let (start, size) = self.consume_token();
         let expression = self.parse_expression(Precedence::Prefix)?;
         let size = size + expression.size;
         Ok(Expression::new(
@@ -412,6 +416,11 @@ impl<'src> Parser<'src> {
         } else {
             Ok((token.start, token.size))
         }
+    }
+
+    fn consume_token(&mut self) -> (usize, usize) {
+        let token = self.lexer.next().unwrap();
+        (token.start, token.size)
     }
 
     fn peek_kind(&mut self) -> &TokenKind {

@@ -5,8 +5,7 @@ mod parser_tests {
 
     use crate::parser::{
         ast::{
-            DataType, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator,
-            PrefixOperator, Program, Statement, Variant,
+            DataType, DataTypeKind, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program, Statement, Variant
         },
         parser::Parser,
         parser_error::ParserError,
@@ -36,7 +35,7 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         let field = Field::new(
             "name".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Str), 23, 6),
+            Expression::new(ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)), 23, 6),
         );
         match parser.parse() {
             Ok(program) => {
@@ -58,15 +57,15 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         let name_field = Field::new(
             "name".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Str), 26, 6),
+            Expression::new(ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)), 26, 6),
         );
         let quantity_field = Field::new(
             "quantity".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Int), 45, 3),
+            Expression::new(ExpressionKind::Type(DataType::new(DataTypeKind::Int, None)), 45, 3),
         );
         let price_field = Field::new(
             "price".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Float), 58, 5),
+            Expression::new(ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)), 58, 5),
         );
         match parser.parse() {
             Ok(program) => {
@@ -95,11 +94,11 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         let name_field = Field::new(
             "name".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Str), 25, 6),
+            Expression::new(ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)), 25, 6),
         );
         let price_field = Field::new(
             "price".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Float), 41, 5),
+            Expression::new(ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)), 41, 5),
         );
         match parser.parse() {
             Ok(program) => {
