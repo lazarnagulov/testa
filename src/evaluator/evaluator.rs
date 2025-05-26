@@ -1,11 +1,9 @@
 use std::{fs::File, io::Write};
 
 use crate::{
-    enumeration::enumeration::Enum,
-    parser::ast::{
+    constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum, parser::ast::{
         Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program, Statement,
-    },
-    template::template::Template,
+    }, template::template::Template
 };
 
 use super::{
@@ -44,7 +42,14 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         }
         Statement::OutputDirective { .. } => todo!(),
         Statement::Resource { .. } => todo!(),
-        Statement::TypeDecl { .. } => todo!(),
+        Statement::TypeDecl { name, data_type } => {
+            let Type(data_type) = data_type.kind else {
+                unreachable!()
+            };
+            let data_type = ConstrainedType::new(data_type, context)?;
+            context.insert_type(&name, data_type);
+            Ok(Object::NoReturn)
+        }
         Statement::ConstraintDecl { .. } => todo!(),
     }
 }
@@ -135,23 +140,6 @@ fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalErro
 
     Ok(Object::new(value))
 }
-
-// fn evaluate_data_type(data_type: DataType) -> Result<Object, EvalError> {
-// let mut rng = rand::rng();
-// match data_type {
-//     DataType::Int => Ok(Object::new(rng.random::<i32>() as isize)),
-//     DataType::Str => {
-//         let size = rng.random_range(6..=20);
-//         let value: String = rng
-//             .sample_iter(&Alphanumeric)
-//             .take(size)
-//             .map(char::from)
-//             .collect();
-//         Ok(Object::new(value))
-//     }
-//     DataType::Float => Ok(Object::new(rng.random::<f32>())),
-// }
-// }
 
 fn evaluate_prefix_expression(
     operator: PrefixOperator,
@@ -244,8 +232,8 @@ fn evaluate_integer_infix(
         InfixOperator::GreaterThan => Ok(Object::new(left > right)),
         InfixOperator::LessThanOrEqual => Ok(Object::new(left <= right)),
         InfixOperator::GreaterThanOrEqual => Ok(Object::new(left >= right)),
-        InfixOperator::ExclusiveRange => todo!(),
-        InfixOperator::InclusiveRange => todo!(),
+        InfixOperator::ExclusiveRange => Ok(Object::new((left, right-1))),
+        InfixOperator::InclusiveRange => Ok(Object::new((left, right))),
         _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
     }
 }

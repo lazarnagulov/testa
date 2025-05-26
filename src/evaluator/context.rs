@@ -1,11 +1,17 @@
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
-use crate::{enumeration::enumeration::Enum, template::template::Template};
+use crate::{constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum, template::template::Template};
 
-use super::eval_error::EvalError;
+use super::{eval_error::EvalError, object::Object};
 
-pub trait Visitor<T> {
+pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;
+}
+
+pub trait Constraint: std::fmt::Debug {
+    fn validate(&self, value: &Object) -> bool;
+    fn description(&self) -> String;
+    fn build_sampler(&self) -> Option<Box<dyn Any>>;
 }
 
 // TODO: Consider changing String to &str
@@ -13,6 +19,7 @@ pub trait Visitor<T> {
 pub struct Context {
     pub templates: HashMap<String, Template>,
     pub enums: HashMap<String, Enum>,
+    pub types: HashMap<String, ConstrainedType>,
 }
 
 impl Context {
@@ -30,5 +37,13 @@ impl Context {
 
     pub fn get_enum(&self, key: &str) -> Option<&Enum> {
         self.enums.get(key)
+    }
+
+    pub fn insert_type(&mut self, key: &str, data_type: ConstrainedType) -> Option<ConstrainedType> {
+        self.types.insert(key.to_owned(), data_type)
+    }
+
+    pub fn get_type(&self, key: &str) -> Option<&ConstrainedType> {
+        self.types.get(key)
     }
 }

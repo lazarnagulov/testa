@@ -6,12 +6,19 @@ pub enum Object {
     Float(f32),
     String(String),
     Boolean(bool),
+    Range(isize, isize),
     NoReturn,
 }
 
 impl Object {
     pub fn new<T: Into<Object>>(value: T) -> Self {
         value.into()
+    }
+}
+
+impl From<(isize, isize)> for Object {
+    fn from(value: (isize, isize)) -> Self {
+        Object::Range(value.0, value.1)
     }
 }
 
