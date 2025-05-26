@@ -27,8 +27,8 @@ fn main() {
     let program = parser.parse().unwrap_or_else(|err| {
         let error_message = match err {
             ParserError::Expected { expected, got } => {
-                        format!("Expected '{}' but got '{}'", expected, got)
-                    }
+                format!("Expected '{}' but got '{}'", expected, got)
+            }
             ParserError::InvalidDirective => format!("Invalid directive"),
             ParserError::UnexpectedEOF => format!("Missing enclosing \" or ;"),
             ParserError::Syntax(error) => error,

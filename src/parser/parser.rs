@@ -298,7 +298,7 @@ impl<'src> Parser<'src> {
                 let name = self.parse_identifier_as_string()?;
                 let peek = self.peek_kind();
                 if peek != &With {
-                    return Err(ParserError::expected("with", &format!("{}", *peek)))
+                    return Err(ParserError::expected("with", &format!("{}", *peek)));
                 }
                 DataTypeKind::Custom(name)
             }

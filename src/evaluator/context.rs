@@ -1,6 +1,9 @@
 use std::{any::Any, collections::HashMap};
 
-use crate::{constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum, template::template::Template};
+use crate::{
+    constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum,
+    template::template::Template,
+};
 
 use super::{eval_error::EvalError, object::Object};
 
@@ -39,11 +42,19 @@ impl Context {
         self.enums.get(key)
     }
 
-    pub fn insert_type(&mut self, key: &str, data_type: ConstrainedType) -> Option<ConstrainedType> {
+    pub fn insert_type(
+        &mut self,
+        key: &str,
+        data_type: ConstrainedType,
+    ) -> Option<ConstrainedType> {
         self.types.insert(key.to_owned(), data_type)
     }
 
     pub fn get_type(&self, key: &str) -> Option<&ConstrainedType> {
         self.types.get(key)
+    }
+
+    pub fn get_type_mut(&mut self, key: &str) -> Option<&mut ConstrainedType> {
+        self.types.get_mut(key)
     }
 }

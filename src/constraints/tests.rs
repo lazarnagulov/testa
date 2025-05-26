@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod constraint_test {
-    use crate::{evaluator::{context::Context, evaluator::evaluate}, parser::{parser::Parser, parser_error::ParserError}};
+    use crate::{
+        evaluator::{context::Context, evaluator::evaluate},
+        parser::{parser::Parser, parser_error::ParserError},
+    };
 
     #[test]
     fn evaluate_type_declaration() {
@@ -27,5 +30,4 @@ mod constraint_test {
             ParserError::UndefinedConstraint => panic!("Undefined constraint"),
         }
     }
-
 }

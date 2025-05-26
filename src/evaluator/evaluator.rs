@@ -1,9 +1,12 @@
 use std::{fs::File, io::Write};
 
 use crate::{
-    constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum, parser::ast::{
+    constraints::constrainted_type::ConstrainedType,
+    enumeration::enumeration::Enum,
+    parser::ast::{
         Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program, Statement,
-    }, template::template::Template
+    },
+    template::template::Template,
 };
 
 use super::{
@@ -48,6 +51,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             };
             let data_type = ConstrainedType::new(data_type, context)?;
             context.insert_type(&name, data_type);
+
             Ok(Object::NoReturn)
         }
         Statement::ConstraintDecl { .. } => todo!(),
@@ -232,7 +236,7 @@ fn evaluate_integer_infix(
         InfixOperator::GreaterThan => Ok(Object::new(left > right)),
         InfixOperator::LessThanOrEqual => Ok(Object::new(left <= right)),
         InfixOperator::GreaterThanOrEqual => Ok(Object::new(left >= right)),
-        InfixOperator::ExclusiveRange => Ok(Object::new((left, right-1))),
+        InfixOperator::ExclusiveRange => Ok(Object::new((left, right - 1))),
         InfixOperator::InclusiveRange => Ok(Object::new((left, right))),
         _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
     }

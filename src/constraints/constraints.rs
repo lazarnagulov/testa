@@ -22,7 +22,7 @@ impl Constraint for RangeConstraint {
     fn description(&self) -> String {
         format!("range={}..={}", self.min, self.max)
     }
-    
+
     fn build_sampler(&self) -> Option<Box<dyn std::any::Any>> {
         let dist = Uniform::new_inclusive(self.min as i32, self.max as i32);
         Some(Box::new(dist))
