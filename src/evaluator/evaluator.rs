@@ -3,8 +3,7 @@ use std::{fs::File, io::Write};
 use crate::{
     enumeration::enumeration::Enum,
     parser::ast::{
-        Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
-        Statement,
+        Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program, Statement,
     },
     template::template::Template,
 };
@@ -138,20 +137,20 @@ fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalErro
 }
 
 // fn evaluate_data_type(data_type: DataType) -> Result<Object, EvalError> {
-    // let mut rng = rand::rng();
-    // match data_type {
-    //     DataType::Int => Ok(Object::new(rng.random::<i32>() as isize)),
-    //     DataType::Str => {
-    //         let size = rng.random_range(6..=20);
-    //         let value: String = rng
-    //             .sample_iter(&Alphanumeric)
-    //             .take(size)
-    //             .map(char::from)
-    //             .collect();
-    //         Ok(Object::new(value))
-    //     }
-    //     DataType::Float => Ok(Object::new(rng.random::<f32>())),
-    // }
+// let mut rng = rand::rng();
+// match data_type {
+//     DataType::Int => Ok(Object::new(rng.random::<i32>() as isize)),
+//     DataType::Str => {
+//         let size = rng.random_range(6..=20);
+//         let value: String = rng
+//             .sample_iter(&Alphanumeric)
+//             .take(size)
+//             .map(char::from)
+//             .collect();
+//         Ok(Object::new(value))
+//     }
+//     DataType::Float => Ok(Object::new(rng.random::<f32>())),
+// }
 // }
 
 fn evaluate_prefix_expression(

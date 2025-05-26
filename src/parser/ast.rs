@@ -16,11 +16,11 @@ pub enum Statement {
     },
     TypeDecl {
         name: String,
-        data_type: DataType,
+        data_type: Expression,
     },
     ConstraintDecl {
         name: String,
-        constraint: ConstraintDecl,
+        constraint: ConstraintExpression,
     },
     Enum {
         name: String,
@@ -170,9 +170,18 @@ impl fmt::Display for InfixOperator {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub struct ConstraintDecl {
+pub struct ConstraintExpression {
     pub expression: Expression,
     pub constraint_kind: ConstraintKind,
+}
+
+impl ConstraintExpression {
+    pub fn new(expression: Expression, constraint_kind: ConstraintKind) -> Self {
+        ConstraintExpression {
+            expression,
+            constraint_kind,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -187,18 +196,24 @@ pub enum ConstraintKind {
     Containts,
     StartsWith,
     EndsWith,
-    Custom
+    Custom,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct DataType {
     pub data_type_kind: DataTypeKind,
-    pub constraints: Option<Vec<ConstraintDecl>>,
+    pub constraints: Option<Vec<ConstraintExpression>>,
 }
 
 impl DataType {
-    pub fn new(data_type_kind: DataTypeKind, constraints: Option<Vec<ConstraintDecl>>) -> Self {
-        DataType { data_type_kind, constraints }
+    pub fn new(
+        data_type_kind: DataTypeKind,
+        constraints: Option<Vec<ConstraintExpression>>,
+    ) -> Self {
+        DataType {
+            data_type_kind,
+            constraints,
+        }
     }
 }
 
@@ -206,7 +221,17 @@ impl DataType {
 pub enum DataTypeKind {
     Int,
     Str,
-    Float
+    Float,
+}
+
+impl fmt::Display for DataTypeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DataTypeKind::Int => write!(f, "int"),
+            DataTypeKind::Str => write!(f, "string"),
+            DataTypeKind::Float => write!(f, "float"),
+        }
+    }
 }
 
 #[derive(Ord, Eq, PartialEq, PartialOrd, Debug)]
