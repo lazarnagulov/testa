@@ -172,14 +172,14 @@ impl fmt::Display for InfixOperator {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct ConstraintExpression {
     pub expression: Expression,
-    pub constraint_kind: ConstraintKind,
+    pub kind: ConstraintKind,
 }
 
 impl ConstraintExpression {
     pub fn new(expression: Expression, constraint_kind: ConstraintKind) -> Self {
         ConstraintExpression {
             expression,
-            constraint_kind,
+            kind: constraint_kind,
         }
     }
 }
@@ -189,31 +189,18 @@ pub enum ConstraintKind {
     Range,
     MultipleOf,
     Length,
-    Matches,
-    NotMatches,
-    In,
-    NotIn,
-    Containts,
-    StartsWith,
-    EndsWith,
     Custom,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct DataType {
-    pub data_type_kind: DataTypeKind,
+    pub kind: DataTypeKind,
     pub constraints: Option<Vec<ConstraintExpression>>,
 }
 
 impl DataType {
-    pub fn new(
-        data_type_kind: DataTypeKind,
-        constraints: Option<Vec<ConstraintExpression>>,
-    ) -> Self {
-        DataType {
-            data_type_kind,
-            constraints,
-        }
+    pub fn new(kind: DataTypeKind, constraints: Option<Vec<ConstraintExpression>>) -> Self {
+        DataType { kind, constraints }
     }
 }
 
@@ -222,6 +209,8 @@ pub enum DataTypeKind {
     Int,
     Str,
     Float,
+    Boolean,
+    Custom(String),
 }
 
 impl fmt::Display for DataTypeKind {
@@ -230,6 +219,8 @@ impl fmt::Display for DataTypeKind {
             DataTypeKind::Int => write!(f, "int"),
             DataTypeKind::Str => write!(f, "string"),
             DataTypeKind::Float => write!(f, "float"),
+            DataTypeKind::Boolean => write!(f, "bool"),
+            DataTypeKind::Custom(name) => write!(f, "type: {}", name),
         }
     }
 }

@@ -199,6 +199,8 @@ impl<'src> Lexer<'src> {
                     "generate" => Token::new(Generate, current_index, 8),
                     "template" => Token::new(Template, current_index, 8),
                     "resource" => Token::new(Resource, current_index, 8),
+                    "with" => Token::new(With, current_index, 4),
+                    "extend" => Token::new(Extend, current_index, 6),
                     "true" => Token::new(True, current_index, 4),
                     "false" => Token::new(False, current_index, 4),
                     "enum" => Token::new(Enum, current_index, 4),
@@ -253,14 +255,14 @@ impl<'src> Lexer<'src> {
                     position,
                     last - position + 1,
                 );
-            } 
-         
+            }
+
             let token = self.next().unwrap();
             if is_float && token.1 == '.' {
                 panic!("Invalid float literal");
             } else if token.1 == '.' {
                 is_float = true;
-            } 
+            }
             last = token.0;
         }
 

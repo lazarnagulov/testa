@@ -292,10 +292,22 @@ impl<'src> Parser<'src> {
             Int => DataTypeKind::Int,
             Float => DataTypeKind::Float,
             Str => DataTypeKind::Str,
+            True | False => DataTypeKind::Boolean,
+            Extend => {
+                self.consume_token();
+                let name = self.parse_identifier_as_string()?;
+                let peek = self.peek_kind();
+                if peek != &With {
+                    return Err(ParserError::expected("with", &format!("{}", *peek)));
+                }
+                DataTypeKind::Custom(name)
+            }
             _ => unreachable!(),
         };
+
         self.lexer.next();
         if self.peek_kind() == &LBracket {
+            println!("da");
             let constraints = self.parse_constraints()?;
             // TODO: calculate start and size
             Ok(Expression::new(
@@ -312,8 +324,6 @@ impl<'src> Parser<'src> {
         }
     }
 
-    // constraint custom = it * 20 >= 2350;
-    // TODO: allow inlining custom constraints
     // int [range = 0..=100, { it % 5 == 0 }, custom]
     fn parse_constraints(&mut self) -> Result<Vec<ConstraintExpression>, ParserError> {
         self.consume_token();
@@ -325,19 +335,16 @@ impl<'src> Parser<'src> {
                 "range" => self.parse_constraint_expression(ConstraintKind::Range),
                 "multiple_of" => self.parse_constraint_expression(ConstraintKind::MultipleOf),
                 "length" => self.parse_constraint_expression(ConstraintKind::Length),
-                "matches" => self.parse_constraint_expression(ConstraintKind::Matches),
-                "not_matches" => self.parse_constraint_expression(ConstraintKind::NotMatches),
-                "in" => self.parse_constraint_expression(ConstraintKind::In),
-                "not_in" => self.parse_constraint_expression(ConstraintKind::NotIn),
-                "containts" => self.parse_constraint_expression(ConstraintKind::Containts),
-                "starts_with" => self.parse_constraint_expression(ConstraintKind::StartsWith),
-                "ends_with" => self.parse_constraint_expression(ConstraintKind::EndsWith),
                 _ => {
-                    let expression = self.parse_expression(Precedence::Lowest)?;
-                    Ok(ConstraintExpression::new(
-                        expression,
-                        ConstraintKind::Custom,
-                    ))
+                    if self.peek_kind() == &SingleEqual {
+                        Err(ParserError::UndefinedConstraint)
+                    } else {
+                        let expression = self.parse_expression(Precedence::Lowest)?;
+                        Ok(ConstraintExpression::new(
+                            expression,
+                            ConstraintKind::Custom,
+                        ))
+                    }
                 }
             }?;
             constraints.push(constraint);

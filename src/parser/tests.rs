@@ -5,7 +5,9 @@ mod parser_tests {
 
     use crate::parser::{
         ast::{
-            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program, Statement, Variant
+            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Expression,
+            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program,
+            Statement, Variant,
         },
         parser::Parser,
         parser_error::ParserError,
@@ -233,29 +235,61 @@ mod parser_tests {
     }
 
     #[test]
-    fn parse_type() {
-        let program = "type uint = int[range=0..=1024];";
+    fn parse_extended_type() {
+        let program = r#"
+            type positive_int = int[range=0..=1024];
+            type even_positive_int = extend positive_int with [multiple_of=2];
+        "#;
         let mut parser = Parser::new(program);
-        let expression = Expression::new(ExpressionKind::Type(
-            DataType::new(DataTypeKind::Int, Some(vec![
-                ConstraintExpression::new(
-                    Expression::new(ExpressionKind::Infix { 
-                        left: Box::new(Expression::new(ExpressionKind::IntLiteral(0), 22, 1)), 
-                        operator: InfixOperator::InclusiveRange, 
-                        right: Box::new(Expression::new(ExpressionKind::IntLiteral(1024), 26, 4))
-                    }, 22, 8), 
-                    ConstraintKind::Range
-                )
-            ]))
-        ), 0, 0);
+        let data_type = Expression::new(
+            ExpressionKind::Type(DataType::new(
+                DataTypeKind::Int,
+                Some(vec![ConstraintExpression::new(
+                    Expression::new(
+                        ExpressionKind::Infix {
+                            left: Box::new(Expression::new(ExpressionKind::IntLiteral(0), 43, 1)),
+                            operator: InfixOperator::InclusiveRange,
+                            right: Box::new(Expression::new(
+                                ExpressionKind::IntLiteral(1024),
+                                47,
+                                4,
+                            )),
+                        },
+                        43,
+                        8,
+                    ),
+                    ConstraintKind::Range,
+                )]),
+            )),
+            0,
+            0,
+        );
+        let extended_data_type = Expression::new(
+            ExpressionKind::Type(DataType::new(
+                DataTypeKind::Custom("positive_int".to_owned()),
+                Some(vec![ConstraintExpression::new(
+                    Expression::new(ExpressionKind::IntLiteral(2), 129, 1),
+                    ConstraintKind::MultipleOf,
+                )]),
+            )),
+            0,
+            0,
+        );
+
         match parser.parse() {
             Ok(program) => {
                 assert_eq!(
                     program.0,
-                    vec![Statement::TypeDecl {
-                        name: "uint".to_owned(),
-                        data_type: expression
-                    }]
+                    vec![
+                        Statement::TypeDecl {
+                            name: "positive_int".to_owned(),
+                            data_type
+                        },
+                        Statement::TypeDecl {
+                            name: "even_positive_int".to_owned(),
+                            data_type: extended_data_type
+                        }
+                    ]
                 );
             }
             Err(err) => handle_error(err),
@@ -465,6 +499,7 @@ mod parser_tests {
             ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
             ParserError::InvalidDirective => panic!("Invalid directive"),
             ParserError::Syntax(message) => panic!("{}", message),
+            ParserError::UndefinedConstraint => panic!("Undefined constraint"),
         }
     }
 }
