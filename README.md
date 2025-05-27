@@ -82,13 +82,13 @@ You can apply similar constraints to other data types as well.
 You can define custom types by adding constraints to existing (fundamental) types using this syntax: `type <name> = <type>[<constraint1>, <constraint2>...]`.
 Example:
 ```
-type positive_int = int [range=1..=1024];
+type PositiveInt = int [range=1..=1024];
 ```
-This defines a positive_int type as an int constrained to values from 1 to 1024 (inclusive).
+This defines a PositiveInt type as an int constrained to values from 1 to 1024 (inclusive).
 To extend an existing user-defined type with additional constraints, use: `type <name> = extend <type> with [<constraint1>,<constraint2>..]`
 Example:
 ```
-type <name> = extend <existing_type> with [<constraint1>, <constraint2>, ...];
+type PositiveEvenInt = extend PositiveInt with [multiple_of=2];
 ```
 This lets you build on previously defined types by layering more rules on top.
 ## Templates
