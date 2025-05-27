@@ -25,6 +25,7 @@ pub enum TokenKind {
     Int,
     Float,
     Str,
+    Bool,
 
     // syntax
     LParen,            // (
@@ -82,6 +83,7 @@ impl Display for TokenKind {
             TokenKind::Int => "int",
             TokenKind::Float => "float",
             TokenKind::Str => "string",
+            TokenKind::Bool => "bool",
             TokenKind::Extend => "extend",
             TokenKind::With => "with",
             TokenKind::LParen => "(",

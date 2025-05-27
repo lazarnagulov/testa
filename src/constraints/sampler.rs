@@ -1,6 +1,6 @@
 use std::fmt;
 
-use rand::distr::{Distribution, Uniform};
+use rand::{distr::{Distribution, Uniform}, Rng};
 
 use crate::evaluator::object::Object;
 
@@ -104,5 +104,23 @@ impl Sampler for UniformSampler {
         let mut rng = rand::rng();
         let sample = Uniform::try_from(self.min..self.max).unwrap();
         Object::new(sample.sample(&mut rng) as isize)
+    }
+}
+
+#[derive(Debug)]
+pub struct BooleanSampler {
+    bias: f32,
+}
+
+impl BooleanSampler {
+    pub fn new(bias: f32) -> Self {
+        BooleanSampler { bias }
+    }
+}
+
+impl Sampler for BooleanSampler {
+    fn sample(&self) -> Object {
+        let mut rng = rand::rng();
+        Object::new(rng.random_bool((self.bias / 100.0) as f64))
     }
 }

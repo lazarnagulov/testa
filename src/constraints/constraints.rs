@@ -2,7 +2,7 @@ use crate::evaluator::object::Object;
 
 use super::{
     constrainted_type::Constraint,
-    sampler::{Sampler, UniformSampler},
+    sampler::{BooleanSampler, Sampler, UniformSampler},
 };
 
 #[derive(Debug, Clone)]
@@ -60,6 +60,36 @@ impl Constraint for MultipleOfConstraint {
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
         None
+    }
+
+    fn clone_box(&self) -> Box<dyn Constraint> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BiasConstraint {
+    pub percent: f32,    
+}
+
+impl BiasConstraint {
+    pub fn new(percent: f32) -> Self {
+        BiasConstraint { percent }
+    }
+}
+
+
+impl Constraint for BiasConstraint {
+    fn validate(&self, _value: &Object) -> bool {
+        true
+    }
+
+    fn description(&self) -> String {
+        format!("bias({}%)", self.percent)
+    }
+
+    fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
+        Some(Box::new(BooleanSampler::new(self.percent)))
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {

@@ -259,7 +259,7 @@ impl<'src> Parser<'src> {
 
     fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.peek_kind() {
-            Int | Float | Str => Ok(self.parse_type()?),
+            Int | Float | Str | Bool => Ok(self.parse_type()?),
             Identifier | True | False | IntLiteral | StringLiteral | FloatLiteral => {
                 Ok(self.parse_literal()?)
             }
@@ -292,7 +292,7 @@ impl<'src> Parser<'src> {
             Int => DataTypeKind::Int,
             Float => DataTypeKind::Float,
             Str => DataTypeKind::Str,
-            True | False => DataTypeKind::Boolean,
+            Bool => DataTypeKind::Boolean,
             Extend => {
                 self.consume_token();
                 let name = self.parse_identifier_as_string()?;
@@ -334,6 +334,7 @@ impl<'src> Parser<'src> {
                 "range" => self.parse_constraint_expression(ConstraintKind::Range),
                 "multiple_of" => self.parse_constraint_expression(ConstraintKind::MultipleOf),
                 "length" => self.parse_constraint_expression(ConstraintKind::Length),
+                "bias" => self.parse_constraint_expression(ConstraintKind::Bias),
                 _ => {
                     if self.peek_kind() == &SingleEqual {
                         Err(ParserError::UndefinedConstraint)

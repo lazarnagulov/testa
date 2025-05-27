@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    constraints::{MultipleOfConstraint, RangeConstraint},
+    constraints::{BiasConstraint, MultipleOfConstraint, RangeConstraint},
     sampler::{ConstraintSet, Sampler},
 };
 
@@ -82,6 +82,13 @@ impl ConstrainedType {
                         obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
                     }?;
                     evaluated_constraints.push(Box::new(MultipleOfConstraint::new(integer as i32)));
+                }
+                ConstraintKind::Bias => {
+                    let float = match object {
+                        Object::Float(value) => Ok(value),
+                        obj => Err(EvalError::type_error("float".to_owned(), format!("{}", obj))),
+                    }?;
+                    evaluated_constraints.push(Box::new(BiasConstraint::new(float)));
                 }
                 _ => todo!(),
             }

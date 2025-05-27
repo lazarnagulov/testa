@@ -206,6 +206,7 @@ impl<'src> Lexer<'src> {
                     "enum" => Token::new(Enum, current_index, 4),
                     "int" => Token::new(Int, current_index, 3),
                     "float" => Token::new(Float, current_index, 5),
+                    "bool" => Token::new(Bool, current_index, 4),
                     "string" => Token::new(Str, current_index, 6),
                     "type" => Token::new(Type, current_index, 4),
                     "constraint" => Token::new(Constraint, current_index, 10),

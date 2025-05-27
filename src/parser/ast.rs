@@ -189,6 +189,7 @@ pub enum ConstraintKind {
     Range,
     MultipleOf,
     Length,
+    Bias,
     Custom,
 }
 
