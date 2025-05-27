@@ -39,6 +39,13 @@ pub struct ConstrainedType {
 
 impl ConstrainedType {
     pub fn new(data_type: DataType, context: &Context) -> Result<Self, EvalError> {
+        let parent = match &data_type.kind {
+            DataTypeKind::Custom(parent_name) => {
+                context.get_type(&parent_name).map(|rc| Rc::clone(rc))
+            }
+            _ => None,
+        };
+
         let Some(constraints) = data_type.constraints else {
             return Ok(ConstrainedType {
                 parent: None,
@@ -49,7 +56,7 @@ impl ConstrainedType {
         };
         let evaluated_constraints = ConstrainedType::evaluate_constraints(&constraints, context)?;
         Ok(ConstrainedType {
-            parent: None,
+            parent,
             type_kind: data_type.kind,
             constraints: evaluated_constraints,
             cached_sampler: RefCell::new(None),

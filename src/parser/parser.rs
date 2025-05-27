@@ -307,7 +307,6 @@ impl<'src> Parser<'src> {
 
         self.lexer.next();
         if self.peek_kind() == &LBracket {
-            println!("da");
             let constraints = self.parse_constraints()?;
             // TODO: calculate start and size
             Ok(Expression::new(

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum,
@@ -16,7 +16,7 @@ pub trait Visitor<T>: std::fmt::Debug {
 pub struct Context {
     pub templates: HashMap<String, Template>,
     pub enums: HashMap<String, Enum>,
-    pub types: HashMap<String, ConstrainedType>,
+    pub types: HashMap<String, Rc<ConstrainedType>>,
 }
 
 impl Context {
@@ -40,15 +40,15 @@ impl Context {
         &mut self,
         key: &str,
         data_type: ConstrainedType,
-    ) -> Option<ConstrainedType> {
-        self.types.insert(key.to_owned(), data_type)
+    ) -> Option<Rc<ConstrainedType>> {
+        self.types.insert(key.to_owned(), Rc::from(data_type))
     }
 
-    pub fn get_type(&self, key: &str) -> Option<&ConstrainedType> {
+    pub fn get_type(&self, key: &str) -> Option<&Rc<ConstrainedType>> {
         self.types.get(key)
     }
 
-    pub fn get_type_mut(&mut self, key: &str) -> Option<&mut ConstrainedType> {
+    pub fn get_type_mut(&mut self, key: &str) -> Option<&mut Rc<ConstrainedType>> {
         self.types.get_mut(key)
     }
 }
