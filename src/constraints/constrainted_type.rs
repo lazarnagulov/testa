@@ -40,10 +40,8 @@ pub struct ConstrainedType {
 impl ConstrainedType {
     pub fn new(data_type: DataType, context: &Context) -> Result<Self, EvalError> {
         let parent = match &data_type.kind {
-            DataTypeKind::Custom(parent_name) => {
-                context.get_type(&parent_name).map(|rc| Rc::clone(rc))
-            }
-            _ => None,
+            DataTypeKind::Custom(parent_name) => context.get_type(&parent_name).map(|rc| Rc::clone(rc)),
+            _ => None
         };
 
         let Some(constraints) = data_type.constraints else {

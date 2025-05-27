@@ -87,7 +87,7 @@ impl Sampler for CompositeSampler {
 }
 
 #[derive(Debug)]
-struct UniformSampler {
+pub struct UniformSampler {
     min: i32,
     max: i32,
 }
@@ -100,6 +100,7 @@ impl UniformSampler {
 
 impl Sampler for UniformSampler {
     fn sample(&self) -> Object {
+        // TODO: do not create rng every type, extract it somewhere
         let mut rng = rand::rng();
         let sample = Uniform::try_from(self.min..self.max).unwrap();
         Object::new(sample.sample(&mut rng) as isize)

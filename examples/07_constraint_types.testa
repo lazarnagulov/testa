@@ -1,0 +1,11 @@
+type age = int [range=0..=100];
+
+template User {
+    id = int[range=1..=1024];
+    name = string;
+    password = string;
+    age = age;
+    balance = float;
+}
+
+generate User[10];

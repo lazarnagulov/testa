@@ -1,6 +1,9 @@
 use crate::evaluator::object::Object;
 
-use super::{constrainted_type::Constraint, sampler::Sampler};
+use super::{
+    constrainted_type::Constraint,
+    sampler::{Sampler, UniformSampler},
+};
 
 #[derive(Debug, Clone)]
 pub struct RangeConstraint {
@@ -24,9 +27,10 @@ impl Constraint for RangeConstraint {
     }
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
-        // let dist = Uniform::new_inclusive(self.min as i32, self.max as i32);
-        // Some(Box::new(dist))
-        todo!()
+        Some(Box::new(UniformSampler::new(
+            self.min as i32,
+            self.max as i32,
+        )))
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {
@@ -55,8 +59,7 @@ impl Constraint for MultipleOfConstraint {
     }
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
-        // None
-        todo!()
+        None
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {
