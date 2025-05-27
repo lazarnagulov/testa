@@ -93,7 +93,7 @@ type PositiveEvenInt = extend PositiveInt with [multiple_of=2];
 This lets you build on previously defined types by layering more rules on top.
 ## Templates
 
-Templates are declared using `template <name> { key = <value:expr>; }`.
+Templates are declared using `template <name> [: <parent_name>] { key = <value:expr>; }`.
 
 ```
 template User {
@@ -102,6 +102,15 @@ template User {
     age = int;
 }
 ```
+You can extend template using `: <parent name>`.
+```
+template Student : User {
+    index_id: string;
+    override age: int [range=19..=30];
+}
+```
+> [!NOTE]
+> Fields are overridden by default. Use the `override` keyword to prevent the warning.
 
 Check examples: [template](./examples/02_generate.testa).
 
