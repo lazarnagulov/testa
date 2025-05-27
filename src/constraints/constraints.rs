@@ -1,6 +1,6 @@
-use rand::distr::Uniform;
+use crate::evaluator::object::Object;
 
-use crate::evaluator::{context::Constraint, object::Object};
+use super::{constrainted_type::Constraint, sampler::Sampler};
 
 #[derive(Debug, Clone)]
 pub struct RangeConstraint {
@@ -23,9 +23,14 @@ impl Constraint for RangeConstraint {
         format!("range={}..={}", self.min, self.max)
     }
 
-    fn build_sampler(&self) -> Option<Box<dyn std::any::Any>> {
-        let dist = Uniform::new_inclusive(self.min as i32, self.max as i32);
-        Some(Box::new(dist))
+    fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
+        // let dist = Uniform::new_inclusive(self.min as i32, self.max as i32);
+        // Some(Box::new(dist))
+        todo!()
+    }
+
+    fn clone_box(&self) -> Box<dyn Constraint> {
+        Box::new(self.clone())
     }
 }
 
@@ -49,7 +54,12 @@ impl Constraint for MultipleOfConstraint {
         format!("multiple_of({})", self.base)
     }
 
-    fn build_sampler(&self) -> Option<Box<dyn std::any::Any>> {
-        None
+    fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
+        // None
+        todo!()
+    }
+
+    fn clone_box(&self) -> Box<dyn Constraint> {
+        Box::new(self.clone())
     }
 }

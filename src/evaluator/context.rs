@@ -1,20 +1,14 @@
-use std::{any::Any, collections::HashMap};
+use std::collections::HashMap;
 
 use crate::{
     constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum,
     template::template::Template,
 };
 
-use super::{eval_error::EvalError, object::Object};
+use super::eval_error::EvalError;
 
 pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;
-}
-
-pub trait Constraint: std::fmt::Debug {
-    fn validate(&self, value: &Object) -> bool;
-    fn description(&self) -> String;
-    fn build_sampler(&self) -> Option<Box<dyn Any>>;
 }
 
 // TODO: Consider changing String to &str
