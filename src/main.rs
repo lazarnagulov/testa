@@ -32,6 +32,7 @@ fn main() {
             ParserError::InvalidDirective => format!("Invalid directive"),
             ParserError::UnexpectedEOF => format!("Missing enclosing \" or ;"),
             ParserError::Syntax(error) => error,
+            ParserError::UndefinedConstraint => format!("Undefined constraint"),
         };
         eprintln!("{}", error_message);
         std::process::exit(1);

@@ -1,0 +1,13 @@
+type Age = int [range=0..=100];
+type HouseNumber = extend age with [multiple_of=2];
+
+template User {
+    id = int[range=1..=1024];
+    name = string;
+    password = string;
+    age = Age;
+    balance = float;
+    home_number = HouseNumber;
+}
+
+generate User[10];

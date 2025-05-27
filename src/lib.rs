@@ -1,3 +1,4 @@
+pub mod constraints;
 pub mod enumeration;
 pub mod evaluator;
 pub mod lexer;

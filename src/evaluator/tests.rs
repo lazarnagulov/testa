@@ -26,14 +26,6 @@ mod evaluator_tests {
     }
 
     #[test]
-    fn evalute_data_types() {
-        let program = Parser::new("int;").parse().unwrap();
-        let mut context = Context::default();
-        let result = evaluate(program, &mut context).unwrap();
-        println!("{}", result);
-    }
-
-    #[test]
     fn evaluate_enum() {
         let program = Parser::new(
             r#"

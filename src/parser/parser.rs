@@ -39,6 +39,7 @@ impl<'src> Parser<'src> {
             Resource => todo!(),
             Enum => self.parse_enum(),
             Generate => self.parse_generate(),
+            Type => self.parse_type_declaration(),
             _ => Ok(Statement::Expression(self.parse_expression_statement()?)),
         }
     }
@@ -144,10 +145,10 @@ impl<'src> Parser<'src> {
         Ok(ExpressionStatemnt { expression })
     }
 
-    fn parse_expression(&mut self, precendence: Precedence) -> Result<Expression, ParserError> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
         let mut expression = self.parse_primary_expression()?;
 
-        while precendence < self.current_precendence() {
+        while precedence < self.current_precendence() {
             expression = match &self.peek_kind() {
                 Asterisk => self.parse_infix_expression(
                     expression,
@@ -258,7 +259,7 @@ impl<'src> Parser<'src> {
 
     fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.peek_kind() {
-            Int | Float | Str => Ok(self.parse_type()?),
+            Int | Float | Str | Bool => Ok(self.parse_type()?),
             Identifier | True | False | IntLiteral | StringLiteral | FloatLiteral => {
                 Ok(self.parse_literal()?)
             }
@@ -273,22 +274,98 @@ impl<'src> Parser<'src> {
         }
     }
 
+    // type usize = int [range = 0..=255];
+    fn parse_type_declaration(&mut self) -> Result<Statement, ParserError> {
+        self.lexer.next();
+        let name = self.parse_identifier_as_string()?;
+        self.expect_token(SingleEqual)?;
+        let data_type = self.parse_type()?;
+        self.expect_token(Semicolon)?;
+        Ok(Statement::TypeDecl { name, data_type })
+    }
+
     fn parse_type(&mut self) -> Result<Expression, ParserError> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
         let start = token.start;
         let size = token.size;
-        let data_type = match token.kind {
-            Int => DataType::Int,
-            Float => DataType::Float,
-            Str => DataType::Str,
+        let data_type_kind = match token.kind {
+            Int => DataTypeKind::Int,
+            Float => DataTypeKind::Float,
+            Str => DataTypeKind::Str,
+            Bool => DataTypeKind::Boolean,
+            Extend => {
+                self.consume_token();
+                let name = self.parse_identifier_as_string()?;
+                let peek = self.peek_kind();
+                if peek != &With {
+                    return Err(ParserError::expected("with", &format!("{}", *peek)));
+                }
+                DataTypeKind::Custom(name)
+            }
             _ => unreachable!(),
         };
+
         self.lexer.next();
-        Ok(Expression::new(
-            ExpressionKind::Type(data_type),
-            start,
-            size,
-        ))
+        if self.peek_kind() == &LBracket {
+            let constraints = self.parse_constraints()?;
+            // TODO: calculate start and size
+            Ok(Expression::new(
+                ExpressionKind::Type(DataType::new(data_type_kind, Some(constraints))),
+                0,
+                0,
+            ))
+        } else {
+            Ok(Expression::new(
+                ExpressionKind::Type(DataType::new(data_type_kind, None)),
+                start,
+                size,
+            ))
+        }
+    }
+
+    // int [range = 0..=100, { it % 5 == 0 }, custom]
+    fn parse_constraints(&mut self) -> Result<Vec<ConstraintExpression>, ParserError> {
+        self.consume_token();
+        let mut constraints: Vec<ConstraintExpression> = vec![];
+
+        while self.peek_kind() == &Identifier {
+            let identifier = self.parse_identifier_as_string()?;
+            let constraint = match identifier.as_str() {
+                "range" => self.parse_constraint_expression(ConstraintKind::Range),
+                "multiple_of" => self.parse_constraint_expression(ConstraintKind::MultipleOf),
+                "length" => self.parse_constraint_expression(ConstraintKind::Length),
+                "bias" => self.parse_constraint_expression(ConstraintKind::Bias),
+                "min" => self.parse_constraint_expression(ConstraintKind::Min),
+                "max" => self.parse_constraint_expression(ConstraintKind::Max),
+                _ => {
+                    if self.peek_kind() == &SingleEqual {
+                        Err(ParserError::UndefinedConstraint)
+                    } else {
+                        let expression = self.parse_expression(Precedence::Lowest)?;
+                        Ok(ConstraintExpression::new(
+                            expression,
+                            ConstraintKind::Custom,
+                        ))
+                    }
+                }
+            }?;
+            constraints.push(constraint);
+            if self.peek_kind() == &RBracket {
+                break;
+            }
+            self.expect_token(Comma)?;
+        }
+        self.expect_token(RBracket)?;
+        Ok(constraints)
+    }
+
+    fn parse_constraint_expression(
+        &mut self,
+        constraint_kind: ConstraintKind,
+    ) -> Result<ConstraintExpression, ParserError> {
+        self.expect_token(SingleEqual)?;
+        let expression = self.parse_expression(Precedence::Lowest)?;
+        Ok(ConstraintExpression::new(expression, constraint_kind))
     }
 
     fn parse_literal(&mut self) -> Result<Expression, ParserError> {
@@ -345,7 +422,7 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_group_expression(&mut self) -> Result<Expression, ParserError> {
-        let start = self.expect_token(LParen).unwrap().0;
+        let (start, _) = self.consume_token();
         let expression = self.parse_expression(Precedence::Lowest)?;
         match self.peek_kind() {
             RParen => {
@@ -363,11 +440,7 @@ impl<'src> Parser<'src> {
         &mut self,
         operator: PrefixOperator,
     ) -> Result<Expression, ParserError> {
-        let (start, size) = self.expect_token(match operator {
-            PrefixOperator::LogicalNegate => ExclamationMark,
-            PrefixOperator::Negative => Minus,
-            PrefixOperator::BitNegate => BitNegate,
-        })?;
+        let (start, size) = self.consume_token();
         let expression = self.parse_expression(Precedence::Prefix)?;
         let size = size + expression.size;
         Ok(Expression::new(
@@ -412,6 +485,11 @@ impl<'src> Parser<'src> {
         } else {
             Ok((token.start, token.size))
         }
+    }
+
+    fn consume_token(&mut self) -> (usize, usize) {
+        let token = self.lexer.next().unwrap();
+        (token.start, token.size)
     }
 
     fn peek_kind(&mut self) -> &TokenKind {

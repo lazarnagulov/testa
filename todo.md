@@ -3,7 +3,7 @@
 - [ ] Lookup
 - [ ] Better error messages
 
-### Lexer
+### Lexer ✅
 - [x] Arithmetic operators : +, -, *, /, %.
 - [x] Bitwise operators : &, |, ^, <<, >>, ~.
 - [x] Logical operators: &&, ||.
@@ -26,7 +26,8 @@
 - [x] Generate statement
 - [ ] Resource statement
 - [x] Template statement
-- [ ] Type constraint: e.g. int<32>[range=1..=16]
+- [x] Type constraint: e.g. int[range=1..=16]
+- [ ] List data: int<32>
 
 ### Evaluator
 - [x] Infix expressions : arithmetic, bitwise (expect ~) operators, range? 
@@ -36,11 +37,12 @@
 - [x] Template statement
 - [x] Anonymous Generate statement
 - [x] Named Generate statement
-- [ ] Identifiers
+- [x] Enum generation
 - [ ] Built-ins
-- [ ] Type constraint: e.g. int<32>[range=1..=16]
-- [ ] Random generate with with constraints: e.g. int<32>[range=1..=16]
-- [ ] Weights
+- [ ] Lists: int<32>[range=1..=16]
+- [x] Random generate with with constraints(INT): e.g. int[range=1..=16]
+- [x] Weights for enums
+- [ ] Type checking constraints
 
 ### Ideas
 
@@ -67,7 +69,7 @@ template Store {
 ```
 constraint Positive = field > 0; 
 ```
-- Weights
+- Weights ✅
 ```
 enum Role { User => 9; Admin => 1; Developer => 5 }
 ```
@@ -75,9 +77,9 @@ enum Role { User => 9; Admin => 1; Developer => 5 }
 
 - Should ranges be infix expression or its own kind?
 - Should directive and built-ins be seperated from TokenKind -- Directive(DirectiveKind)?
-- How should constraints be added to types?
+- How should constraints be added to types? ✅
 - Floats in AST as String?
 - Type chacker?
 - Should I change String to &'src str?
 - How to properly use Rc<> in evaluator?
-- Enum variants ';' intead of ','?
+- Enum variants ';' intead of ','? ✅

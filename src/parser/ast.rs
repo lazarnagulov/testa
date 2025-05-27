@@ -14,6 +14,14 @@ pub enum Statement {
         argument: String,
         options: Vec<Field>,
     },
+    TypeDecl {
+        name: String,
+        data_type: Expression,
+    },
+    ConstraintDecl {
+        name: String,
+        constraint: ConstraintExpression,
+    },
     Enum {
         name: String,
         variants: Vec<Variant>,
@@ -161,11 +169,63 @@ impl fmt::Display for InfixOperator {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub enum DataType {
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct ConstraintExpression {
+    pub expression: Expression,
+    pub kind: ConstraintKind,
+}
+
+impl ConstraintExpression {
+    pub fn new(expression: Expression, constraint_kind: ConstraintKind) -> Self {
+        ConstraintExpression {
+            expression,
+            kind: constraint_kind,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum ConstraintKind {
+    Range,
+    MultipleOf,
+    Length,
+    Bias,
+    Custom,
+    Min,
+    Max,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct DataType {
+    pub kind: DataTypeKind,
+    pub constraints: Option<Vec<ConstraintExpression>>,
+}
+
+impl DataType {
+    pub fn new(kind: DataTypeKind, constraints: Option<Vec<ConstraintExpression>>) -> Self {
+        DataType { kind, constraints }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum DataTypeKind {
     Int,
     Str,
     Float,
+    Boolean,
+    Custom(String),
+}
+
+impl fmt::Display for DataTypeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DataTypeKind::Int => write!(f, "int"),
+            DataTypeKind::Str => write!(f, "string"),
+            DataTypeKind::Float => write!(f, "float"),
+            DataTypeKind::Boolean => write!(f, "bool"),
+            DataTypeKind::Custom(name) => write!(f, "type: {}", name),
+        }
+    }
 }
 
 #[derive(Ord, Eq, PartialEq, PartialOrd, Debug)]

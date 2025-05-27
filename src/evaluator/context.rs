@@ -1,10 +1,13 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::{enumeration::enumeration::Enum, template::template::Template};
+use crate::{
+    constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum,
+    template::template::Template,
+};
 
 use super::eval_error::EvalError;
 
-pub trait Visitor<T> {
+pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;
 }
 
@@ -13,6 +16,7 @@ pub trait Visitor<T> {
 pub struct Context {
     pub templates: HashMap<String, Template>,
     pub enums: HashMap<String, Enum>,
+    pub types: HashMap<String, Rc<ConstrainedType>>,
 }
 
 impl Context {
@@ -30,5 +34,21 @@ impl Context {
 
     pub fn get_enum(&self, key: &str) -> Option<&Enum> {
         self.enums.get(key)
+    }
+
+    pub fn insert_type(
+        &mut self,
+        key: &str,
+        data_type: ConstrainedType,
+    ) -> Option<Rc<ConstrainedType>> {
+        self.types.insert(key.to_owned(), Rc::from(data_type))
+    }
+
+    pub fn get_type(&self, key: &str) -> Option<&Rc<ConstrainedType>> {
+        self.types.get(key)
+    }
+
+    pub fn get_type_mut(&mut self, key: &str) -> Option<&mut Rc<ConstrainedType>> {
+        self.types.get_mut(key)
     }
 }

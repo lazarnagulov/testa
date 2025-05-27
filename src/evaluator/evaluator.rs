@@ -3,10 +3,11 @@ use std::{fs::File, io::Write};
 use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
+    constraints::constrainted_type::ConstrainedType,
     enumeration::enumeration::Enum,
     parser::ast::{
-        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
-        Statement,
+        DataType, DataTypeKind, Expression, ExpressionKind::*, Field, InfixOperator,
+        PrefixOperator, Program, Statement,
     },
     template::template::Template,
 };
@@ -47,6 +48,16 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         }
         Statement::OutputDirective { .. } => todo!(),
         Statement::Resource { .. } => todo!(),
+        Statement::TypeDecl { name, data_type } => {
+            let Type(data_type) = data_type.kind else {
+                unreachable!()
+            };
+            let data_type = ConstrainedType::new(data_type, context)?;
+            context.insert_type(&name, data_type);
+
+            Ok(Object::NoReturn)
+        }
+        Statement::ConstraintDecl { .. } => todo!(),
     }
 }
 
@@ -106,7 +117,7 @@ pub fn evaluate_expression(
         StringLiteral(value) => Ok(Object::new(value.to_owned())),
         BooleanLiteral(value) => Ok(Object::new(*value)),
         Identifier(name) => evaluate_identifier(name, context),
-        Type(data_type) => evaluate_data_type(*data_type),
+        Type(data_type) => evaluate_data_type(data_type, context),
         Prefix {
             operator,
             expression,
@@ -127,31 +138,41 @@ pub fn evaluate_expression(
     }
 }
 
-fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalError> {
-    // TODO: Add support for more identifiers - now it works only for enumerations
-    let value = context
-        .get_enum(name)
-        .ok_or_else(|| EvalError::General("Only enums are supported for now".to_owned()))?
-        .visit(context)?;
+fn evaluate_data_type(data_type: &DataType, context: &Context) -> Result<Object, EvalError> {
+    // TODO: Move not constraints generation to visit()
+    if data_type.constraints.is_none() {
+        let mut rng = rand::rng();
+        return match &data_type.kind {
+            DataTypeKind::Int => Ok(Object::new(rng.random::<i32>() as isize)),
+            DataTypeKind::Str => {
+                let size = rng.random_range(6..=20);
+                let value: String = rng
+                    .sample_iter(&Alphanumeric)
+                    .take(size)
+                    .map(char::from)
+                    .collect();
+                Ok(Object::new(value))
+            }
+            DataTypeKind::Boolean => Ok(Object::new(rng.random_bool(50.0))),
+            DataTypeKind::Float => Ok(Object::new(rng.random::<f32>())),
+            DataTypeKind::Custom(name) => evaluate_identifier(name, context),
+        };
+    }
 
-    Ok(Object::new(value))
+    // TODO: not cloning here?
+    let constrainted_type = ConstrainedType::new(data_type.clone(), context)?;
+    Ok(constrainted_type.visit(context)?)
 }
 
-fn evaluate_data_type(data_type: DataType) -> Result<Object, EvalError> {
-    let mut rng = rand::rng();
-    match data_type {
-        DataType::Int => Ok(Object::new(rng.random::<i32>() as isize)),
-        DataType::Str => {
-            let size = rng.random_range(6..=20);
-            let value: String = rng
-                .sample_iter(&Alphanumeric)
-                .take(size)
-                .map(char::from)
-                .collect();
-            Ok(Object::new(value))
-        }
-        DataType::Float => Ok(Object::new(rng.random::<f32>())),
+fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalError> {
+    // TODO: Add support for more identifiers - now it works only for enumerations
+    if let Some(enumeration) = context.get_enum(name) {
+        return Ok(Object::new(enumeration.visit(context)?));
     }
+    if let Some(data_type) = context.get_type(name) {
+        return Ok(Object::new(data_type.visit(context)?));
+    }
+    todo!()
 }
 
 fn evaluate_prefix_expression(
@@ -245,8 +266,8 @@ fn evaluate_integer_infix(
         InfixOperator::GreaterThan => Ok(Object::new(left > right)),
         InfixOperator::LessThanOrEqual => Ok(Object::new(left <= right)),
         InfixOperator::GreaterThanOrEqual => Ok(Object::new(left >= right)),
-        InfixOperator::ExclusiveRange => todo!(),
-        InfixOperator::InclusiveRange => todo!(),
+        InfixOperator::ExclusiveRange => Ok(Object::new((left, right - 1))),
+        InfixOperator::InclusiveRange => Ok(Object::new((left, right))),
         _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
     }
 }

@@ -50,10 +50,11 @@ You add additional options for directive with `{ key = <value:expr>; ... }`.
 
 ## Data Types
 
-Currently, there are 3 available data types that can be used to express and generate random values:
+Currently, there are 4 available data types that can be used to express and generate random values:
 - int
 - string
 - float
+- bool
 
 ### Adding Constraints
 
@@ -76,6 +77,20 @@ In the above example:
 
 You can apply similar constraints to other data types as well.
 
+### Custom types
+
+You can define custom types by adding constraints to existing (fundamental) types using this syntax: `type <name> = <type>[<constraint1>, <constraint2>...]`.
+Example:
+```
+type PositiveInt = int [range=1..=1024];
+```
+This defines a PositiveInt type as an int constrained to values from 1 to 1024 (inclusive).
+To extend an existing user-defined type with additional constraints, use: `type <name> = extend <type> with [<constraint1>,<constraint2>..]`
+Example:
+```
+type PositiveEvenInt = extend PositiveInt with [multiple_of=2];
+```
+This lets you build on previously defined types by layering more rules on top.
 ## Templates
 
 Templates are declared using `template <name> { key = <value:expr>; }`.

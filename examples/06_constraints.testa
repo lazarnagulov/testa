@@ -1,0 +1,10 @@
+template User {
+    id = int[range=1..=1024];
+    name = string;
+    password = string;
+    age = int[range=1..=100];
+    balance = float;
+    is_deleted = bool[bias=30.0];
+}
+
+generate User[10];

@@ -5,8 +5,9 @@ mod parser_tests {
 
     use crate::parser::{
         ast::{
-            DataType, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator,
-            PrefixOperator, Program, Statement, Variant,
+            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Expression,
+            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program,
+            Statement, Variant,
         },
         parser::Parser,
         parser_error::ParserError,
@@ -36,7 +37,11 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         let field = Field::new(
             "name".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Str), 23, 6),
+            Expression::new(
+                ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
+                23,
+                6,
+            ),
         );
         match parser.parse() {
             Ok(program) => {
@@ -58,15 +63,27 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         let name_field = Field::new(
             "name".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Str), 26, 6),
+            Expression::new(
+                ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
+                26,
+                6,
+            ),
         );
         let quantity_field = Field::new(
             "quantity".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Int), 45, 3),
+            Expression::new(
+                ExpressionKind::Type(DataType::new(DataTypeKind::Int, None)),
+                45,
+                3,
+            ),
         );
         let price_field = Field::new(
             "price".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Float), 58, 5),
+            Expression::new(
+                ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
+                58,
+                5,
+            ),
         );
         match parser.parse() {
             Ok(program) => {
@@ -95,11 +112,19 @@ mod parser_tests {
         let mut parser = Parser::new(program);
         let name_field = Field::new(
             "name".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Str), 25, 6),
+            Expression::new(
+                ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
+                25,
+                6,
+            ),
         );
         let price_field = Field::new(
             "price".to_string(),
-            Expression::new(ExpressionKind::Type(DataType::Float), 41, 5),
+            Expression::new(
+                ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
+                41,
+                5,
+            ),
         );
         match parser.parse() {
             Ok(program) => {
@@ -203,6 +228,68 @@ mod parser_tests {
                         name: "Role".to_string(),
                         variants: vec![Variant::new("User".to_string(), None)]
                     }]
+                );
+            }
+            Err(err) => handle_error(err),
+        }
+    }
+
+    #[test]
+    fn parse_extended_type() {
+        let program = r#"
+            type positive_int = int[range=0..=1024];
+            type even_positive_int = extend positive_int with [multiple_of=2];
+        "#;
+        let mut parser = Parser::new(program);
+        let data_type = Expression::new(
+            ExpressionKind::Type(DataType::new(
+                DataTypeKind::Int,
+                Some(vec![ConstraintExpression::new(
+                    Expression::new(
+                        ExpressionKind::Infix {
+                            left: Box::new(Expression::new(ExpressionKind::IntLiteral(0), 43, 1)),
+                            operator: InfixOperator::InclusiveRange,
+                            right: Box::new(Expression::new(
+                                ExpressionKind::IntLiteral(1024),
+                                47,
+                                4,
+                            )),
+                        },
+                        43,
+                        8,
+                    ),
+                    ConstraintKind::Range,
+                )]),
+            )),
+            0,
+            0,
+        );
+        let extended_data_type = Expression::new(
+            ExpressionKind::Type(DataType::new(
+                DataTypeKind::Custom("positive_int".to_owned()),
+                Some(vec![ConstraintExpression::new(
+                    Expression::new(ExpressionKind::IntLiteral(2), 129, 1),
+                    ConstraintKind::MultipleOf,
+                )]),
+            )),
+            0,
+            0,
+        );
+
+        match parser.parse() {
+            Ok(program) => {
+                assert_eq!(
+                    program.0,
+                    vec![
+                        Statement::TypeDecl {
+                            name: "positive_int".to_owned(),
+                            data_type
+                        },
+                        Statement::TypeDecl {
+                            name: "even_positive_int".to_owned(),
+                            data_type: extended_data_type
+                        }
+                    ]
                 );
             }
             Err(err) => handle_error(err),
@@ -412,6 +499,7 @@ mod parser_tests {
             ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
             ParserError::InvalidDirective => panic!("Invalid directive"),
             ParserError::Syntax(message) => panic!("{}", message),
+            ParserError::UndefinedConstraint => panic!("Undefined constraint"),
         }
     }
 }

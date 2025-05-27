@@ -19,6 +19,10 @@ impl<'src> Lexer<'src> {
         self.chars.peek().copied()
     }
 
+    fn peek_n(&self, n: usize) -> Option<(usize, char)> {
+        self.chars.clone().nth(n - 1)
+    }
+
     fn next_token(&mut self) -> Token {
         use super::token::TokenKind::*;
         self.skip_whitespaces();
@@ -195,12 +199,17 @@ impl<'src> Lexer<'src> {
                     "generate" => Token::new(Generate, current_index, 8),
                     "template" => Token::new(Template, current_index, 8),
                     "resource" => Token::new(Resource, current_index, 8),
+                    "with" => Token::new(With, current_index, 4),
+                    "extend" => Token::new(Extend, current_index, 6),
                     "true" => Token::new(True, current_index, 4),
                     "false" => Token::new(False, current_index, 4),
                     "enum" => Token::new(Enum, current_index, 4),
                     "int" => Token::new(Int, current_index, 3),
                     "float" => Token::new(Float, current_index, 5),
+                    "bool" => Token::new(Bool, current_index, 4),
                     "string" => Token::new(Str, current_index, 6),
+                    "type" => Token::new(Type, current_index, 4),
+                    "constraint" => Token::new(Constraint, current_index, 10),
                     ident => Token::new(Identifier, current_index, ident.len()),
                 }
             }
@@ -237,6 +246,18 @@ impl<'src> Lexer<'src> {
             .peek()
             .is_some_and(|(_, c)| c.is_ascii_digit() || c == '.')
         {
+            if self.peek().unwrap().1 == '.' && self.peek_n(2).is_some_and(|(_, c)| c == '.') {
+                return Token::new(
+                    if is_float {
+                        TokenKind::FloatLiteral
+                    } else {
+                        TokenKind::IntLiteral
+                    },
+                    position,
+                    last - position + 1,
+                );
+            }
+
             let token = self.next().unwrap();
             if is_float && token.1 == '.' {
                 panic!("Invalid float literal");
@@ -247,7 +268,7 @@ impl<'src> Lexer<'src> {
         }
 
         if let Some((_, char)) = self.peek() {
-            if !matches!(char, ' ' | ';' | ']' | ')') {
+            if !matches!(char, ' ' | ';' | ',' | ']' | ')') {
                 panic!("Invalid int or float literal");
             }
         }
