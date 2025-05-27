@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write};
+use std::{fs::File, io::Write, rc::Rc};
 
 use rand::{Rng, distr::Alphanumeric};
 
@@ -31,8 +31,13 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         Statement::Expression(expression_statement) => {
             evaluate_expression(&expression_statement.expression, context)
         }
-        Statement::Template { name, body } => {
-            let template = Template::new(body);
+        Statement::Template { parent, name, body } => {
+            let parent = match parent {
+                Some(parent_name) => context.get_template(&parent_name).map(|rc| Rc::clone(rc)),
+                None => None,
+            };
+
+            let template = Template::new(parent, body);
             context.insert_template(&name, template);
             Ok(Object::NoReturn)
         }
@@ -72,11 +77,11 @@ fn evaluate_generate(
         obj => Err(EvalError::type_error("int".to_owned(), format!("{}", *obj))),
     }?;
     let template = template_name.map_or_else(
-        || Ok(Template::new(body)),
+        || Ok(Template::new(None, body)),
         |name| {
             context
                 .get_template(&name)
-                .map(|template| Ok(template.clone()))
+                .map(|template| Ok((**template).clone()))
                 .unwrap_or_else(|| Err(EvalError::NotDefined(name)))
         },
     )?;
@@ -90,7 +95,7 @@ fn generate_csv(
 ) -> Result<Object, EvalError> {
     let mut file = File::create("test.csv")
         .map_err(|error| EvalError::General(format!("Failed to create file: {}", error)))?;
-    let header = template.field_names().collect::<Vec<_>>().join(",");
+    let header = template.all_field_names().join(",");
 
     writeln!(file, "{}", header)
         .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;

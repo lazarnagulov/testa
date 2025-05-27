@@ -7,6 +7,7 @@ pub struct Program(pub Vec<Statement>);
 pub enum Statement {
     Expression(ExpressionStatemnt),
     Template {
+        parent: Option<String>,
         name: String,
         body: Vec<Field>,
     },
@@ -53,11 +54,16 @@ impl Variant {
 pub struct Field {
     pub name: String,
     pub value: Expression,
+    pub overridable: bool,
 }
 
 impl Field {
-    pub fn new(name: String, value: Expression) -> Self {
-        Field { name, value }
+    pub fn new(name: String, value: Expression, overridable: bool) -> Self {
+        Field {
+            name,
+            value,
+            overridable,
+        }
     }
 }
 

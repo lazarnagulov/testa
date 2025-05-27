@@ -119,10 +119,7 @@ impl Constraint for MinConstraint {
     }
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
-        Some(Box::new(UniformSampler::new(
-            self.value,
-            i32::MAX,
-        )))
+        Some(Box::new(UniformSampler::new(self.value, i32::MAX)))
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {
@@ -151,10 +148,7 @@ impl Constraint for MaxConstraint {
     }
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
-        Some(Box::new(UniformSampler::new(
-            i32::MIN,
-            self.value,
-        )))
+        Some(Box::new(UniformSampler::new(i32::MIN, self.value)))
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {

@@ -14,17 +14,17 @@ pub trait Visitor<T>: std::fmt::Debug {
 // TODO: Consider changing String to &str
 #[derive(Debug, Default)]
 pub struct Context {
-    pub templates: HashMap<String, Template>,
+    pub templates: HashMap<String, Rc<Template>>,
     pub enums: HashMap<String, Enum>,
     pub types: HashMap<String, Rc<ConstrainedType>>,
 }
 
 impl Context {
-    pub fn insert_template(&mut self, key: &str, template: Template) -> Option<Template> {
-        self.templates.insert(key.to_owned(), template)
+    pub fn insert_template(&mut self, key: &str, template: Template) -> Option<Rc<Template>> {
+        self.templates.insert(key.to_owned(), Rc::from(template))
     }
 
-    pub fn get_template(&self, key: &str) -> Option<&Template> {
+    pub fn get_template(&self, key: &str) -> Option<&Rc<Template>> {
         self.templates.get(key)
     }
 

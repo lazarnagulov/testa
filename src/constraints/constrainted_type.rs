@@ -11,7 +11,9 @@ use crate::{
 };
 
 use super::{
-    constraints::{BiasConstraint, MaxConstraint, MinConstraint, MultipleOfConstraint, RangeConstraint},
+    constraints::{
+        BiasConstraint, MaxConstraint, MinConstraint, MultipleOfConstraint, RangeConstraint,
+    },
     sampler::{ConstraintSet, Sampler},
 };
 

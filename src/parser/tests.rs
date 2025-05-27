@@ -23,7 +23,8 @@ mod parser_tests {
                     program.0,
                     vec![Statement::Template {
                         name: "User".to_string(),
-                        body: vec![]
+                        body: vec![],
+                        parent: None,
                     }]
                 );
             }
@@ -42,6 +43,7 @@ mod parser_tests {
                 23,
                 6,
             ),
+            false,
         );
         match parser.parse() {
             Ok(program) => {
@@ -49,7 +51,8 @@ mod parser_tests {
                     program.0,
                     vec![Statement::Template {
                         name: "User".to_string(),
-                        body: vec![field]
+                        body: vec![field],
+                        parent: None,
                     }]
                 );
             }
@@ -59,31 +62,34 @@ mod parser_tests {
 
     #[test]
     fn parse_template() {
-        let program = "template Product { name = string; quantity = int; price = float; }";
+        let program = "template Product : Consumable { override name = string; quantity = int; price = float; }";
         let mut parser = Parser::new(program);
         let name_field = Field::new(
             "name".to_string(),
             Expression::new(
                 ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-                26,
+                48,
                 6,
             ),
+            true,
         );
         let quantity_field = Field::new(
             "quantity".to_string(),
             Expression::new(
                 ExpressionKind::Type(DataType::new(DataTypeKind::Int, None)),
-                45,
+                67,
                 3,
             ),
+            false,
         );
         let price_field = Field::new(
             "price".to_string(),
             Expression::new(
                 ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
-                58,
+                80,
                 5,
             ),
+            false,
         );
         match parser.parse() {
             Ok(program) => {
@@ -91,7 +97,8 @@ mod parser_tests {
                     program.0,
                     vec![Statement::Template {
                         name: "Product".to_string(),
-                        body: vec![name_field, quantity_field, price_field]
+                        body: vec![name_field, quantity_field, price_field],
+                        parent: Some("Consumable".to_owned()),
                     }]
                 );
             }
@@ -117,6 +124,7 @@ mod parser_tests {
                 25,
                 6,
             ),
+            false,
         );
         let price_field = Field::new(
             "price".to_string(),
@@ -125,6 +133,7 @@ mod parser_tests {
                 41,
                 5,
             ),
+            false,
         );
         match parser.parse() {
             Ok(program) => {
@@ -455,7 +464,8 @@ mod parser_tests {
                         argument: "csv".to_string(),
                         options: vec![Field::new(
                             "delimiter".to_string(),
-                            Expression::new(ExpressionKind::StringLiteral(";".to_string()), 26, 3)
+                            Expression::new(ExpressionKind::StringLiteral(";".to_string()), 26, 3),
+                            false,
                         )]
                     }]
                 );

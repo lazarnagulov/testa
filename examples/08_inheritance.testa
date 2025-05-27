@@ -1,0 +1,13 @@
+template User {
+    id = string;
+    name = string;
+    age = int[range=0..=100];
+}
+
+template Student : User {
+    override age = int[range=19..=100];
+    student_card_id = string;
+    year = int[range=1..=4];
+}
+
+generate Student[10];
