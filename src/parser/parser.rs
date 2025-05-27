@@ -71,7 +71,11 @@ impl<'src> Parser<'src> {
             None
         };
         let fields = self.parse_fields()?;
-        Ok(Statement::Template { parent, name, body: fields })
+        Ok(Statement::Template {
+            parent,
+            name,
+            body: fields,
+        })
     }
 
     fn parse_generate(&mut self) -> Result<Statement, ParserError> {
