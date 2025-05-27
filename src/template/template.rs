@@ -1,4 +1,7 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 use crate::{
     evaluator::{
@@ -56,15 +59,23 @@ impl Template {
 impl Visitor<Vec<String>> for Template {
     fn visit(&self, context: &Context) -> Result<Vec<String>, EvalError> {
         let mut field_map: HashMap<&str, &Field> = HashMap::new();
+        let mut override_set: HashSet<&str> = HashSet::new();
+        override_set.extend(
+            self.fields
+                .iter()
+                .filter(|field| field.overridable)
+                .map(|field| field.name.as_str()),
+        );
 
         let result = self
             .all_fields()
             .iter()
             .filter_map(|field| {
                 if let Some(field) = field_map.get(field.name.as_str()) {
+                    override_set.remove(field.name.as_str());
                     if !field.overridable {
                         eprintln!(
-                            "WARNING: Field {} is overridden but not marked as 'override'!",
+                            "WARNING: Field '{}' is overridden but not marked as 'override'!",
                             field.name
                         );
                     }
@@ -76,6 +87,7 @@ impl Visitor<Vec<String>> for Template {
                     .map(|result| format!("{}", result))
             })
             .collect::<Vec<String>>();
+        override_set.iter().for_each(|field_name| eprintln!("WARNING: The field '{}' is marked as 'override', but it is not actually overridden.", field_name));
         Ok(result)
     }
 }

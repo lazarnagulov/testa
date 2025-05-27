@@ -102,7 +102,7 @@ template User {
     age = int;
 }
 ```
-You can extend template using `: <parent name>`.
+Templates can be extended using `: <parent name>`.
 ```
 template Student : User {
     index_id: string;
