@@ -191,6 +191,8 @@ pub enum ConstraintKind {
     Length,
     Bias,
     Custom,
+    Min,
+    Max,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

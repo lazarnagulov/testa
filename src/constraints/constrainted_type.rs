@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    constraints::{BiasConstraint, MultipleOfConstraint, RangeConstraint},
+    constraints::{BiasConstraint, MaxConstraint, MinConstraint, MultipleOfConstraint, RangeConstraint},
     sampler::{ConstraintSet, Sampler},
 };
 
@@ -40,8 +40,10 @@ pub struct ConstrainedType {
 impl ConstrainedType {
     pub fn new(data_type: DataType, context: &Context) -> Result<Self, EvalError> {
         let parent = match &data_type.kind {
-            DataTypeKind::Custom(parent_name) => context.get_type(&parent_name).map(|rc| Rc::clone(rc)),
-            _ => None
+            DataTypeKind::Custom(parent_name) => {
+                context.get_type(&parent_name).map(|rc| Rc::clone(rc))
+            }
+            _ => None,
         };
 
         let Some(constraints) = data_type.constraints else {
@@ -86,11 +88,28 @@ impl ConstrainedType {
                 ConstraintKind::Bias => {
                     let float = match object {
                         Object::Float(value) => Ok(value),
-                        obj => Err(EvalError::type_error("float".to_owned(), format!("{}", obj))),
+                        obj => Err(EvalError::type_error(
+                            "float".to_owned(),
+                            format!("{}", obj),
+                        )),
                     }?;
                     evaluated_constraints.push(Box::new(BiasConstraint::new(float)));
                 }
-                _ => todo!(),
+                ConstraintKind::Min => {
+                    let integer = match object {
+                        Object::Int(value) => Ok(value),
+                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
+                    }?;
+                    evaluated_constraints.push(Box::new(MinConstraint::new(integer as i32)));
+                }
+                ConstraintKind::Max => {
+                    let integer = match object {
+                        Object::Int(value) => Ok(value),
+                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
+                    }?;
+                    evaluated_constraints.push(Box::new(MaxConstraint::new(integer as i32)));
+                }
+                _ => todo!("add new kind to ConstrainedType::evaluate_constraints()"),
             }
         }
         Ok(evaluated_constraints)

@@ -1,3 +1,5 @@
+use std::i32;
+
 use crate::evaluator::object::Object;
 
 use super::{
@@ -69,7 +71,7 @@ impl Constraint for MultipleOfConstraint {
 
 #[derive(Debug, Clone)]
 pub struct BiasConstraint {
-    pub percent: f32,    
+    pub percent: f32,
 }
 
 impl BiasConstraint {
@@ -77,7 +79,6 @@ impl BiasConstraint {
         BiasConstraint { percent }
     }
 }
-
 
 impl Constraint for BiasConstraint {
     fn validate(&self, _value: &Object) -> bool {
@@ -90,6 +91,70 @@ impl Constraint for BiasConstraint {
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
         Some(Box::new(BooleanSampler::new(self.percent)))
+    }
+
+    fn clone_box(&self) -> Box<dyn Constraint> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MinConstraint {
+    value: i32,
+}
+
+impl MinConstraint {
+    pub fn new(value: i32) -> Self {
+        MinConstraint { value }
+    }
+}
+
+impl Constraint for MinConstraint {
+    fn validate(&self, object: &Object) -> bool {
+        matches!(object, Object::Int(v) if *v >= self.value as isize)
+    }
+
+    fn description(&self) -> String {
+        format!("min({})", self.value)
+    }
+
+    fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
+        Some(Box::new(UniformSampler::new(
+            self.value,
+            i32::MAX,
+        )))
+    }
+
+    fn clone_box(&self) -> Box<dyn Constraint> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MaxConstraint {
+    value: i32,
+}
+
+impl MaxConstraint {
+    pub fn new(value: i32) -> Self {
+        MaxConstraint { value }
+    }
+}
+
+impl Constraint for MaxConstraint {
+    fn validate(&self, object: &Object) -> bool {
+        matches!(object, Object::Int(v) if *v <= self.value as isize)
+    }
+
+    fn description(&self) -> String {
+        format!("max({})", self.value)
+    }
+
+    fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
+        Some(Box::new(UniformSampler::new(
+            i32::MIN,
+            self.value,
+        )))
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {

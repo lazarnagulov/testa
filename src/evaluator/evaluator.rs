@@ -1,13 +1,13 @@
 use std::{fs::File, io::Write};
 
-
-use rand::{distr::Alphanumeric, Rng};
+use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
     constraints::constrainted_type::ConstrainedType,
     enumeration::enumeration::Enum,
     parser::ast::{
-        DataType, DataTypeKind, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program, Statement
+        DataType, DataTypeKind, Expression, ExpressionKind::*, Field, InfixOperator,
+        PrefixOperator, Program, Statement,
     },
     template::template::Template,
 };
@@ -155,8 +155,8 @@ fn evaluate_data_type(data_type: &DataType, context: &Context) -> Result<Object,
             }
             DataTypeKind::Boolean => Ok(Object::new(rng.random_bool(50.0))),
             DataTypeKind::Float => Ok(Object::new(rng.random::<f32>())),
-            DataTypeKind::Custom(name) => evaluate_identifier(name, context)
-        }
+            DataTypeKind::Custom(name) => evaluate_identifier(name, context),
+        };
     }
 
     // TODO: not cloning here?

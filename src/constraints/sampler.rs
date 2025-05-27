@@ -1,6 +1,9 @@
 use std::fmt;
 
-use rand::{distr::{Distribution, Uniform}, Rng};
+use rand::{
+    Rng,
+    distr::{Distribution, Uniform},
+};
 
 use crate::evaluator::object::Object;
 

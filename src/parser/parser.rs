@@ -335,6 +335,8 @@ impl<'src> Parser<'src> {
                 "multiple_of" => self.parse_constraint_expression(ConstraintKind::MultipleOf),
                 "length" => self.parse_constraint_expression(ConstraintKind::Length),
                 "bias" => self.parse_constraint_expression(ConstraintKind::Bias),
+                "min" => self.parse_constraint_expression(ConstraintKind::Min),
+                "max" => self.parse_constraint_expression(ConstraintKind::Max),
                 _ => {
                     if self.peek_kind() == &SingleEqual {
                         Err(ParserError::UndefinedConstraint)
