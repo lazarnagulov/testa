@@ -31,7 +31,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         Statement::Expression(expression_statement) => {
             evaluate_expression(&expression_statement.expression, context)
         }
-        Statement::Template { name, body } => {
+        Statement::Template { parent: _, name, body } => {
             let template = Template::new(body);
             context.insert_template(&name, template);
             Ok(Object::NoReturn)

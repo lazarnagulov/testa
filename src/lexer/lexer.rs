@@ -208,6 +208,7 @@ impl<'src> Lexer<'src> {
                     "float" => Token::new(Float, current_index, 5),
                     "bool" => Token::new(Bool, current_index, 4),
                     "string" => Token::new(Str, current_index, 6),
+                    "override" => Token::new(Override, current_index, 8),
                     "type" => Token::new(Type, current_index, 4),
                     "constraint" => Token::new(Constraint, current_index, 10),
                     ident => Token::new(Identifier, current_index, ident.len()),

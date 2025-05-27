@@ -64,8 +64,14 @@ impl<'src> Parser<'src> {
     fn parse_template(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
         let name = self.parse_identifier_as_string()?;
+        let parent = if self.peek_kind() == &Colon {
+            self.consume_token();
+            Some(self.parse_identifier_as_string()?)
+        } else {
+            None
+        };
         let fields = self.parse_fields()?;
-        Ok(Statement::Template { name, body: fields })
+        Ok(Statement::Template { parent, name, body: fields })
     }
 
     fn parse_generate(&mut self) -> Result<Statement, ParserError> {
@@ -122,12 +128,16 @@ impl<'src> Parser<'src> {
     fn parse_fields(&mut self) -> Result<Vec<Field>, ParserError> {
         self.expect_token(LBrace)?;
         let mut options = vec![];
-        while self.peek_kind() == &Identifier {
+        while self.peek_kind() == &Identifier || self.peek_kind() == &Override {
+            let overridable = self.peek_kind() == &Override;
+            if overridable {
+                self.consume_token();
+            }
             let name = self.parse_identifier_as_string()?;
             self.expect_token(SingleEqual)?;
             let expression = self.parse_expression(Precedence::Lowest)?;
             self.expect_token(Semicolon)?;
-            options.push(Field::new(name, expression));
+            options.push(Field::new(name, expression, overridable));
         }
         self.expect_token(RBrace)?;
         Ok(options)
