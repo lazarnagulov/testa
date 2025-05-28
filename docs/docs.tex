@@ -161,14 +161,51 @@ template User {
         \label{listing:4}
     \end{listing}
     \par As demonstrated in Listing \ref{listing:4}, these types can interact with each other as well as with literals. 
+    \subsection{Lists}
+        \begin{listing}[h]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+[<type>][<constraint1>, <constraint2>...]  
+        \end{minted}
+        \caption{List type}
+        \centering
+        \label{declaration:list}
+    \end{listing}
+    \par A list is a container that can hold various data types, including other lists. By default, a list generates a 
+    random number of items, ranging from 0 to 16. However, this number can be adjusted using the "count" constraint. 
+    Further details about constraints can be found in the next section.
+    \begin{listing}[h]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+// Example 1 : 
+// List with random number of int ranging from 5 to 15.
+[int][count=5..15]
+ // result: [1, -5, 6, -7, 8, 18]
+
+
+ // Example 2 :
+// List of lists with random numbers from 1 to 5 ranging from 
+// 1 to 5 ranging from 3 to 5.
+[[int[range=1..=5]][count=1..5]][count=3..=5] 
+// result : [[1,2,3],[5,2,1,3],[5],[4,5]]
+        \end{minted}
+        \caption{List examples}
+        \centering
+    \label{listing:list_example}
+    \end{listing}
+    \par In Examples from Listing \ref{listing:list_example}, two lists are declared. Second list can be 
+    simplified by utilizing type constraints.
+%     \begin{listing}[h]
+%         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+
+%         \end{minted}
+%         \caption{Multidimensional list example}
+%         \centering
+%         \label{listing:multidimensional_list}
+%     \end{listing}
     \subsection{Type constraints}
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
-    
 |\textcolor{keywordColor}{type}| <name> = <type> [<constraint1>, <constraint2>...];
 |\textcolor{keywordColor}{type}| <name> = |\textcolor{keywordColor}{extend}| <type> |\textcolor{keywordColor}{with}| [<constraint1>, ...];
-|\textcolor{keywordColor}{constraint}| <name> = <expr:bool>;
-
         \end{minted}
         \caption{Constrained type declaration}
         \label{declaration:type_constraint}
@@ -180,36 +217,42 @@ template User {
     conforms to the expected parameters.
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
-template User {
-    name = |\textcolor{purple}{string}|[starts_with="A"];
-    age = int[range=18..=100];
-    salary = float[range=100..500] + 300.0;
-    is_registered = bool[bias=75];
+template User { 
+    age = int [range=0..=100]; 
+}
+
+template Student : User { 
+    override age = int[range=19..=100];
+    grades = [int[range=6..=10]][count=0..=46]; 
 }
         \end{minted}
-        \caption{Template with constrained data types}
+        \caption{Templates with constrained data types}
         \centering
         \label{listing:5}
     \end{listing}
     \par To improve clarity and minimize redundancy, types may be effectively declared and reused (Listing \ref{listing:6}). 
-    Furthermore, user-defined types can be expanded to offer greater versatility. 
-    \par Check out Table 1 for an overview of the built-in constraints that apply to various types!
     \begin{listing}[h]
     \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
-|\textcolor{keywordColor}{type}| Name = |\textcolor{purple}{string}| [starts_with="A"];
-|\textcolor{keywordColor}{type}| Age = int [range=18..=100];
-|\textcolor{keywordColor}{type}| MinimalSalary = float [range=100..500];
-template User {
-    name = |\textcolor{purple}{Name}|;
-    age = |\textcolor{purple}{Age}|;
-    salary = |\textcolor{purple}{MinimalSalary}|;
-    is_registered = bool[bias=75];
+|\textcolor{keywordColor}{type}| Age = int [range=0..=100];
+|\textcolor{keywordColor}{type}| StudentAge = |\textcolor{keywordColor}{extend}| |\textcolor{purple}{Age}| |\textcolor{keywordColor}{with}| [min=19];
+|\textcolor{keywordColor}{type}| Grade = int [range=6..=10];
+|\textcolor{keywordColor}{type}| GradeList = [|\textcolor{keywordColor}{Grade}|][count=1..=46];
+
+template User { 
+    age = |\textcolor{purple}{Age}|; 
+}
+
+template Student : User { 
+    override age = |\textcolor{purple}{StudentAge}|;
+    grades = |\textcolor{purple}{GradeList}|; 
 }
         \end{minted}
-        \caption{Template with user-defined data types}
+        \caption{Templates with user-defined data types}
         \centering
         \label{listing:6}
     \end{listing}
+    \pagebreak
+
     \begin{table}[h]
         \begin{tabular}{|c|c|c|c|}
             \hline
@@ -224,6 +267,8 @@ template User {
             multiple\_of & int & int & \makecell{Number is multiple of \\ input.} \\
             \hline
             bias & bool & float[0, 100] & \makecell{Sets chance of \\ being true.} \\
+            \hline
+            count & list & \makecell{Inclusive, \\ Exclusive range \\ or int} & \makecell{Sets number \\ of items in list} \\
             \hline
         \end{tabular}
         \caption{Data type constraints}        
