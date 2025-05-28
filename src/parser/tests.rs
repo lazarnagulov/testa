@@ -272,7 +272,7 @@ mod parser_tests {
                         ConstraintKind::Range,
                     )]),
                 )),
-                0,
+                1,
                 5,
             ),
         };

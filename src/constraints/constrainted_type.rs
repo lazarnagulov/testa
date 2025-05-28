@@ -128,6 +128,7 @@ impl ConstrainedType {
 
         all_constraints
     }
+
 }
 
 impl Visitor<Object> for ConstrainedType {

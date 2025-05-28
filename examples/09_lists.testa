@@ -1,0 +1,11 @@
+type Age = int [range=0..=100];
+
+template Student {
+    id = string;
+    name = string;
+    age = Age;
+    year = int [range=1..=4];
+    grades = [int[range=6..=10]];
+}
+
+generate Student[10];

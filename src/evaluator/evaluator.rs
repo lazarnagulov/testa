@@ -161,7 +161,14 @@ fn evaluate_data_type(data_type: &DataType, context: &Context) -> Result<Object,
             }
             DataTypeKind::Boolean => Ok(Object::new(rng.random_bool(50.0))),
             DataTypeKind::Float => Ok(Object::new(rng.random::<f32>())),
-            DataTypeKind::List(_) => todo!(),
+            DataTypeKind::List(data_type) => {
+                let count = rng.random_range(0..=16); 
+                let mut values = vec![];
+                for _ in 0..count {
+                    values.push(evaluate_data_type(data_type, context)?);
+                }
+                Ok(Object::new(values))
+            },
             DataTypeKind::Custom(name) => evaluate_identifier(name, context),
         };
     }

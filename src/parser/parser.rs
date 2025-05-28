@@ -306,7 +306,7 @@ impl<'src> Parser<'src> {
                 let kind = self.peek_kind_n(2);
                 match kind {
                     Int | Float | Str | Bool => self.parse_list_type(),
-                    Identifier | True | False | IntLiteral | StringLiteral | FloatLiteral => {
+                    True | False | IntLiteral | StringLiteral | FloatLiteral => {
                         self.parse_list_expression()
                     }
                     obj => Err(ParserError::expected(
@@ -352,13 +352,13 @@ impl<'src> Parser<'src> {
                     DataTypeKind::List(Box::new(data_type)),
                     Some(consraints),
                 )),
-                start - 1,
+                start,
                 start + size + 1,
             ))
         } else {
             Ok(Expression::new(
                 ExpressionKind::Type(DataType::new(DataTypeKind::List(Box::new(data_type)), None)),
-                start - 1,
+                start,
                 start + size + 1,
             ))
         }
