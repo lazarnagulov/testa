@@ -305,12 +305,12 @@ impl<'src> Parser<'src> {
             LBracket => {
                 let kind = self.peek_kind_n(2);
                 match kind {
-                    Int | Float | Str | Bool => self.parse_list_type(),
+                    Int | Float | Str | Bool | LBracket => self.parse_type(),
                     True | False | IntLiteral | StringLiteral | FloatLiteral => {
                         self.parse_list_expression()
                     }
                     obj => Err(ParserError::expected(
-                        "data type or litera",
+                        "data type or literal",
                         &format!("{}", obj),
                     )),
                 }
@@ -378,6 +378,10 @@ impl<'src> Parser<'src> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
         let start = token.start;
         let size = token.size;
+
+        if token.kind == LBracket {
+            return self.parse_list_type();
+        }
 
         let data_type_kind = match token.kind {
             Int => DataTypeKind::Int,
