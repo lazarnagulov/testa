@@ -1,10 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
+use rand::{Rng, distr::Alphanumeric};
+
 use crate::{
     evaluator::{
         context::{Context, Visitor},
         eval_error::EvalError,
-        evaluator::evaluate_expression,
+        evaluator::{evaluate_data_type, evaluate_expression, evaluate_identifier},
         object::Object,
     },
     parser::ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind},
@@ -74,47 +76,50 @@ impl ConstrainedType {
             let object = evaluate_expression(&constraint.expression, context)?;
             match constraint.kind {
                 ConstraintKind::Range => {
-                    let (start, end) = match object {
-                        Object::Range(start, end) => Ok((start, end)),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
+                    let (start, end) = ConstrainedType::extract_range(&object)?;
                     evaluated_constraints.push(Box::new(RangeConstraint::new(start, end)));
                 }
                 ConstraintKind::MultipleOf => {
-                    let integer = match object {
-                        Object::Int(value) => Ok(value),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
-                    evaluated_constraints.push(Box::new(MultipleOfConstraint::new(integer as i32)));
+                    let integer = ConstrainedType::extract_int(&object)?;
+                    evaluated_constraints.push(Box::new(MultipleOfConstraint::new(integer)));
                 }
                 ConstraintKind::Bias => {
-                    let float = match object {
-                        Object::Float(value) => Ok(value),
-                        obj => Err(EvalError::type_error(
-                            "float".to_owned(),
-                            format!("{}", obj),
-                        )),
-                    }?;
+                    let float = ConstrainedType::extract_float(&object)?;
                     evaluated_constraints.push(Box::new(BiasConstraint::new(float)));
                 }
                 ConstraintKind::Min => {
-                    let integer = match object {
-                        Object::Int(value) => Ok(value),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
-                    evaluated_constraints.push(Box::new(MinConstraint::new(integer as i32)));
+                    let integer = ConstrainedType::extract_int(&object)?;
+                    evaluated_constraints.push(Box::new(MinConstraint::new(integer)));
                 }
                 ConstraintKind::Max => {
-                    let integer = match object {
-                        Object::Int(value) => Ok(value),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
-                    evaluated_constraints.push(Box::new(MaxConstraint::new(integer as i32)));
+                    let integer = ConstrainedType::extract_int(&object)?;
+                    evaluated_constraints.push(Box::new(MaxConstraint::new(integer)));
                 }
                 _ => todo!("add new kind to ConstrainedType::evaluate_constraints()"),
             }
         }
         Ok(evaluated_constraints)
+    }
+
+    fn extract_int(object: &Object) -> Result<i32, EvalError> {
+       match object {
+            Object::Int(value) => Ok((*value) as i32),
+            obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
+        }   
+    }
+
+    fn extract_float(object: &Object) -> Result<f32, EvalError> {
+        match object {
+            Object::Float(value) => Ok(*value),
+            obj => Err(EvalError::type_error("float".to_owned(), format!("{}", obj))),
+        }
+    }
+
+    fn extract_range(object: &Object) -> Result<(isize, isize), EvalError> {
+        match object {
+            Object::Range(start, end) => Ok((*start, *end)),
+            obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
+        }
     }
 
     fn collect_constraints(&self) -> Vec<Box<dyn Constraint>> {
@@ -129,10 +134,40 @@ impl ConstrainedType {
         all_constraints
     }
 
+    fn generate_without_constraints(&self, context: &Context) -> Result<Object, EvalError> {
+        let mut rng = rand::rng();
+        return match &self.type_kind {
+            DataTypeKind::Int => Ok(Object::new(rng.random::<i32>() as isize)),
+            DataTypeKind::Str => {
+                let size = rng.random_range(6..=20);
+                let value: String = rng
+                    .sample_iter(&Alphanumeric)
+                    .take(size)
+                    .map(char::from)
+                    .collect();
+                Ok(Object::new(value))
+            }
+            DataTypeKind::Boolean => Ok(Object::new(rng.random_bool(50.0))),
+            DataTypeKind::Float => Ok(Object::new(rng.random::<f32>())),
+            DataTypeKind::List(data_type) => {
+                let count = rng.random_range(0..=16);
+                let mut values = vec![];
+                for _ in 0..count {
+                    values.push(evaluate_data_type(data_type, context)?);
+                }
+                Ok(Object::new(values))
+            }
+            DataTypeKind::Custom(name) => evaluate_identifier(name, context),
+        };
+    }
 }
 
 impl Visitor<Object> for ConstrainedType {
-    fn visit(&self, _context: &Context) -> Result<Object, EvalError> {
+    fn visit(&self, context: &Context) -> Result<Object, EvalError> {
+        if self.constraints.is_empty() {
+            return self.generate_without_constraints(context);
+        }
+
         if let Some(sampler) = self.cached_sampler.borrow().as_ref() {
             return Ok(sampler.sample());
         };
