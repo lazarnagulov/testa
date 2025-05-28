@@ -175,6 +175,13 @@ impl<'src> Parser<'src> {
         Ok(options)
     }
 
+    fn parse_peeked_token_as_string(&mut self) -> String {
+        let token = self.lexer.peek().unwrap();
+        let start = token.start;
+        let size = token.size;
+        self.source[start..start + size].to_string()
+    }
+
     fn parse_identifier_as_string(&mut self) -> Result<String, ParserError> {
         let (start, size) = self.expect_token(Identifier)?;
         Ok(self.source[start..start + size].to_string())
@@ -305,7 +312,7 @@ impl<'src> Parser<'src> {
             LBracket => {
                 let kind = self.peek_kind_n(2);
                 match kind {
-                    Int | Float | Str | Bool | LBracket => self.parse_type(),
+                    Int | Float | Str | Bool | LBracket | Identifier => self.parse_type(),
                     True | False | IntLiteral | StringLiteral | FloatLiteral => {
                         self.parse_list_expression()
                     }
@@ -397,6 +404,7 @@ impl<'src> Parser<'src> {
                 }
                 DataTypeKind::Custom(name)
             }
+            Identifier => DataTypeKind::Custom(self.parse_peeked_token_as_string()),
             _ => unreachable!(),
         };
 
