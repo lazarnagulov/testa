@@ -2,6 +2,7 @@ use std::{iter::Peekable, str::CharIndices};
 
 use super::token::{Token, TokenKind};
 
+#[derive(Clone)]
 pub struct Lexer<'src> {
     content: &'src str,
     chars: Peekable<CharIndices<'src>>,

@@ -5,7 +5,7 @@ mod parser_tests {
 
     use crate::parser::{
         ast::{
-            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Expression,
+            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
             ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program,
             Statement, Variant,
         },
@@ -241,6 +241,75 @@ mod parser_tests {
             }
             Err(err) => handle_error(err),
         }
+    }
+
+    #[test]
+    fn parse_list_type() {
+        let program = "[int][range=1..=5];";
+        let mut parser = Parser::new(program);
+        let expression = ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::Type(DataType::new(
+                    DataTypeKind::List(Box::new(DataType::new(DataTypeKind::Int, None))),
+                    Some(vec![ConstraintExpression::new(
+                        Expression::new(
+                            ExpressionKind::Infix {
+                                left: Box::new(Expression::new(
+                                    ExpressionKind::IntLiteral(1),
+                                    12,
+                                    1,
+                                )),
+                                operator: InfixOperator::InclusiveRange,
+                                right: Box::new(Expression::new(
+                                    ExpressionKind::IntLiteral(5),
+                                    16,
+                                    1,
+                                )),
+                            },
+                            12,
+                            5,
+                        ),
+                        ConstraintKind::Range,
+                    )]),
+                )),
+                0,
+                5,
+            ),
+        };
+        expect_expression(&mut parser, expression);
+    }
+
+    #[test]
+    fn parse_list_expression() {
+        let program = "[1 => 5; \"John\"; true => 25];";
+        let mut parser = Parser::new(program);
+        let expression = ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::List(vec![
+                    Element::new(
+                        Expression::new(ExpressionKind::IntLiteral(1), 1, 1),
+                        Some(Expression::new(ExpressionKind::IntLiteral(5), 6, 1)),
+                        1,
+                        4,
+                    ),
+                    Element::new(
+                        Expression::new(ExpressionKind::StringLiteral("John".to_owned()), 9, 6),
+                        None,
+                        9,
+                        6,
+                    ),
+                    Element::new(
+                        Expression::new(ExpressionKind::BooleanLiteral(true), 17, 4),
+                        Some(Expression::new(ExpressionKind::IntLiteral(25), 25, 2)),
+                        17,
+                        8,
+                    ),
+                ]),
+                0,
+                19,
+            ),
+        };
+        expect_expression(&mut parser, expression);
     }
 
     #[test]

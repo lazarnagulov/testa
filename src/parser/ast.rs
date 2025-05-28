@@ -92,6 +92,7 @@ pub enum ExpressionKind {
     StringLiteral(String),
     BooleanLiteral(bool),
     Identifier(String),
+    List(Vec<Element>),
     Type(DataType),
     Prefix {
         operator: PrefixOperator,
@@ -105,6 +106,26 @@ pub enum ExpressionKind {
     FuncCall {
         arguments: Vec<Expression>,
     },
+}
+
+// TODO: Add start and size
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct Element {
+    pub value: Expression,
+    pub weight: Option<Expression>,
+    pub start: usize,
+    pub size: usize,
+}
+
+impl Element {
+    pub fn new(value: Expression, weight: Option<Expression>, start: usize, size: usize) -> Self {
+        Element {
+            value,
+            weight,
+            start,
+            size,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -219,6 +240,7 @@ pub enum DataTypeKind {
     Str,
     Float,
     Boolean,
+    List(Box<DataType>),
     Custom(String),
 }
 
@@ -229,6 +251,7 @@ impl fmt::Display for DataTypeKind {
             DataTypeKind::Str => write!(f, "string"),
             DataTypeKind::Float => write!(f, "float"),
             DataTypeKind::Boolean => write!(f, "bool"),
+            DataTypeKind::List(data_type) => write!(f, "[{}]", data_type.kind),
             DataTypeKind::Custom(name) => write!(f, "type: {}", name),
         }
     }

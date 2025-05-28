@@ -123,6 +123,7 @@ pub fn evaluate_expression(
         BooleanLiteral(value) => Ok(Object::new(*value)),
         Identifier(name) => evaluate_identifier(name, context),
         Type(data_type) => evaluate_data_type(data_type, context),
+        List(_) => todo!("implement list expression evaluation"),
         Prefix {
             operator,
             expression,
@@ -160,6 +161,7 @@ fn evaluate_data_type(data_type: &DataType, context: &Context) -> Result<Object,
             }
             DataTypeKind::Boolean => Ok(Object::new(rng.random_bool(50.0))),
             DataTypeKind::Float => Ok(Object::new(rng.random::<f32>())),
+            DataTypeKind::List(_) => todo!(),
             DataTypeKind::Custom(name) => evaluate_identifier(name, context),
         };
     }
