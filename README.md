@@ -77,6 +77,8 @@ In the above example:
 
 Apply similar constraints to other data types as well.
 
+Check example: [constraints](./examples/06_constraints.testa),
+
 ### Lists
 
 Define list with syntax: `[<type>[<constraint1>, <constraint2>...]][<constraint1>, <constraint2>...]`.
@@ -94,6 +96,9 @@ In the above example:
 
 > [!NOTE]
 > Defining multidimensional lists is also possible, such as `[[int[min=0]][count=0..5]][count=1..=5]`, but using type aliasing is recommended.
+
+
+Check examples: [lists](./examples/09_lists.testa), [multidimensional lists](./examples/10_multidimensional_list.testa).
 
 ### Custom types
 
@@ -113,6 +118,9 @@ This lets you build on previously defined types by layering more rules on top.
 
 > [!TIP]
 > Now that ugly list example can be written as `[PositiveIntList][count=1..5]`.
+
+Check example: [types](./examples/07_constraint_types.testa).
+
 
 ## Templates
 
@@ -135,7 +143,7 @@ template Student : User {
 > [!NOTE]
 > Fields are overridden by default. Use the `override` keyword to prevent the warning.
 
-Check examples: [template](./examples/02_generate.testa).
+Check examples: [template](./examples/02_generate_template.testa).
 
 ## Enum
 
