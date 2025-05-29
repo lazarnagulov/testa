@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     constrainted_type::Constraint,
-    sampler::{BooleanSampler, Sampler, UniformSampler},
+    sampler::{BooleanSampler, IdentitySampler, Sampler, UniformSampler},
     util,
 };
 
@@ -270,26 +270,6 @@ impl ConstraintBuilder for CountBuilder {
                 Ok(Box::new(CountConstraint::new(start as i32, end as i32)))
             }
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct IdentitySampler<T> {
-    pub value: T,
-}
-
-impl<T> IdentitySampler<T> {
-    pub fn new(value: T) -> Self {
-        IdentitySampler { value }
-    }
-}
-
-impl<T> Sampler for IdentitySampler<T>
-where
-    T: Into<Object> + Debug + Clone,
-{
-    fn sample(&self) -> Object {
-        Object::new(self.value.clone())
     }
 }
 

@@ -23,7 +23,7 @@ template User {
     role = $pick(Role);
 }
 
-generate User [10];
+@generate User [10];
 
 ```
 
@@ -172,7 +172,7 @@ todo...
 ## Generate
 todo...
 ```
-generate <template_name|_> [<count>] ; | { key = <value:expr> }
+@generate <template_name|_> [<count>] ; | { key = <value:expr> }
 ```
 
 ## References:

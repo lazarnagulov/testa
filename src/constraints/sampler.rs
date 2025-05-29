@@ -95,6 +95,26 @@ impl Sampler for CompositeSampler {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct IdentitySampler<T> {
+    pub value: T,
+}
+
+impl<T> IdentitySampler<T> {
+    pub fn new(value: T) -> Self {
+        IdentitySampler { value }
+    }
+}
+
+impl<T> Sampler for IdentitySampler<T>
+where
+    T: Into<Object> + fmt::Debug + Clone,
+{
+    fn sample(&self) -> Object {
+        Object::new(self.value.clone())
+    }
+}
+
 #[derive(Debug)]
 pub struct UniformSampler {
     min: i32,
