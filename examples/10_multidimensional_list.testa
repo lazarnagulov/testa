@@ -6,7 +6,7 @@ template Student {
     name = string;
     age = Age;
     year = int [range=1..=4];
-    grades = [Grade][count=1..5];
+    grades = [[[Grade][count=1..5]][count=0..=64]][count=0..=4];
 }
 
 generate Student[10];

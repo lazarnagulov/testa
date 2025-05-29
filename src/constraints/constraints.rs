@@ -258,8 +258,14 @@ impl ConstraintBuilder for CountBuilder {
         matches!(type_kind, DataTypeKind::List(_))
     }
 
-    fn build(&self, _object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
-        todo!()
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
+        match util::extract_int(object) {
+            Ok(integer) => Ok(Box::new(CountConstraint::exact(integer))),
+            Err(_) => {
+                let (start, end) = util::extract_range(object)?;
+                Ok(Box::new(CountConstraint::new(start as i32, end as i32)))
+            }
+        }
     }
 }
 

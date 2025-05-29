@@ -48,7 +48,7 @@ impl ConstrainedType {
             _ => None,
         };
 
-        let Some(constraints) = data_type.constraints else {
+        let Some(mut constraints) = data_type.constraints else {
             return Ok(ConstrainedType {
                 parent: None,
                 type_kind: data_type.kind,
@@ -58,7 +58,7 @@ impl ConstrainedType {
         };
         let fundamental_type = ConstrainedType::get_fundamental_type(&data_type.kind, context);
         let evaluated_constraints =
-            ConstrainedType::evaluate_constraints(&constraints, fundamental_type, context)?;
+            ConstrainedType::evaluate_constraints(&mut constraints, fundamental_type, context)?;
 
         Ok(ConstrainedType {
             parent,
@@ -73,14 +73,50 @@ impl ConstrainedType {
         type_kind: &DataTypeKind,
         context: &Context,
     ) -> Result<Vec<Box<dyn Constraint>>, EvalError> {
-        let mut evaluated_constraints: Vec<Box<dyn Constraint>> = vec![];
-        let registry = &CONSTRAINT_REGISTRY;
+        let mut evaluated_constraints =
+            ConstrainedType::build_constraints(constraints, type_kind, context)?;
 
+        if let DataTypeKind::List(inner_type) = type_kind {
+            let mut inner_type = inner_type;
+            match &inner_type.constraints {
+                Some(constraints) => {
+                    evaluated_constraints.extend(ConstrainedType::build_constraints(
+                        &constraints,
+                        &inner_type.kind,
+                        context,
+                    )?);
+                }
+                None => {}
+            }
+            while let DataTypeKind::List(inner_type_inner) = &inner_type.kind {
+                match &inner_type_inner.constraints {
+                    Some(constraints) => {
+                        evaluated_constraints.extend(ConstrainedType::build_constraints(
+                            &constraints,
+                            &inner_type_inner.kind,
+                            context,
+                        )?);
+                    }
+                    None => break,
+                }
+                inner_type = inner_type_inner;
+            }
+        }
+        Ok(evaluated_constraints)
+    }
+
+    fn build_constraints(
+        constraints: &Vec<ConstraintExpression>,
+        type_kind: &DataTypeKind,
+        context: &Context,
+    ) -> Result<Vec<Box<dyn Constraint>>, EvalError> {
+        let mut evaluated_constraints: Vec<Box<dyn Constraint>> = Vec::new();
         for constraint in constraints {
-            let object = evaluate_expression(&constraint.expression, context)?;
+            let registry = &CONSTRAINT_REGISTRY;
             let builder = registry.get(&constraint.kind).ok_or_else(|| {
                 EvalError::NotDefined(format!("Constraint kind {:?}", constraint.kind))
             })?;
+            let object = evaluate_expression(&constraint.expression, context)?;
 
             if !builder.is_compatible(type_kind) {
                 return Err(EvalError::incompatible_constraint(
@@ -105,15 +141,13 @@ impl ConstrainedType {
         all_constraints
     }
 
-    // TODO: Move to util?
     fn get_fundamental_type<'a>(kind: &'a DataTypeKind, context: &'a Context) -> &'a DataTypeKind {
         match kind {
-            DataTypeKind::Int | DataTypeKind::Str | DataTypeKind::Float | DataTypeKind::Boolean => {
-                &kind
-            }
-            DataTypeKind::List(data_type) => {
-                ConstrainedType::get_fundamental_type(&data_type.kind, context)
-            }
+            DataTypeKind::Int
+            | DataTypeKind::Str
+            | DataTypeKind::Float
+            | DataTypeKind::Boolean
+            | DataTypeKind::List(_) => &kind,
             DataTypeKind::Custom(name) => {
                 let data_type = context.get_type(&name).unwrap();
                 ConstrainedType::get_fundamental_type(&data_type.type_kind, context)
