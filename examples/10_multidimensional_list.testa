@@ -1,12 +1,9 @@
-type Age = int [range=0..=100];
-type Grade = int [range=6..=10];
+type IntList = [int][count=1..=5];
+type IntMatrix = [IntList][count=1..=5];
+type IntTensor = [IntMatrix][count=1..=5];
 
-template Student {
-    id = string;
-    name = string;
-    age = Age;
-    year = int [range=1..=4];
-    grades = [[[Grade][count=1..5]][count=0..=64]][count=0..=4];
+generate _ [10] {
+    int_tensor = IntTensor;
 }
 
-generate Student[10];
+

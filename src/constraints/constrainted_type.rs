@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 use rand::{Rng, distr::Alphanumeric};
 
@@ -41,13 +41,7 @@ pub struct ConstrainedType {
 
 impl ConstrainedType {
     pub fn new(data_type: DataType, context: &Context) -> Result<Self, EvalError> {
-        let parent = match &data_type.kind {
-            DataTypeKind::Custom(parent_name) => {
-                context.get_type(&parent_name).map(|rc| Rc::clone(rc))
-            }
-            _ => None,
-        };
-
+        let parent = ConstrainedType::find_parent(&data_type.kind, context)?;
         let Some(mut constraints) = data_type.constraints else {
             return Ok(ConstrainedType {
                 parent: None,
@@ -59,7 +53,6 @@ impl ConstrainedType {
         let fundamental_type = ConstrainedType::get_fundamental_type(&data_type.kind, context);
         let evaluated_constraints =
             ConstrainedType::evaluate_constraints(&mut constraints, fundamental_type, context)?;
-
         Ok(ConstrainedType {
             parent,
             type_kind: data_type.kind,
@@ -129,8 +122,8 @@ impl ConstrainedType {
         Ok(evaluated_constraints)
     }
 
-    fn collect_constraints(&self) -> Vec<Box<dyn Constraint>> {
-        let mut all_constraints: Vec<Box<dyn Constraint>> = vec![];
+    fn collect_constraints(&self) -> VecDeque<Box<dyn Constraint>> {
+        let mut all_constraints: VecDeque<Box<dyn Constraint>> = VecDeque::new();
         let mut current = Some(self);
 
         while let Some(current_type) = current {
@@ -139,6 +132,19 @@ impl ConstrainedType {
         }
 
         all_constraints
+    }
+
+    fn find_parent(type_kind: &DataTypeKind, context: &Context) -> Result<Option<Rc<ConstrainedType>>, EvalError> {
+        match type_kind {
+            DataTypeKind::Custom(parent_name) => {
+                match context.get_type(&parent_name).map(|rc| Rc::clone(rc)) {
+                    Some(parent) => Ok(Some(parent)),
+                    None => Err(EvalError::NotDefined(format!("Type '{}'", parent_name))),
+                }
+            }
+            DataTypeKind::List(data_type) => ConstrainedType::find_parent(&data_type.kind, context),
+            _ => Ok(None),
+        }
     }
 
     fn get_fundamental_type<'a>(kind: &'a DataTypeKind, context: &'a Context) -> &'a DataTypeKind {
@@ -181,6 +187,16 @@ impl ConstrainedType {
             DataTypeKind::Custom(name) => evaluate_identifier(name, context),
         };
     }
+
+    fn sample(&self, constraints_set: &ConstraintSet) -> Result<Object, EvalError> {
+        if let Some(sampler) = self.cached_sampler.borrow().as_ref() {
+            return Ok(sampler.sample());
+        };
+        let sampler = constraints_set.build_sampler();
+
+        *self.cached_sampler.borrow_mut() = Some(sampler);
+        Ok(self.cached_sampler.borrow().as_ref().unwrap().sample())
+    }
 }
 
 impl Visitor<Object> for ConstrainedType {
@@ -189,13 +205,17 @@ impl Visitor<Object> for ConstrainedType {
             return self.generate_without_constraints(context);
         }
 
-        if let Some(sampler) = self.cached_sampler.borrow().as_ref() {
-            return Ok(sampler.sample());
-        };
-        let constraints_set = ConstraintSet::new(self.collect_constraints());
-        let sampler = constraints_set.build_sampler();
-
-        *self.cached_sampler.borrow_mut() = Some(sampler);
-        Ok(self.cached_sampler.borrow().as_ref().unwrap().sample())
+        let mut constraints_set = ConstraintSet::new(self.collect_constraints());
+        if let DataTypeKind::List(data_type) = &self.type_kind {
+            let mut result = Vec::new();
+            let sampler = constraints_set.build_list_sampler().unwrap();
+            let Object::Int(count) = sampler.sample() else { unreachable!() };
+            for _ in 0..count {
+                result.push(evaluate_data_type(&data_type, context)?);
+            }
+            Ok(Object::List(result))
+        } else {
+            self.sample(&constraints_set)
+        }
     }
 }

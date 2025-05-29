@@ -72,7 +72,7 @@ impl fmt::Display for Object {
                     .map(|val| format!("{}", val))
                     .collect::<Vec<String>>()
                     .join(";");
-                write!(f, "{}", objects)
+                write!(f, "[{}]", objects)
             }
             _ => write!(f, "Nothing"),
         }
