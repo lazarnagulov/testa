@@ -89,7 +89,7 @@ impl Enum {
         return variants.iter().map(|variant| match &variant.weight {
             Some(expr) => evaluate_expression(expr, context).and_then(|obj| match obj {
                 Object::Int(value) => Ok(EvaluatedVariant::new(&variant.name, value)),
-                other => Err(EvalError::type_error(
+                other => Err(EvalError::type_mismatch(
                     "int".to_owned(),
                     format!("{}", other),
                 )),

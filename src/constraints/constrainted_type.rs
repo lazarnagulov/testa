@@ -71,26 +71,22 @@ impl ConstrainedType {
 
         if let DataTypeKind::List(inner_type) = type_kind {
             let mut inner_type = inner_type;
-            match &inner_type.constraints {
-                Some(constraints) => {
-                    evaluated_constraints.extend(ConstrainedType::build_constraints(
-                        &constraints,
-                        &inner_type.kind,
-                        context,
-                    )?);
-                }
-                None => {}
+            if let Some(constraints) = &inner_type.constraints {
+                evaluated_constraints.extend(ConstrainedType::build_constraints(
+                    constraints,
+                    &inner_type.kind,
+                    context,
+                )?);
             }
             while let DataTypeKind::List(inner_type_inner) = &inner_type.kind {
-                match &inner_type_inner.constraints {
-                    Some(constraints) => {
-                        evaluated_constraints.extend(ConstrainedType::build_constraints(
-                            &constraints,
-                            &inner_type_inner.kind,
-                            context,
-                        )?);
-                    }
-                    None => break,
+                if let Some(constraints) = &inner_type_inner.constraints {
+                    evaluated_constraints.extend(ConstrainedType::build_constraints(
+                        constraints,
+                        &inner_type_inner.kind,
+                        context,
+                    )?);
+                } else {
+                    break;
                 }
                 inner_type = inner_type_inner;
             }
@@ -182,9 +178,11 @@ impl ConstrainedType {
             DataTypeKind::List(data_type) => {
                 let count = rng.random_range(0..=16);
                 let mut values = vec![];
-                for _ in 0..count {
-                    values.push(evaluate_data_type(data_type, context)?);
-                }
+                values.extend(
+                    (0..count)
+                        .map(|_| evaluate_data_type(data_type, context))
+                        .collect::<Result<Vec<_>, _>>()?,
+                );
                 Ok(Object::new(values))
             }
             DataTypeKind::Custom(name) => evaluate_identifier(name, context),
@@ -210,15 +208,14 @@ impl Visitor<Object> for ConstrainedType {
 
         let mut constraints_set = ConstraintSet::new(self.collect_constraints());
         if let DataTypeKind::List(data_type) = &self.type_kind {
-            let mut result = Vec::new();
             let sampler = constraints_set.build_list_sampler().unwrap();
             let Object::Int(count) = sampler.sample() else {
                 unreachable!()
             };
-            for _ in 0..count {
-                result.push(evaluate_data_type(&data_type, context)?);
-            }
-            Ok(Object::List(result))
+            (0..count)
+                .map(|_| evaluate_data_type(&data_type, context))
+                .collect::<Result<Vec<_>, _>>()
+                .map(|list| Object::List(list))
         } else {
             self.sample(&constraints_set)
         }

@@ -54,11 +54,11 @@ fn main() {
                     operator, left, right
                 )
             }
-            EvalError::TypeError { expected, got } => {
+            EvalError::TypeMismatch { expected, got } => {
                 format!("Expected '{}' but got '{}'", expected, got)
             }
             EvalError::NotDefined(name) => format!("{} is not defined", name),
-            EvalError::General(error) => error,
+            EvalError::MiscellaneousError(error) => error,
             EvalError::UncompatibleConstraint {
                 data_type,
                 constraint,

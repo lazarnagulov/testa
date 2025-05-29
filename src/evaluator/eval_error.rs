@@ -13,7 +13,7 @@ pub enum EvalError {
         operator: InfixOperator,
         right: Object,
     },
-    TypeError {
+    TypeMismatch {
         expected: String,
         got: String,
     },
@@ -23,7 +23,7 @@ pub enum EvalError {
         constraint: String,
     },
     // TODO: Better name?
-    General(String),
+    MiscellaneousError(String),
 }
 
 impl EvalError {
@@ -56,7 +56,7 @@ impl EvalError {
         }
     }
 
-    pub fn type_error(expected: String, got: String) -> Self {
-        EvalError::TypeError { expected, got }
+    pub fn type_mismatch(expected: String, got: String) -> Self {
+        EvalError::TypeMismatch { expected, got }
     }
 }

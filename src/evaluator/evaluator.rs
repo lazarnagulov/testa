@@ -72,7 +72,10 @@ fn evaluate_generate(
 ) -> Result<Object, EvalError> {
     let cardinality = match &evaluate_expression(count, context)? {
         Object::Int(value) => Ok(*value),
-        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", *obj))),
+        obj => Err(EvalError::type_mismatch(
+            "int".to_owned(),
+            format!("{}", *obj),
+        )),
     }?;
     let template = template_name.map_or_else(
         || Ok(Template::new(None, body)),
@@ -91,16 +94,19 @@ fn generate_csv(
     cardinality: isize,
     context: &Context,
 ) -> Result<Object, EvalError> {
-    let mut file = File::create("test.csv")
-        .map_err(|error| EvalError::General(format!("Failed to create file: {}", error)))?;
+    let mut file = File::create("test.csv").map_err(|error| {
+        EvalError::MiscellaneousError(format!("Failed to create file: {}", error))
+    })?;
     let header = template.all_field_names().join(",");
 
-    writeln!(file, "{}", header)
-        .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
+    writeln!(file, "{}", header).map_err(|error| {
+        EvalError::MiscellaneousError(format!("Failed to write to file: {}", error))
+    })?;
     for _ in 0..cardinality {
         let line = template.visit(context).map(|fields| fields.join(","))?;
-        writeln!(file, "{}", line)
-            .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
+        writeln!(file, "{}", line).map_err(|error| {
+            EvalError::MiscellaneousError(format!("Failed to write to file: {}", error))
+        })?;
     }
     Ok(Object::NoReturn)
 }
@@ -113,7 +119,7 @@ pub fn evaluate_expression(
         IntLiteral(value) => Ok(Object::new(*value)),
         FloatLiteral(value) => {
             let parsed = value.parse::<f32>().map_err(|error| {
-                EvalError::General(format!("Error parsing float literal: {}", error))
+                EvalError::MiscellaneousError(format!("Error parsing float literal: {}", error))
             })?;
             Ok(Object::new(parsed))
         }
