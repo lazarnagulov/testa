@@ -1,3 +1,5 @@
+@output_path "./example_05.csv";
+
 template User {
     id = int[range=1..=1024];
     name = string;

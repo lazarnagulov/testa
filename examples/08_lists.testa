@@ -1,3 +1,5 @@
+@output_path "./example_08.csv";
+
 type Age = int [range=0..=100];
 type Grade = int [range=6..=10];
 

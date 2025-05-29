@@ -1,4 +1,8 @@
-use std::{fs::File, io::Write, rc::Rc};
+use std::{
+    fs::File,
+    io::Write,
+    rc::Rc,
+};
 
 use crate::{
     constraints::constrainted_type::ConstrainedType,
@@ -61,6 +65,10 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             Ok(Object::NoReturn)
         }
         Statement::ConstraintDecl { .. } => todo!(),
+        Statement::OutputPathDirective { argument: path } => {
+            context.output_path = Some(path);
+            Ok(Object::NoReturn)
+        }
     }
 }
 
@@ -94,7 +102,7 @@ fn generate_csv(
     cardinality: isize,
     context: &Context,
 ) -> Result<Object, EvalError> {
-    let mut file = File::create("test.csv").map_err(|error| {
+    let mut file = File::create(context.output_path()).map_err(|error| {
         EvalError::MiscellaneousError(format!("Failed to create file: {}", error))
     })?;
     let header = template.all_field_names().join(",");

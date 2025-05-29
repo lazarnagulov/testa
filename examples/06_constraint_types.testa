@@ -1,3 +1,5 @@
+@output_path "./example_06.csv";
+
 type Age = int [range=0..=100];
 type HouseNumber = extend Age with [multiple_of=2];
 

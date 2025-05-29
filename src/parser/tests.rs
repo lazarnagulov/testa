@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod parser_tests {
     use core::panic;
-    use std::vec;
+    use std::{path::PathBuf, vec};
 
     use crate::parser::{
         ast::{
@@ -514,6 +514,24 @@ mod parser_tests {
                     vec![Statement::OutputDirective {
                         argument: "csv".to_string(),
                         options: vec![]
+                    }]
+                );
+            }
+            Err(err) => handle_error(err),
+        }
+    }
+
+    #[test]
+    fn parse_output_path() {
+        let program = "@output_path \"./example.csv\";";
+        let mut parser = Parser::new(program);
+        match parser.parse() {
+            Ok(program) => {
+                println!("{:?}", program);
+                assert_eq!(
+                    program.0,
+                    vec![Statement::OutputPathDirective {
+                        argument: PathBuf::from("./example.csv"),
                     }]
                 );
             }

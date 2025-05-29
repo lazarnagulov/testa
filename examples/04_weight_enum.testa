@@ -1,3 +1,5 @@
+@output_path "./example_04.csv";
+
 enum Role { 
     User => 5;
     Admin;

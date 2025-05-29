@@ -1,3 +1,5 @@
+@output_path "./example_07.csv";
+
 template User {
     id = string;
     name = string;
