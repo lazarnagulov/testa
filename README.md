@@ -77,7 +77,7 @@ In the above example:
 
 Apply similar constraints to other data types as well.
 
-Check example: [constraints](./examples/06_constraints.testa),
+Check example: [constraints](./examples/05_constraints.testa),
 
 ### Lists
 
@@ -98,7 +98,7 @@ In the above example:
 > Defining multidimensional lists is also possible, such as `[[int[min=0]][count=0..5]][count=1..=5]`, but using type aliasing is recommended.
 
 
-Check examples: [lists](./examples/09_lists.testa), [multidimensional lists](./examples/10_multidimensional_list.testa).
+Check examples: [lists](./examples/08_lists.testa), [multidimensional lists](./examples/09_multidimensional_list.testa).
 
 ### Custom types
 
@@ -119,7 +119,7 @@ This lets you build on previously defined types by layering more rules on top.
 > [!TIP]
 > Now that ugly list example can be written as `[PositiveIntList][count=1..5]`.
 
-Check example: [types](./examples/07_constraint_types.testa).
+Check example: [types](./examples/06_constraint_types.testa).
 
 
 ## Templates
