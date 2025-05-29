@@ -134,7 +134,10 @@ impl ConstrainedType {
         all_constraints
     }
 
-    fn find_parent(type_kind: &DataTypeKind, context: &Context) -> Result<Option<Rc<ConstrainedType>>, EvalError> {
+    fn find_parent(
+        type_kind: &DataTypeKind,
+        context: &Context,
+    ) -> Result<Option<Rc<ConstrainedType>>, EvalError> {
         match type_kind {
             DataTypeKind::Custom(parent_name) => {
                 match context.get_type(&parent_name).map(|rc| Rc::clone(rc)) {
@@ -209,7 +212,9 @@ impl Visitor<Object> for ConstrainedType {
         if let DataTypeKind::List(data_type) = &self.type_kind {
             let mut result = Vec::new();
             let sampler = constraints_set.build_list_sampler().unwrap();
-            let Object::Int(count) = sampler.sample() else { unreachable!() };
+            let Object::Int(count) = sampler.sample() else {
+                unreachable!()
+            };
             for _ in 0..count {
                 result.push(evaluate_data_type(&data_type, context)?);
             }

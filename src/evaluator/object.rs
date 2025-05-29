@@ -17,6 +17,12 @@ impl Object {
     }
 }
 
+impl From<i32> for Object {
+    fn from(value: i32) -> Self {
+        Object::Int(value as isize)
+    }
+}
+
 impl From<Vec<Object>> for Object {
     fn from(value: Vec<Object>) -> Self {
         Object::List(value)

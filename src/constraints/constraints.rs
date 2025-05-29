@@ -1,6 +1,6 @@
 use core::fmt;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, i32};
+use std::{collections::HashMap, fmt::Debug, i32};
 
 use crate::{
     evaluator::{eval_error::EvalError, object::Object},
@@ -67,10 +67,14 @@ impl Constraint for RangeConstraint {
     }
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
-        Some(Box::new(UniformSampler::new(
-            self.min as i32,
-            self.max as i32,
-        )))
+        if self.min == self.max {
+            Some(Box::new(IdentitySampler::new(self.min)))
+        } else {
+            Some(Box::new(UniformSampler::new(
+                self.min as i32,
+                self.max as i32,
+            )))
+        }
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {
@@ -270,6 +274,26 @@ impl ConstraintBuilder for CountBuilder {
 }
 
 #[derive(Debug, Clone)]
+pub struct IdentitySampler<T> {
+    pub value: T,
+}
+
+impl<T> IdentitySampler<T> {
+    pub fn new(value: T) -> Self {
+        IdentitySampler { value }
+    }
+}
+
+impl<T> Sampler for IdentitySampler<T>
+where
+    T: Into<Object> + Debug + Clone,
+{
+    fn sample(&self) -> Object {
+        Object::new(self.value.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct CountConstraint {
     pub min: i32,
     pub max: i32,
@@ -302,10 +326,14 @@ impl Constraint for CountConstraint {
     }
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
-        Some(Box::new(UniformSampler::new(
-            self.min as i32,
-            self.max as i32,
-        )))
+        if self.min == self.max {
+            Some(Box::new(IdentitySampler::new(self.min)))
+        } else {
+            Some(Box::new(UniformSampler::new(
+                self.min as i32,
+                self.max as i32,
+            )))
+        }
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {
