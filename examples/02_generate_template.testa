@@ -6,4 +6,4 @@ template User {
     balance = float;
 }
 
-generate User[10];
+@generate User[10];

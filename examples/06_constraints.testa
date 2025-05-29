@@ -7,4 +7,4 @@ template User {
     is_deleted = bool[bias=30.0];
 }
 
-generate User[10];
+@generate User[10];

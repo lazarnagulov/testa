@@ -191,13 +191,13 @@ impl<'src> Lexer<'src> {
                 match directive {
                     "@output" => Token::new(Output, current_index, 6),
                     "@seed" => Token::new(Seed, current_index, 4),
+                    "@generate" => Token::new(Generate, current_index, 9),
                     _ => panic!("Invalid directive {}", directive),
                 }
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let identifier = self.read_identifier(current_index);
                 match identifier {
-                    "generate" => Token::new(Generate, current_index, 8),
                     "template" => Token::new(Template, current_index, 8),
                     "resource" => Token::new(Resource, current_index, 8),
                     "with" => Token::new(With, current_index, 4),

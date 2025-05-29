@@ -10,4 +10,4 @@ template Student : User {
     year = int[range=1..=4];
 }
 
-generate Student[10];
+@generate Student[10];

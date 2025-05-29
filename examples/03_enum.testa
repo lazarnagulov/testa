@@ -10,4 +10,4 @@ template User {
     role = Role;
 }
 
-generate User[10];
+@generate User[10];

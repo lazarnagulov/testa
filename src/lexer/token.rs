@@ -5,6 +5,7 @@ use std::fmt::Display;
 pub enum TokenKind {
     // directives -- starts with @
     Output,
+    Generate,
     Seed,
 
     // builtins -- starts with $
@@ -12,7 +13,6 @@ pub enum TokenKind {
     Uuid,
 
     // keywords
-    Generate,
     Template,
     Resource,
     Constraint,

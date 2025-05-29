@@ -10,4 +10,4 @@ template User {
     home_number = HouseNumber;
 }
 
-generate User[10];
+@generate User[10];

@@ -9,4 +9,4 @@ template Student {
     grades = [Grade][count=1..5];
 }
 
-generate Student[10];
+@generate Student[10];
