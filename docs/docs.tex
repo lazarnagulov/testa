@@ -160,7 +160,9 @@ template User {
         \caption{Template with data types}
         \label{listing:4}
     \end{listing}
-    \par As demonstrated in Listing \ref{listing:4}, these types can interact with each other as well as with literals. 
+    \par As shown in Listing \ref{listing:4}, these types can interact with one another as well as with 
+    literals. Additionally, fundamental data types can be extended by introducing constraints or creating 
+    lists of these types.
     \subsection{Lists}
         \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
@@ -230,7 +232,7 @@ template Student : User {
         \centering
         \label{listing:5}
     \end{listing}
-    \par To improve clarity and minimize redundancy, types may be effectively declared and reused (Listing \ref{listing:6}). 
+    \par To improve clarity and minimize redundancy, types may be effectively declared and reused (Listings \ref{listing:6} and \ref{listing:int_tensor}). 
     \begin{listing}[h]
     \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
 |\textcolor{keywordColor}{type}| Age = int [range=0..=100];
@@ -252,6 +254,23 @@ template Student : User {
         \label{listing:6}
     \end{listing}
     \pagebreak
+
+    \begin{listing}[h]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+|\textcolor{keywordColor}{type}| IntList = [int][count=1..=5];
+|\textcolor{keywordColor}{type}| IntMatrix = [|\textcolor{purple}{IntList}|][count=1..=5];
+|\textcolor{keywordColor}{type}| IntTensor = [|\textcolor{purple}{IntMatrix}|][count=1..=5];
+// same as
+|\textcolor{keywordColor}{type}| IntTensor 
+        = [[[int][count=1..=5]][count=1..=5]][count=1..=5];
+    \end{minted}
+        \caption{Templates with user-defined lists}
+        \centering
+        \label{listing:int_tensor}
+    \end{listing}
+
+
+
 
     \begin{table}[h]
         \begin{tabular}{|c|c|c|c|}
