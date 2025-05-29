@@ -440,6 +440,7 @@ impl<'src> Parser<'src> {
                 "bias" => self.parse_constraint_expression(ConstraintKind::Bias),
                 "min" => self.parse_constraint_expression(ConstraintKind::Min),
                 "max" => self.parse_constraint_expression(ConstraintKind::Max),
+                "count" => self.parse_constraint_expression(ConstraintKind::Count),
                 _ => {
                     if self.peek_kind() == &SingleEqual {
                         Err(ParserError::UndefinedConstraint)

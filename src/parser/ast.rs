@@ -211,7 +211,7 @@ impl ConstraintExpression {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub enum ConstraintKind {
     Range,
     MultipleOf,
@@ -220,6 +220,22 @@ pub enum ConstraintKind {
     Custom,
     Min,
     Max,
+    Count,
+}
+
+impl fmt::Display for ConstraintKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConstraintKind::Range => write!(f, "range"),
+            ConstraintKind::MultipleOf => write!(f, "multiple_of"),
+            ConstraintKind::Length => write!(f, "lenght"),
+            ConstraintKind::Bias => write!(f, "bias"),
+            ConstraintKind::Custom => write!(f, "custom"),
+            ConstraintKind::Min => write!(f, "min"),
+            ConstraintKind::Max => write!(f, "max"),
+            ConstraintKind::Count => write!(f, "count"),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

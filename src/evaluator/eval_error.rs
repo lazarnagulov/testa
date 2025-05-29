@@ -18,6 +18,10 @@ pub enum EvalError {
         got: String,
     },
     NotDefined(String),
+    UncompatibleConstraint {
+        data_type: String,
+        constraint: String,
+    },
     // TODO: Better name?
     General(String),
 }
@@ -30,6 +34,13 @@ impl EvalError {
         EvalError::UnsupportedPrefixOperator {
             operator,
             object: object.into(),
+        }
+    }
+
+    pub fn incompatible_constraint(data_type: &str, constraint: &str) -> Self {
+        EvalError::UncompatibleConstraint {
+            constraint: constraint.to_owned(),
+            data_type: data_type.to_owned(),
         }
     }
 

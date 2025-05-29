@@ -9,13 +9,11 @@ use crate::{
         evaluator::{evaluate_data_type, evaluate_expression, evaluate_identifier},
         object::Object,
     },
-    parser::ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind},
+    parser::ast::{ConstraintExpression, DataType, DataTypeKind},
 };
 
 use super::{
-    constraints::{
-        BiasConstraint, MaxConstraint, MinConstraint, MultipleOfConstraint, RangeConstraint,
-    },
+    constraints::CONSTRAINT_REGISTRY,
     sampler::{ConstraintSet, Sampler},
 };
 
@@ -58,7 +56,10 @@ impl ConstrainedType {
                 cached_sampler: RefCell::new(None),
             });
         };
-        let evaluated_constraints = ConstrainedType::evaluate_constraints(&constraints, context)?;
+        let fundamental_type = ConstrainedType::get_fundamental_type(&data_type.kind, context);
+        let evaluated_constraints =
+            ConstrainedType::evaluate_constraints(&constraints, fundamental_type, context)?;
+
         Ok(ConstrainedType {
             parent,
             type_kind: data_type.kind,
@@ -69,57 +70,27 @@ impl ConstrainedType {
 
     pub fn evaluate_constraints(
         constraints: &Vec<ConstraintExpression>,
+        type_kind: &DataTypeKind,
         context: &Context,
     ) -> Result<Vec<Box<dyn Constraint>>, EvalError> {
         let mut evaluated_constraints: Vec<Box<dyn Constraint>> = vec![];
+        let registry = &CONSTRAINT_REGISTRY;
+
         for constraint in constraints {
             let object = evaluate_expression(&constraint.expression, context)?;
-            match constraint.kind {
-                ConstraintKind::Range => {
-                    let (start, end) = ConstrainedType::extract_range(&object)?;
-                    evaluated_constraints.push(Box::new(RangeConstraint::new(start, end)));
-                }
-                ConstraintKind::MultipleOf => {
-                    let integer = ConstrainedType::extract_int(&object)?;
-                    evaluated_constraints.push(Box::new(MultipleOfConstraint::new(integer)));
-                }
-                ConstraintKind::Bias => {
-                    let float = ConstrainedType::extract_float(&object)?;
-                    evaluated_constraints.push(Box::new(BiasConstraint::new(float)));
-                }
-                ConstraintKind::Min => {
-                    let integer = ConstrainedType::extract_int(&object)?;
-                    evaluated_constraints.push(Box::new(MinConstraint::new(integer)));
-                }
-                ConstraintKind::Max => {
-                    let integer = ConstrainedType::extract_int(&object)?;
-                    evaluated_constraints.push(Box::new(MaxConstraint::new(integer)));
-                }
-                _ => todo!("add new kind to ConstrainedType::evaluate_constraints()"),
+            let builder = registry.get(&constraint.kind).ok_or_else(|| {
+                EvalError::NotDefined(format!("Constraint kind {:?}", constraint.kind))
+            })?;
+
+            if !builder.is_compatible(type_kind) {
+                return Err(EvalError::incompatible_constraint(
+                    &format!("{}", type_kind),
+                    &format!("{}", constraint.kind),
+                ));
             }
+            evaluated_constraints.push(builder.build(&object)?);
         }
         Ok(evaluated_constraints)
-    }
-
-    fn extract_int(object: &Object) -> Result<i32, EvalError> {
-       match object {
-            Object::Int(value) => Ok((*value) as i32),
-            obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-        }   
-    }
-
-    fn extract_float(object: &Object) -> Result<f32, EvalError> {
-        match object {
-            Object::Float(value) => Ok(*value),
-            obj => Err(EvalError::type_error("float".to_owned(), format!("{}", obj))),
-        }
-    }
-
-    fn extract_range(object: &Object) -> Result<(isize, isize), EvalError> {
-        match object {
-            Object::Range(start, end) => Ok((*start, *end)),
-            obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-        }
     }
 
     fn collect_constraints(&self) -> Vec<Box<dyn Constraint>> {
@@ -132,6 +103,22 @@ impl ConstrainedType {
         }
 
         all_constraints
+    }
+
+    // TODO: Move to util?
+    fn get_fundamental_type<'a>(kind: &'a DataTypeKind, context: &'a Context) -> &'a DataTypeKind {
+        match kind {
+            DataTypeKind::Int | DataTypeKind::Str | DataTypeKind::Float | DataTypeKind::Boolean => {
+                &kind
+            }
+            DataTypeKind::List(data_type) => {
+                ConstrainedType::get_fundamental_type(&data_type.kind, context)
+            }
+            DataTypeKind::Custom(name) => {
+                let data_type = context.get_type(&name).unwrap();
+                ConstrainedType::get_fundamental_type(&data_type.type_kind, context)
+            }
+        }
     }
 
     fn generate_without_constraints(&self, context: &Context) -> Result<Object, EvalError> {
