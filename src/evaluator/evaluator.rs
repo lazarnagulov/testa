@@ -1,13 +1,11 @@
 use std::{fs::File, io::Write, rc::Rc};
 
-use rand::{Rng, distr::Alphanumeric};
-
 use crate::{
     constraints::constrainted_type::ConstrainedType,
     enumeration::enumeration::Enum,
     parser::ast::{
-        DataType, DataTypeKind, Expression, ExpressionKind::*, Field, InfixOperator,
-        PrefixOperator, Program, Statement,
+        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
+        Statement,
     },
     template::template::Template,
 };
@@ -74,7 +72,10 @@ fn evaluate_generate(
 ) -> Result<Object, EvalError> {
     let cardinality = match &evaluate_expression(count, context)? {
         Object::Int(value) => Ok(*value),
-        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", *obj))),
+        obj => Err(EvalError::type_mismatch(
+            "int".to_owned(),
+            format!("{}", *obj),
+        )),
     }?;
     let template = template_name.map_or_else(
         || Ok(Template::new(None, body)),
@@ -93,16 +94,19 @@ fn generate_csv(
     cardinality: isize,
     context: &Context,
 ) -> Result<Object, EvalError> {
-    let mut file = File::create("test.csv")
-        .map_err(|error| EvalError::General(format!("Failed to create file: {}", error)))?;
+    let mut file = File::create("test.csv").map_err(|error| {
+        EvalError::MiscellaneousError(format!("Failed to create file: {}", error))
+    })?;
     let header = template.all_field_names().join(",");
 
-    writeln!(file, "{}", header)
-        .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
+    writeln!(file, "{}", header).map_err(|error| {
+        EvalError::MiscellaneousError(format!("Failed to write to file: {}", error))
+    })?;
     for _ in 0..cardinality {
         let line = template.visit(context).map(|fields| fields.join(","))?;
-        writeln!(file, "{}", line)
-            .map_err(|error| EvalError::General(format!("Failed to write to file: {}", error)))?;
+        writeln!(file, "{}", line).map_err(|error| {
+            EvalError::MiscellaneousError(format!("Failed to write to file: {}", error))
+        })?;
     }
     Ok(Object::NoReturn)
 }
@@ -115,7 +119,7 @@ pub fn evaluate_expression(
         IntLiteral(value) => Ok(Object::new(*value)),
         FloatLiteral(value) => {
             let parsed = value.parse::<f32>().map_err(|error| {
-                EvalError::General(format!("Error parsing float literal: {}", error))
+                EvalError::MiscellaneousError(format!("Error parsing float literal: {}", error))
             })?;
             Ok(Object::new(parsed))
         }
@@ -123,6 +127,7 @@ pub fn evaluate_expression(
         BooleanLiteral(value) => Ok(Object::new(*value)),
         Identifier(name) => evaluate_identifier(name, context),
         Type(data_type) => evaluate_data_type(data_type, context),
+        List(_) => todo!("implement list expression evaluation"),
         Prefix {
             operator,
             expression,
@@ -143,33 +148,14 @@ pub fn evaluate_expression(
     }
 }
 
-fn evaluate_data_type(data_type: &DataType, context: &Context) -> Result<Object, EvalError> {
-    // TODO: Move not constraints generation to visit()
-    if data_type.constraints.is_none() {
-        let mut rng = rand::rng();
-        return match &data_type.kind {
-            DataTypeKind::Int => Ok(Object::new(rng.random::<i32>() as isize)),
-            DataTypeKind::Str => {
-                let size = rng.random_range(6..=20);
-                let value: String = rng
-                    .sample_iter(&Alphanumeric)
-                    .take(size)
-                    .map(char::from)
-                    .collect();
-                Ok(Object::new(value))
-            }
-            DataTypeKind::Boolean => Ok(Object::new(rng.random_bool(50.0))),
-            DataTypeKind::Float => Ok(Object::new(rng.random::<f32>())),
-            DataTypeKind::Custom(name) => evaluate_identifier(name, context),
-        };
-    }
-
+pub fn evaluate_data_type(data_type: &DataType, context: &Context) -> Result<Object, EvalError> {
     // TODO: not cloning here?
+    // TODO: add caching
     let constrainted_type = ConstrainedType::new(data_type.clone(), context)?;
     Ok(constrainted_type.visit(context)?)
 }
 
-fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalError> {
+pub fn evaluate_identifier(name: &str, context: &Context) -> Result<Object, EvalError> {
     // TODO: Add support for more identifiers - now it works only for enumerations
     if let Some(enumeration) = context.get_enum(name) {
         return Ok(Object::new(enumeration.visit(context)?));

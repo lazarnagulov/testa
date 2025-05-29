@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::VecDeque, fmt};
 
 use rand::{
     Rng,
@@ -13,13 +13,19 @@ pub trait Sampler: std::fmt::Debug {
     fn sample(&self) -> Object;
 }
 
+#[derive(Debug)]
 pub struct ConstraintSet {
-    constraints: Vec<Box<dyn Constraint>>,
+    constraints: VecDeque<Box<dyn Constraint>>,
 }
 
 impl ConstraintSet {
-    pub fn new(constraints: Vec<Box<dyn Constraint>>) -> Self {
+    pub fn new(constraints: VecDeque<Box<dyn Constraint>>) -> Self {
         Self { constraints }
+    }
+
+    pub fn build_list_sampler(&mut self) -> Option<Box<dyn Sampler>> {
+        let constraint = self.constraints.pop_front()?;
+        Some(constraint.build_sampler()?)
     }
 
     pub fn build_sampler(&self) -> Box<dyn Sampler> {

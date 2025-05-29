@@ -109,8 +109,36 @@ impl<'src> Parser<'src> {
         Ok(Statement::Enum { name, variants })
     }
 
+    // FIXME: Something is wrong with start, size calculation
+    fn parse_elements(&mut self) -> Result<Vec<Element>, ParserError> {
+        let mut elements = vec![];
+        while matches!(
+            self.peek_kind(),
+            False | True | StringLiteral | FloatLiteral | IntLiteral
+        ) {
+            let value = self.parse_expression(Precedence::Lowest)?;
+            let start = value.start;
+            let mut size = value.size;
+            let weight = if self.peek_kind() == &Arrow {
+                self.lexer.next();
+                let weight_expression = self.parse_expression(Precedence::Lowest)?;
+                size += weight_expression.size + 2;
+                Some(weight_expression)
+            } else {
+                None
+            };
+            elements.push(Element::new(value, weight, start, size));
+            if self.peek_kind() == &RBracket {
+                break;
+            }
+            self.expect_token(Semicolon)?;
+        }
+        self.expect_token(RBracket)?;
+        Ok(elements)
+    }
+
     fn parse_variants(&mut self) -> Result<Vec<Variant>, ParserError> {
-        let mut parameters = vec![];
+        let mut variants = vec![];
         while self.peek_kind() == &Identifier {
             let name = self.parse_identifier_as_string()?;
             let weight = if self.peek_kind() == &Arrow {
@@ -119,14 +147,14 @@ impl<'src> Parser<'src> {
             } else {
                 None
             };
-            parameters.push(Variant::new(name, weight));
+            variants.push(Variant::new(name, weight));
             if self.peek_kind() == &RBrace {
                 break;
             }
             self.expect_token(Semicolon)?;
         }
         self.expect_token(RBrace)?;
-        Ok(parameters)
+        Ok(variants)
     }
 
     fn parse_fields(&mut self) -> Result<Vec<Field>, ParserError> {
@@ -145,6 +173,13 @@ impl<'src> Parser<'src> {
         }
         self.expect_token(RBrace)?;
         Ok(options)
+    }
+
+    fn parse_peeked_token_as_string(&mut self) -> String {
+        let token = self.lexer.peek().unwrap();
+        let start = token.start;
+        let size = token.size;
+        self.source[start..start + size].to_string()
     }
 
     fn parse_identifier_as_string(&mut self) -> Result<String, ParserError> {
@@ -274,6 +309,19 @@ impl<'src> Parser<'src> {
     fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.peek_kind() {
             Int | Float | Str | Bool => Ok(self.parse_type()?),
+            LBracket => {
+                let kind = self.peek_kind_n(2);
+                match kind {
+                    Int | Float | Str | Bool | LBracket | Identifier => self.parse_type(),
+                    True | False | IntLiteral | StringLiteral | FloatLiteral => {
+                        self.parse_list_expression()
+                    }
+                    obj => Err(ParserError::expected(
+                        "data type or literal",
+                        &format!("{}", obj),
+                    )),
+                }
+            }
             Identifier | True | False | IntLiteral | StringLiteral | FloatLiteral => {
                 Ok(self.parse_literal()?)
             }
@@ -285,6 +333,41 @@ impl<'src> Parser<'src> {
                 "Invalid primary expression: {}",
                 kind
             ))),
+        }
+    }
+
+    fn parse_list_expression(&mut self) -> Result<Expression, ParserError> {
+        let (start, _) = self.consume_token();
+        let elements = self.parse_elements()?;
+        let size = elements.iter().fold(0, |acc, element| acc + element.size) + 1;
+        Ok(Expression::new(ExpressionKind::List(elements), start, size))
+    }
+
+    fn parse_list_type(&mut self) -> Result<Expression, ParserError> {
+        self.consume_token();
+        let data_type = self.parse_type()?;
+        let start = data_type.start;
+        let size = data_type.size;
+        let ExpressionKind::Type(data_type) = data_type.kind else {
+            unreachable!()
+        };
+        self.expect_token(RBracket)?;
+        if self.peek_kind() == &LBracket {
+            let consraints = self.parse_constraints()?;
+            Ok(Expression::new(
+                ExpressionKind::Type(DataType::new(
+                    DataTypeKind::List(Box::new(data_type)),
+                    Some(consraints),
+                )),
+                start,
+                start + size + 1,
+            ))
+        } else {
+            Ok(Expression::new(
+                ExpressionKind::Type(DataType::new(DataTypeKind::List(Box::new(data_type)), None)),
+                start,
+                start + size + 1,
+            ))
         }
     }
 
@@ -302,6 +385,11 @@ impl<'src> Parser<'src> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
         let start = token.start;
         let size = token.size;
+
+        if token.kind == LBracket {
+            return self.parse_list_type();
+        }
+
         let data_type_kind = match token.kind {
             Int => DataTypeKind::Int,
             Float => DataTypeKind::Float,
@@ -316,6 +404,7 @@ impl<'src> Parser<'src> {
                 }
                 DataTypeKind::Custom(name)
             }
+            Identifier => DataTypeKind::Custom(self.parse_peeked_token_as_string()),
             _ => unreachable!(),
         };
 
@@ -351,6 +440,7 @@ impl<'src> Parser<'src> {
                 "bias" => self.parse_constraint_expression(ConstraintKind::Bias),
                 "min" => self.parse_constraint_expression(ConstraintKind::Min),
                 "max" => self.parse_constraint_expression(ConstraintKind::Max),
+                "count" => self.parse_constraint_expression(ConstraintKind::Count),
                 _ => {
                     if self.peek_kind() == &SingleEqual {
                         Err(ParserError::UndefinedConstraint)
@@ -508,6 +598,13 @@ impl<'src> Parser<'src> {
 
     fn peek_kind(&mut self) -> &TokenKind {
         self.lexer.peek().map_or(&Eof, |t| &t.kind)
+    }
+
+    fn peek_kind_n(&mut self, n: usize) -> TokenKind {
+        self.lexer
+            .clone()
+            .nth(n - 1)
+            .map_or(Eof, |token| token.kind)
     }
 
     fn current_precendence(&mut self) -> Precedence {

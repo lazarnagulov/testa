@@ -70,23 +70,28 @@ impl Visitor<Vec<String>> for Template {
         let result = self
             .all_fields()
             .iter()
-            .filter_map(|field| {
-                if let Some(field) = field_map.get(field.name.as_str()) {
+            .try_fold(Vec::new(), |mut acc, field| {
+                if let Some(existing_field) = field_map.get(field.name.as_str()) {
                     override_set.remove(field.name.as_str());
-                    if !field.overridable {
+                    if !existing_field.overridable {
                         eprintln!(
                             "WARNING: Field '{}' is overridden but not marked as 'override'!",
-                            field.name
+                            existing_field.name
                         );
                     }
-                    return None;
+                    return Ok(acc);
                 }
+
                 field_map.insert(&field.name, &field);
-                evaluate_expression(&field.value, context)
-                    .ok()
-                    .map(|result| format!("{}", result))
-            })
-            .collect::<Vec<String>>();
+
+                match evaluate_expression(&field.value, context) {
+                    Ok(result) => {
+                        acc.push(format!("{}", result));
+                        Ok(acc)
+                    }
+                    Err(e) => Err(e),
+                }
+            })?;
         override_set.iter().for_each(|field_name| eprintln!("WARNING: The field '{}' is marked as 'override', but it is not actually overridden.", field_name));
         Ok(result)
     }

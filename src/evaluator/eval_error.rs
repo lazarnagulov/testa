@@ -13,13 +13,17 @@ pub enum EvalError {
         operator: InfixOperator,
         right: Object,
     },
-    TypeError {
+    TypeMismatch {
         expected: String,
         got: String,
     },
     NotDefined(String),
+    UncompatibleConstraint {
+        data_type: String,
+        constraint: String,
+    },
     // TODO: Better name?
-    General(String),
+    MiscellaneousError(String),
 }
 
 impl EvalError {
@@ -30,6 +34,13 @@ impl EvalError {
         EvalError::UnsupportedPrefixOperator {
             operator,
             object: object.into(),
+        }
+    }
+
+    pub fn incompatible_constraint(data_type: &str, constraint: &str) -> Self {
+        EvalError::UncompatibleConstraint {
+            constraint: constraint.to_owned(),
+            data_type: data_type.to_owned(),
         }
     }
 
@@ -45,7 +56,7 @@ impl EvalError {
         }
     }
 
-    pub fn type_error(expected: String, got: String) -> Self {
-        EvalError::TypeError { expected, got }
+    pub fn type_mismatch(expected: String, got: String) -> Self {
+        EvalError::TypeMismatch { expected, got }
     }
 }

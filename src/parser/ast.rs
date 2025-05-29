@@ -92,6 +92,7 @@ pub enum ExpressionKind {
     StringLiteral(String),
     BooleanLiteral(bool),
     Identifier(String),
+    List(Vec<Element>),
     Type(DataType),
     Prefix {
         operator: PrefixOperator,
@@ -105,6 +106,26 @@ pub enum ExpressionKind {
     FuncCall {
         arguments: Vec<Expression>,
     },
+}
+
+// TODO: Add start and size
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct Element {
+    pub value: Expression,
+    pub weight: Option<Expression>,
+    pub start: usize,
+    pub size: usize,
+}
+
+impl Element {
+    pub fn new(value: Expression, weight: Option<Expression>, start: usize, size: usize) -> Self {
+        Element {
+            value,
+            weight,
+            start,
+            size,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -190,7 +211,7 @@ impl ConstraintExpression {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub enum ConstraintKind {
     Range,
     MultipleOf,
@@ -199,6 +220,22 @@ pub enum ConstraintKind {
     Custom,
     Min,
     Max,
+    Count,
+}
+
+impl fmt::Display for ConstraintKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConstraintKind::Range => write!(f, "range"),
+            ConstraintKind::MultipleOf => write!(f, "multiple_of"),
+            ConstraintKind::Length => write!(f, "lenght"),
+            ConstraintKind::Bias => write!(f, "bias"),
+            ConstraintKind::Custom => write!(f, "custom"),
+            ConstraintKind::Min => write!(f, "min"),
+            ConstraintKind::Max => write!(f, "max"),
+            ConstraintKind::Count => write!(f, "count"),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -219,6 +256,7 @@ pub enum DataTypeKind {
     Str,
     Float,
     Boolean,
+    List(Box<DataType>),
     Custom(String),
 }
 
@@ -229,6 +267,7 @@ impl fmt::Display for DataTypeKind {
             DataTypeKind::Str => write!(f, "string"),
             DataTypeKind::Float => write!(f, "float"),
             DataTypeKind::Boolean => write!(f, "bool"),
+            DataTypeKind::List(data_type) => write!(f, "[{}]", data_type.kind),
             DataTypeKind::Custom(name) => write!(f, "type: {}", name),
         }
     }

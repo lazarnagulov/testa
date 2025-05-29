@@ -1,0 +1,9 @@
+type IntList = [int][count=1..=5];
+type IntMatrix = [IntList][count=1..=5];
+type IntTensor = [IntMatrix][count=1..=5];
+
+generate _ [10] {
+    int_tensor = IntTensor;
+}
+
+

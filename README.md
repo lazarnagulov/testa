@@ -75,14 +75,38 @@ In the above example:
 
 - The `range` constraint ensures that the generated integer will be between 1 and 18 (inclusive).
 
-You can apply similar constraints to other data types as well.
+Apply similar constraints to other data types as well.
+
+Check example: [constraints](./examples/06_constraints.testa),
+
+### Lists
+
+Define list with syntax: `[<type>[<constraint1>, <constraint2>...]][<constraint1>, <constraint2>...]`.
+
+Example
+
+```
+[int[range=1..=100]][count=1..5]
+```
+ 
+In the above example:
+
+- The `range` constraint ensures that the generated integers will be between 1 and 100 (inclusive).
+- The `count` constraint ensures that the generated list constain between 1 and 5 (exclusive) items. 
+
+> [!NOTE]
+> Defining multidimensional lists is also possible, such as `[[int[min=0]][count=0..5]][count=1..=5]`, but using type aliasing is recommended.
+
+
+Check examples: [lists](./examples/09_lists.testa), [multidimensional lists](./examples/10_multidimensional_list.testa).
 
 ### Custom types
 
-You can define custom types by adding constraints to existing (fundamental) types using this syntax: `type <name> = <type>[<constraint1>, <constraint2>...]`.
+Define custom types by adding constraints to existing (fundamental) types using this syntax: `type <name> = <type>[<constraint1>, <constraint2>...]`.
 Example:
 ```
 type PositiveInt = int [range=1..=1024];
+type PositiveIntList = [PositiveInt][count=1..=10];
 ```
 This defines a PositiveInt type as an int constrained to values from 1 to 1024 (inclusive).
 To extend an existing user-defined type with additional constraints, use: `type <name> = extend <type> with [<constraint1>,<constraint2>..]`
@@ -91,6 +115,13 @@ Example:
 type PositiveEvenInt = extend PositiveInt with [multiple_of=2];
 ```
 This lets you build on previously defined types by layering more rules on top.
+
+> [!TIP]
+> Now that ugly list example can be written as `[PositiveIntList][count=1..5]`.
+
+Check example: [types](./examples/07_constraint_types.testa).
+
+
 ## Templates
 
 Templates are declared using `template <name> [: <parent_name>] { key = <value:expr>; }`.
@@ -112,7 +143,7 @@ template Student : User {
 > [!NOTE]
 > Fields are overridden by default. Use the `override` keyword to prevent the warning.
 
-Check examples: [template](./examples/02_generate.testa).
+Check examples: [template](./examples/02_generate_template.testa).
 
 ## Enum
 

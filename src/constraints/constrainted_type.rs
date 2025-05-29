@@ -1,19 +1,19 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+
+use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
     evaluator::{
         context::{Context, Visitor},
         eval_error::EvalError,
-        evaluator::evaluate_expression,
+        evaluator::{evaluate_data_type, evaluate_expression, evaluate_identifier},
         object::Object,
     },
-    parser::ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind},
+    parser::ast::{ConstraintExpression, DataType, DataTypeKind},
 };
 
 use super::{
-    constraints::{
-        BiasConstraint, MaxConstraint, MinConstraint, MultipleOfConstraint, RangeConstraint,
-    },
+    constraints::CONSTRAINT_REGISTRY,
     sampler::{ConstraintSet, Sampler},
 };
 
@@ -41,14 +41,8 @@ pub struct ConstrainedType {
 
 impl ConstrainedType {
     pub fn new(data_type: DataType, context: &Context) -> Result<Self, EvalError> {
-        let parent = match &data_type.kind {
-            DataTypeKind::Custom(parent_name) => {
-                context.get_type(&parent_name).map(|rc| Rc::clone(rc))
-            }
-            _ => None,
-        };
-
-        let Some(constraints) = data_type.constraints else {
+        let parent = ConstrainedType::find_parent(&data_type.kind, context)?;
+        let Some(mut constraints) = data_type.constraints else {
             return Ok(ConstrainedType {
                 parent: None,
                 type_kind: data_type.kind,
@@ -56,7 +50,9 @@ impl ConstrainedType {
                 cached_sampler: RefCell::new(None),
             });
         };
-        let evaluated_constraints = ConstrainedType::evaluate_constraints(&constraints, context)?;
+        let fundamental_type = ConstrainedType::get_fundamental_type(&data_type.kind, context);
+        let evaluated_constraints =
+            ConstrainedType::evaluate_constraints(&mut constraints, fundamental_type, context)?;
         Ok(ConstrainedType {
             parent,
             type_kind: data_type.kind,
@@ -67,58 +63,63 @@ impl ConstrainedType {
 
     pub fn evaluate_constraints(
         constraints: &Vec<ConstraintExpression>,
+        type_kind: &DataTypeKind,
         context: &Context,
     ) -> Result<Vec<Box<dyn Constraint>>, EvalError> {
-        let mut evaluated_constraints: Vec<Box<dyn Constraint>> = vec![];
-        for constraint in constraints {
-            let object = evaluate_expression(&constraint.expression, context)?;
-            match constraint.kind {
-                ConstraintKind::Range => {
-                    let (start, end) = match object {
-                        Object::Range(start, end) => Ok((start, end)),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
-                    evaluated_constraints.push(Box::new(RangeConstraint::new(start, end)));
+        let mut evaluated_constraints =
+            ConstrainedType::build_constraints(constraints, type_kind, context)?;
+
+        if let DataTypeKind::List(inner_type) = type_kind {
+            let mut inner_type = inner_type;
+            if let Some(constraints) = &inner_type.constraints {
+                evaluated_constraints.extend(ConstrainedType::build_constraints(
+                    constraints,
+                    &inner_type.kind,
+                    context,
+                )?);
+            }
+            while let DataTypeKind::List(inner_type_inner) = &inner_type.kind {
+                if let Some(constraints) = &inner_type_inner.constraints {
+                    evaluated_constraints.extend(ConstrainedType::build_constraints(
+                        constraints,
+                        &inner_type_inner.kind,
+                        context,
+                    )?);
+                } else {
+                    break;
                 }
-                ConstraintKind::MultipleOf => {
-                    let integer = match object {
-                        Object::Int(value) => Ok(value),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
-                    evaluated_constraints.push(Box::new(MultipleOfConstraint::new(integer as i32)));
-                }
-                ConstraintKind::Bias => {
-                    let float = match object {
-                        Object::Float(value) => Ok(value),
-                        obj => Err(EvalError::type_error(
-                            "float".to_owned(),
-                            format!("{}", obj),
-                        )),
-                    }?;
-                    evaluated_constraints.push(Box::new(BiasConstraint::new(float)));
-                }
-                ConstraintKind::Min => {
-                    let integer = match object {
-                        Object::Int(value) => Ok(value),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
-                    evaluated_constraints.push(Box::new(MinConstraint::new(integer as i32)));
-                }
-                ConstraintKind::Max => {
-                    let integer = match object {
-                        Object::Int(value) => Ok(value),
-                        obj => Err(EvalError::type_error("int".to_owned(), format!("{}", obj))),
-                    }?;
-                    evaluated_constraints.push(Box::new(MaxConstraint::new(integer as i32)));
-                }
-                _ => todo!("add new kind to ConstrainedType::evaluate_constraints()"),
+                inner_type = inner_type_inner;
             }
         }
         Ok(evaluated_constraints)
     }
 
-    fn collect_constraints(&self) -> Vec<Box<dyn Constraint>> {
-        let mut all_constraints: Vec<Box<dyn Constraint>> = vec![];
+    fn build_constraints(
+        constraints: &Vec<ConstraintExpression>,
+        type_kind: &DataTypeKind,
+        context: &Context,
+    ) -> Result<Vec<Box<dyn Constraint>>, EvalError> {
+        let mut evaluated_constraints: Vec<Box<dyn Constraint>> = Vec::new();
+        for constraint in constraints {
+            let registry = &CONSTRAINT_REGISTRY;
+            let builder = registry.get(&constraint.kind).ok_or_else(|| {
+                EvalError::NotDefined(format!("Constraint kind {:?}", constraint.kind))
+            })?;
+            let object = evaluate_expression(&constraint.expression, context)?;
+
+            if !builder.is_compatible(type_kind) {
+                return Err(EvalError::incompatible_constraint(
+                    &format!("{}", type_kind),
+                    &format!("{}", constraint.kind),
+                ));
+            }
+            evaluated_constraints.push(builder.build(&object)?);
+        }
+        Ok(evaluated_constraints)
+    }
+
+    fn collect_constraints(&self) -> VecDeque<Box<dyn Constraint>> {
+        let mut all_constraints: VecDeque<Box<dyn Constraint>> = VecDeque::new();
         let mut current = Some(self);
 
         while let Some(current_type) = current {
@@ -128,17 +129,95 @@ impl ConstrainedType {
 
         all_constraints
     }
-}
 
-impl Visitor<Object> for ConstrainedType {
-    fn visit(&self, _context: &Context) -> Result<Object, EvalError> {
+    fn find_parent(
+        type_kind: &DataTypeKind,
+        context: &Context,
+    ) -> Result<Option<Rc<ConstrainedType>>, EvalError> {
+        match type_kind {
+            DataTypeKind::Custom(parent_name) => {
+                match context.get_type(&parent_name).map(|rc| Rc::clone(rc)) {
+                    Some(parent) => Ok(Some(parent)),
+                    None => Err(EvalError::NotDefined(format!("Type '{}'", parent_name))),
+                }
+            }
+            DataTypeKind::List(data_type) => ConstrainedType::find_parent(&data_type.kind, context),
+            _ => Ok(None),
+        }
+    }
+
+    fn get_fundamental_type<'a>(kind: &'a DataTypeKind, context: &'a Context) -> &'a DataTypeKind {
+        match kind {
+            DataTypeKind::Int
+            | DataTypeKind::Str
+            | DataTypeKind::Float
+            | DataTypeKind::Boolean
+            | DataTypeKind::List(_) => &kind,
+            DataTypeKind::Custom(name) => {
+                let data_type = context.get_type(&name).unwrap();
+                ConstrainedType::get_fundamental_type(&data_type.type_kind, context)
+            }
+        }
+    }
+
+    fn generate_without_constraints(&self, context: &Context) -> Result<Object, EvalError> {
+        let mut rng = rand::rng();
+        return match &self.type_kind {
+            DataTypeKind::Int => Ok(Object::new(rng.random::<i32>() as isize)),
+            DataTypeKind::Str => {
+                let size = rng.random_range(6..=20);
+                let value: String = rng
+                    .sample_iter(&Alphanumeric)
+                    .take(size)
+                    .map(char::from)
+                    .collect();
+                Ok(Object::new(value))
+            }
+            DataTypeKind::Boolean => Ok(Object::new(rng.random_bool(50.0))),
+            DataTypeKind::Float => Ok(Object::new(rng.random::<f32>())),
+            DataTypeKind::List(data_type) => {
+                let count = rng.random_range(0..=16);
+                let mut values = vec![];
+                values.extend(
+                    (0..count)
+                        .map(|_| evaluate_data_type(data_type, context))
+                        .collect::<Result<Vec<_>, _>>()?,
+                );
+                Ok(Object::new(values))
+            }
+            DataTypeKind::Custom(name) => evaluate_identifier(name, context),
+        };
+    }
+
+    fn sample(&self, constraints_set: &ConstraintSet) -> Result<Object, EvalError> {
         if let Some(sampler) = self.cached_sampler.borrow().as_ref() {
             return Ok(sampler.sample());
         };
-        let constraints_set = ConstraintSet::new(self.collect_constraints());
         let sampler = constraints_set.build_sampler();
 
         *self.cached_sampler.borrow_mut() = Some(sampler);
         Ok(self.cached_sampler.borrow().as_ref().unwrap().sample())
+    }
+}
+
+impl Visitor<Object> for ConstrainedType {
+    fn visit(&self, context: &Context) -> Result<Object, EvalError> {
+        if self.constraints.is_empty() {
+            return self.generate_without_constraints(context);
+        }
+
+        let mut constraints_set = ConstraintSet::new(self.collect_constraints());
+        if let DataTypeKind::List(data_type) = &self.type_kind {
+            let sampler = constraints_set.build_list_sampler().unwrap();
+            let Object::Int(count) = sampler.sample() else {
+                unreachable!()
+            };
+            (0..count)
+                .map(|_| evaluate_data_type(&data_type, context))
+                .collect::<Result<Vec<_>, _>>()
+                .map(|list| Object::List(list))
+        } else {
+            self.sample(&constraints_set)
+        }
     }
 }

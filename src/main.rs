@@ -23,7 +23,7 @@ fn main() {
         eprintln!("Failed to read file: {}", err);
         std::process::exit(1);
     });
-    let mut parser = Parser::new(source.as_str());
+    let mut parser = Parser::new(&source);
     let program = parser.parse().unwrap_or_else(|err| {
         let error_message = match err {
             ParserError::Expected { expected, got } => {
@@ -54,11 +54,20 @@ fn main() {
                     operator, left, right
                 )
             }
-            EvalError::TypeError { expected, got } => {
+            EvalError::TypeMismatch { expected, got } => {
                 format!("Expected '{}' but got '{}'", expected, got)
             }
             EvalError::NotDefined(name) => format!("{} is not defined", name),
-            EvalError::General(error) => error,
+            EvalError::MiscellaneousError(error) => error,
+            EvalError::UncompatibleConstraint {
+                data_type,
+                constraint,
+            } => {
+                format!(
+                    "Incompatible constraint '{}' for type '{}'",
+                    constraint, data_type
+                )
+            }
         };
         eprintln!("{}", error_message);
         std::process::exit(1);

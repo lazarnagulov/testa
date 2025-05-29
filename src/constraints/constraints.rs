@@ -1,11 +1,49 @@
-use std::i32;
+use core::fmt;
+use once_cell::sync::Lazy;
+use std::{collections::HashMap, fmt::Debug, i32};
 
-use crate::evaluator::object::Object;
+use crate::{
+    evaluator::{eval_error::EvalError, object::Object},
+    parser::ast::{ConstraintKind, DataTypeKind},
+};
 
 use super::{
     constrainted_type::Constraint,
     sampler::{BooleanSampler, Sampler, UniformSampler},
+    util,
 };
+
+pub trait ConstraintBuilder: Send + Sync + fmt::Debug {
+    fn is_compatible(&self, type_kind: &DataTypeKind) -> bool;
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError>;
+}
+
+// TODO: Make it thread safe later
+pub static CONSTRAINT_REGISTRY: Lazy<HashMap<ConstraintKind, Box<dyn ConstraintBuilder>>> =
+    Lazy::new(|| {
+        let mut m: HashMap<ConstraintKind, Box<dyn ConstraintBuilder>> = HashMap::new();
+        m.insert(ConstraintKind::Range, Box::new(RangeBuilder));
+        m.insert(ConstraintKind::MultipleOf, Box::new(MultipleOfBuilder));
+        m.insert(ConstraintKind::Bias, Box::new(BiasBuilder));
+        m.insert(ConstraintKind::Min, Box::new(MinBuilder));
+        m.insert(ConstraintKind::Max, Box::new(MaxBuilder));
+        m.insert(ConstraintKind::Count, Box::new(CountBuilder));
+        m
+    });
+
+#[derive(Debug)]
+pub struct RangeBuilder;
+
+impl ConstraintBuilder for RangeBuilder {
+    fn is_compatible(&self, type_kind: &DataTypeKind) -> bool {
+        matches!(type_kind, DataTypeKind::Int | DataTypeKind::Float)
+    }
+
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
+        let (start, end) = util::extract_range(object)?;
+        Ok(Box::new(RangeConstraint::new(start, end)))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct RangeConstraint {
@@ -29,14 +67,32 @@ impl Constraint for RangeConstraint {
     }
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
-        Some(Box::new(UniformSampler::new(
-            self.min as i32,
-            self.max as i32,
-        )))
+        if self.min == self.max {
+            Some(Box::new(IdentitySampler::new(self.min)))
+        } else {
+            Some(Box::new(UniformSampler::new(
+                self.min as i32,
+                self.max as i32,
+            )))
+        }
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {
         Box::new(self.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct MultipleOfBuilder;
+
+impl ConstraintBuilder for MultipleOfBuilder {
+    fn is_compatible(&self, type_kind: &DataTypeKind) -> bool {
+        *type_kind == DataTypeKind::Int
+    }
+
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
+        let integer = util::extract_int(object)?;
+        Ok(Box::new(MultipleOfConstraint::new(integer)))
     }
 }
 
@@ -69,6 +125,20 @@ impl Constraint for MultipleOfConstraint {
     }
 }
 
+#[derive(Debug)]
+pub struct BiasBuilder;
+
+impl ConstraintBuilder for BiasBuilder {
+    fn is_compatible(&self, type_kind: &DataTypeKind) -> bool {
+        *type_kind == DataTypeKind::Boolean
+    }
+
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
+        let float = util::extract_float(object)?;
+        Ok(Box::new(BiasConstraint::new(float)))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct BiasConstraint {
     pub percent: f32,
@@ -95,6 +165,20 @@ impl Constraint for BiasConstraint {
 
     fn clone_box(&self) -> Box<dyn Constraint> {
         Box::new(self.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct MinBuilder;
+
+impl ConstraintBuilder for MinBuilder {
+    fn is_compatible(&self, type_kind: &DataTypeKind) -> bool {
+        matches!(type_kind, DataTypeKind::Float | DataTypeKind::Int)
+    }
+
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
+        let integer = util::extract_int(object)?;
+        Ok(Box::new(MinConstraint::new(integer)))
     }
 }
 
@@ -127,6 +211,20 @@ impl Constraint for MinConstraint {
     }
 }
 
+#[derive(Debug)]
+pub struct MaxBuilder;
+
+impl ConstraintBuilder for MaxBuilder {
+    fn is_compatible(&self, type_kind: &DataTypeKind) -> bool {
+        matches!(type_kind, DataTypeKind::Float | DataTypeKind::Int)
+    }
+
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
+        let integer = util::extract_int(object)?;
+        Ok(Box::new(MaxConstraint::new(integer)))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MaxConstraint {
     value: i32,
@@ -149,6 +247,93 @@ impl Constraint for MaxConstraint {
 
     fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
         Some(Box::new(UniformSampler::new(i32::MIN, self.value)))
+    }
+
+    fn clone_box(&self) -> Box<dyn Constraint> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct CountBuilder;
+
+impl ConstraintBuilder for CountBuilder {
+    fn is_compatible(&self, type_kind: &DataTypeKind) -> bool {
+        matches!(type_kind, DataTypeKind::List(_))
+    }
+
+    fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
+        match util::extract_int(object) {
+            Ok(integer) => Ok(Box::new(CountConstraint::exact(integer))),
+            Err(_) => {
+                let (start, end) = util::extract_range(object)?;
+                Ok(Box::new(CountConstraint::new(start as i32, end as i32)))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct IdentitySampler<T> {
+    pub value: T,
+}
+
+impl<T> IdentitySampler<T> {
+    pub fn new(value: T) -> Self {
+        IdentitySampler { value }
+    }
+}
+
+impl<T> Sampler for IdentitySampler<T>
+where
+    T: Into<Object> + Debug + Clone,
+{
+    fn sample(&self) -> Object {
+        Object::new(self.value.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CountConstraint {
+    pub min: i32,
+    pub max: i32,
+}
+
+impl CountConstraint {
+    pub fn new(min: i32, max: i32) -> Self {
+        CountConstraint { min, max }
+    }
+    pub fn exact(value: i32) -> Self {
+        CountConstraint {
+            min: value,
+            max: value,
+        }
+    }
+}
+
+impl Constraint for CountConstraint {
+    fn validate(&self, value: &Object) -> bool {
+        match value {
+            Object::List(objects) => {
+                objects.len() as i32 >= self.min && objects.len() as i32 <= self.max
+            }
+            _ => false,
+        }
+    }
+
+    fn description(&self) -> String {
+        todo!()
+    }
+
+    fn build_sampler(&self) -> Option<Box<dyn Sampler>> {
+        if self.min == self.max {
+            Some(Box::new(IdentitySampler::new(self.min)))
+        } else {
+            Some(Box::new(UniformSampler::new(
+                self.min as i32,
+                self.max as i32,
+            )))
+        }
     }
 
     fn clone_box(&self) -> Box<dyn Constraint> {
