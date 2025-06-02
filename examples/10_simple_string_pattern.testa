@@ -2,7 +2,7 @@
 @output_path "./example10.csv";
 
 template User {
-    name = string;
+    name = string_pattern "${A}" +  string;
     birth_year = int[range=1900..=2025];
     email = string_pattern "${aaaaAA####}@${aaaaa}.com";
     salary = string_pattern "$1.${###},${##}";
