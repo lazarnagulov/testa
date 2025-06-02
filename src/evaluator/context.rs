@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum,
-    template::template::Template,
+    generator::generator::Target, template::template::Template,
 };
 
 use super::eval_error::EvalError;
@@ -20,6 +20,7 @@ pub trait Visitor<T>: std::fmt::Debug {
 #[derive(Debug, Default)]
 pub struct Context {
     pub output_path: Option<PathBuf>,
+    pub target_format: Target,
 
     templates: HashMap<String, Rc<Template>>,
     enums: HashMap<String, Enum>,
@@ -47,11 +48,12 @@ impl Context {
         match &self.output_path {
             Some(path) => path.clone(),
             None => PathBuf::from(format!(
-                "testa_{}.csv",
+                "testa_{}.{}",
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .expect("Time went backwards")
-                    .as_nanos()
+                    .as_nanos(),
+                self.target_format
             )),
         }
     }

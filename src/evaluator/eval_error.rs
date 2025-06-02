@@ -22,6 +22,7 @@ pub enum EvalError {
         data_type: String,
         constraint: String,
     },
+    FileError(String),
     // TODO: Better name?
     MiscellaneousError(String),
 }

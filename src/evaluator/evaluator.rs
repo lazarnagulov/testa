@@ -1,12 +1,12 @@
-use std::{
-    fs::File,
-    io::Write,
-    rc::Rc,
-};
+use std::{fs::File, io::Write, rc::Rc};
 
 use crate::{
     constraints::constrainted_type::ConstrainedType,
     enumeration::enumeration::Enum,
+    generator::{
+        csv::CsvGenerator,
+        generator::{FileGenerator, GenerationError, Target},
+    },
     parser::ast::{
         DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
         Statement,
@@ -94,10 +94,11 @@ fn evaluate_generate(
                 .unwrap_or_else(|| Err(EvalError::NotDefined(name)))
         },
     )?;
-    Ok(generate_csv(&template, cardinality, context)?)
+    Ok(generate_file(&template, cardinality, context)?)
 }
 
-fn generate_csv(
+// TODO: BUffering and other fun stuff with files
+fn generate_file(
     template: &Template,
     cardinality: isize,
     context: &Context,
@@ -105,17 +106,28 @@ fn generate_csv(
     let mut file = File::create(context.output_path()).map_err(|error| {
         EvalError::MiscellaneousError(format!("Failed to create file: {}", error))
     })?;
-    let header = template.all_field_names().join(",");
-
-    writeln!(file, "{}", header).map_err(|error| {
-        EvalError::MiscellaneousError(format!("Failed to write to file: {}", error))
-    })?;
-    for _ in 0..cardinality {
-        let line = template.visit(context).map(|fields| fields.join(","))?;
-        writeln!(file, "{}", line).map_err(|error| {
-            EvalError::MiscellaneousError(format!("Failed to write to file: {}", error))
-        })?;
+    let generator = match context.target_format {
+        Target::Csv => CsvGenerator::default().with_field_names(template.field_names().collect()),
+    };
+    if let Some(header) = generator.generate_header() {
+        writeln!(file, "{}", header)
+            .map_err(|error| EvalError::FileError(format!("Failed to write to file: {}", error)))?;
     }
+    for _ in 0..cardinality {
+        let record = template.visit(context)?;
+        let line = generator.generate(&record).map_err(|error| {
+            EvalError::MiscellaneousError(match error {
+                GenerationError::NotSupported(error) => error.to_owned(),
+            })
+        })?;
+        writeln!(file, "{}", line)
+            .map_err(|error| EvalError::FileError(format!("Failed to write to file: {}", error)))?;
+    }
+    if let Some(footer) = generator.generate_footer() {
+        writeln!(file, "{}", footer)
+            .map_err(|error| EvalError::FileError(format!("Failed to write to file: {}", error)))?;
+    }
+
     Ok(Object::NoReturn)
 }
 

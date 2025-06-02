@@ -68,6 +68,7 @@ fn main() {
                     constraint, data_type
                 )
             }
+            EvalError::FileError(error) => error,
         };
         eprintln!("{}", error_message);
         std::process::exit(1);

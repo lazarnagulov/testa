@@ -9,6 +9,7 @@ use crate::{
         eval_error::EvalError,
         evaluator::evaluate_expression,
     },
+    generator::generator::Record,
     parser::ast::Field,
 };
 
@@ -56,8 +57,8 @@ impl Template {
     }
 }
 
-impl Visitor<Vec<String>> for Template {
-    fn visit(&self, context: &Context) -> Result<Vec<String>, EvalError> {
+impl Visitor<Record> for Template {
+    fn visit(&self, context: &Context) -> Result<Record, EvalError> {
         let mut field_map: HashMap<&str, &Field> = HashMap::new();
         let mut override_set: HashSet<&str> = HashSet::new();
         override_set.extend(
@@ -86,13 +87,13 @@ impl Visitor<Vec<String>> for Template {
 
                 match evaluate_expression(&field.value, context) {
                     Ok(result) => {
-                        acc.push(format!("{}", result));
+                        acc.push(result);
                         Ok(acc)
                     }
                     Err(e) => Err(e),
                 }
             })?;
         override_set.iter().for_each(|field_name| eprintln!("WARNING: The field '{}' is marked as 'override', but it is not actually overridden.", field_name));
-        Ok(result)
+        Ok(Record::new(result))
     }
 }
