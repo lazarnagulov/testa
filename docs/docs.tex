@@ -1,4 +1,4 @@
-\documentclass[a4paper]{article}
+\documentclass[11pt,a4paper]{article}
 
 \usepackage[utf8]{inputenc}
 
@@ -13,17 +13,71 @@
 \usepackage{listings}
 \usepackage{fancyhdr}
 
+% 87CEEB
 \definecolor{keywordColor}{rgb}{0.0, 0.5, 0.0}
+\definecolor{directiveColor}{RGB}{106, 90, 205}
 
 \author{Lazar Nagulov}
 \title{testA}
-\date{}
+\date{\today}
 
 \begin{document}
     \include{listings}
     \maketitle
+    \newpage
+    \tableofcontents
+    \newpage
     
-    \section{Templates}
+    \section{Introduction}
+    TestA is a domain-specific language designed for generating structured 
+    test data in formats like JSON, CSV, and XML. It provides a simple, 
+    C-like syntax for defining templates, resources, enums, and generation
+    rules, enabling quick and expressive data mockups for testing, prototyping, 
+    or seeding.
+    \begin{listing}[h]
+    \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+|\textcolor{directiveColor}{@output}| csv {
+    header = true;
+    quote = true;
+    delimiter = ";";
+}
+|\textcolor{directiveColor}{@output\_path}| "./example.csv";
+
+|\textcolor{keywordColor}{type}| Grade = int[range=6..=10];
+|\textcolor{keywordColor}{type}| GradeList = [|\textcolor{purple}{Grade}|][count=0..=50];
+
+enum Role { 
+    User => 10; 
+    Admin => 2;
+    Other;
+};
+
+|\textcolor{keywordColor}{template}| User {
+    id = $uuid();
+    name = string;
+    role = |\textcolor{purple}{Role}|;
+}
+
+|\textcolor{keywordColor}{template}| Student : User {
+    year = int [range=1..=4];
+    grades = |\textcolor{keywordColor}{GradeList}|;
+}
+
+|\textcolor{directiveColor}{@generate}| User [10];
+    \end{minted}
+    \centering
+    \caption{testA example}
+    \label{listing:example}
+    \end{listing}
+
+
+    \newpage
+    \section{Getting Started}
+    todo\dots
+    \newpage
+
+    \section{Features}
+    \subsection{Templates}
     \begin{listing}[h]
 
     \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
@@ -56,7 +110,7 @@ template User {
         \centering
         \label{listing:1}
     \end{listing}
-    \subsection{Inheritence}
+    \subsubsection{Inheritence}
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
 template User { age = int [range=0..=100]; }
@@ -96,10 +150,10 @@ template Student : User {
         \centering
         \label{listing:override_example}
     \end{listing}
-    \subsection{Referencing}
+    \subsubsection{Referencing}
     \pagebreak
 
-    \section{Enumerations}
+    \subsection{Enumerations}
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
 enum <name> { 
@@ -141,7 +195,7 @@ template User {
     \end{listing}
     \pagebreak
 
-    \section{Data types}
+    \subsection{Data types}
     \par Unlike other programming languages, such as C or Java, testA data types represent random values in expressions. 
     There are four fundamental data types available: integers (ints), floating-point numbers (floats), strings, and booleans.
     \begin{listing}[h]
@@ -163,7 +217,7 @@ template User {
     \par As shown in Listing \ref{listing:4}, these types can interact with one another as well as with 
     literals. Additionally, fundamental data types can be extended by introducing constraints or creating 
     lists of these types.
-    \subsection{Lists}
+    \subsubsection{Lists}
         \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
 [<type>][<constraint1>, <constraint2>...]  
@@ -177,17 +231,12 @@ template User {
     Further details about constraints can be found in the next section.
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
-// Example 1 : 
-// List with random number of int ranging from 5 to 15.
-[int][count=5..15]
- // result: [1, -5, 6, -7, 8, 18]
-
-
- // Example 2 :
-// List of lists with random numbers from 1 to 5 ranging from 
-// 1 to 5 ranging from 3 to 5.
-[[int[range=1..=5]][count=1..5]][count=3..=5] 
-// result : [[1,2,3],[5,2,1,3],[5],[4,5]]
+// Example 1: List.
+[int][count=5..15] 
+// [1, -5, 6, -7, 8, 18]
+// Example 2: Multidimensional list.
+[[int[range=1..=5]][count=1..5]][count=3..=5]  
+// [[1,2,3],[5,2,1,3],[5],[4,5]]
         \end{minted}
         \caption{List examples}
         \centering
@@ -195,15 +244,8 @@ template User {
     \end{listing}
     \par In Examples from Listing \ref{listing:list_example}, two lists are declared. Second list can be 
     simplified by utilizing type constraints.
-%     \begin{listing}[h]
-%         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
 
-%         \end{minted}
-%         \caption{Multidimensional list example}
-%         \centering
-%         \label{listing:multidimensional_list}
-%     \end{listing}
-    \subsection{Type constraints}
+    \subsubsection{Type constraints}
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
 |\textcolor{keywordColor}{type}| <name> = <type> [<constraint1>, <constraint2>...];
@@ -219,10 +261,7 @@ template User {
     conforms to the expected parameters.
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
-template User { 
-    age = int [range=0..=100]; 
-}
-
+template User { age = int [range=0..=100]; }
 template Student : User { 
     override age = int[range=19..=100];
     grades = [int[range=6..=10]][count=0..=46]; 
@@ -240,10 +279,7 @@ template Student : User {
 |\textcolor{keywordColor}{type}| Grade = int [range=6..=10];
 |\textcolor{keywordColor}{type}| GradeList = [|\textcolor{keywordColor}{Grade}|][count=1..=46];
 
-template User { 
-    age = |\textcolor{purple}{Age}|; 
-}
-
+template User { age = |\textcolor{purple}{Age}|; }
 template Student : User { 
     override age = |\textcolor{purple}{StudentAge}|;
     grades = |\textcolor{purple}{GradeList}|; 
@@ -269,11 +305,8 @@ template Student : User {
         \label{listing:int_tensor}
     \end{listing}
 
-
-
-
     \begin{table}[h]
-        \begin{tabular}{|c|c|c|c|}
+        \begin{tabular}{@{}|l|c|c|c|@{}}
             \hline
             \textbf{Name} & \makecell{\textbf{Compatible} \\ \textbf{types}} & \textbf{Input} & \textbf{Description} \\
             \hline
@@ -297,11 +330,19 @@ template Student : User {
 
     \pagebreak
 
-    \section{Resources}
+    \subsection{Resources}
     \pagebreak
 
-    \section{Generate}
+    \subsection{Generate}
     \pagebreak
-    
 
+    \appendix
+    \section{EBNF Grammar}
+    todo...
+
+    \section{Changelog}
+    \begin{itemize}
+        \item v0.1 - Implemented enumerations, template (with inheritance), 
+        number and boolean constraints and csv generator
+    \end{itemize}
 \end{document}
