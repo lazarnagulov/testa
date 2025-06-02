@@ -46,7 +46,7 @@
 |\textcolor{keywordColor}{type}| Grade = int[range=6..=10];
 |\textcolor{keywordColor}{type}| GradeList = [|\textcolor{purple}{Grade}|][count=0..=50];
 
-enum Role { 
+enum |\textcolor{black}{Role}| { 
     User => 10; 
     Admin => 2;
     Other;
@@ -54,13 +54,13 @@ enum Role {
 
 |\textcolor{keywordColor}{template}| User {
     id = $uuid();
-    name = string;
+    name = |\textcolor{purple}{string}|;
     role = |\textcolor{purple}{Role}|;
 }
 
-|\textcolor{keywordColor}{template}| Student : User {
+|\textcolor{keywordColor}{template}| |\textcolor{black}{Student}| : User {
     year = int [range=1..=4];
-    grades = |\textcolor{keywordColor}{GradeList}|;
+    grades = |\textcolor{purple}{GradeList}|;
 }
 
 |\textcolor{directiveColor}{@generate}| User [10];
@@ -170,7 +170,7 @@ enum <name> {
     Weights are always integers, with a default value of one if not specified.
     \begin{listing}[h]
         \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
-enum Role {
+enum |\textcolor{black}{Role}| {
     User => 8;
     Admin; // Default weight is 1
     Developer => 3;
@@ -342,7 +342,7 @@ template Student : User {
 
     \section{Changelog}
     \begin{itemize}
-        \item v0.1 - Implemented enumerations, template (with inheritance), 
+        \item v0.1 - Implemented enumerations, templates (with inheritance), 
         number and boolean constraints and csv generator
     \end{itemize}
 \end{document}
