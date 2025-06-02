@@ -325,8 +325,36 @@ template Student : User {
         \end{tabular}
         \caption{Data type constraints}        
     \end{table}
-
-
+    \subsubsection{String patterns}
+    \par String patterns define the structure of a string. In these patterns, 
+    characters wrapped in \$\{\} represent placeholders where random values will be generated. Placeholders are:
+    \begin{itemize}
+        \item \$\{a\} generates a random lowercase letter (a-z)
+        \item \$\{A\} generates a random uppercase letter (A-Z)
+        \item \$\{\#\} generates a random digit (0-9)
+    \end{itemize}
+    Examples (Listing \ref{listing:string_pattern}) can generate "pattern: abcABCD123"
+    \begin{listing}[h]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+|\textcolor{keywordColor}{string\_pattern}| "pattern: ${aaaAAAA###}"; 
+        \end{minted}
+        \caption{String pattern example}
+        \centering
+        \label{listing:string_pattern}
+    \end{listing}
+    \par Placeholders can be used directly within the template, as demonstrated in Listing \ref{listing:string_pattern_in_template}.
+    \begin{listing}[H]
+        \begin{minted}[escapeinside=||, xleftmargin=1em, breaklines]{cpp}
+|\textcolor{keywordColor}{template}| User {
+    id = int;
+    name = |\textcolor{keywordColor}{string\_pattern}| "${Aaaaaaaaa}";
+    email = |\textcolor{keywordColor}{string\_pattern}| "${aaaaa##}@${aaaaa}.com"
+}
+        \end{minted}
+        \caption{String pattern in template example}
+        \centering
+        \label{listing:string_pattern_in_template}
+    \end{listing}
 
     \pagebreak
 
