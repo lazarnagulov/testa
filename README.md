@@ -121,6 +121,21 @@ This lets you build on previously defined types by layering more rules on top.
 
 Check example: [types](./examples/06_constraint_types.testa).
 
+## String patterns
+
+String patterns define the structure of a string. In these patterns, char-
+acters wrapped in `${}` represent placeholders where random values will be
+generated. Placeholders are:
+1. ${a} generates a random lowercase letter (a-z)
+1. ${A} generates a random uppercase letter (A-Z)
+1. ${#} generates a random digit (0-9)
+Either repeat the placeholder multiple times or use [<number>].
+```
+string_pattern "${a[4]AA#[3]}@${a[5]}.com";
+string_pattern "${aaaaAA###}@${aaaaa}.com";
+```
+
+Check example: [string_pattern](./examples/10_simple_string_pattern.testa). 
 
 ## Templates
 

@@ -165,7 +165,7 @@ pub fn evaluate_expression(
         }
         StringLiteral(value) => Ok(Object::new(value.to_owned())),
         BooleanLiteral(value) => Ok(Object::new(*value)),
-        StringPattern(pattern) => evalute_string_pattern(pattern, context),
+        StringPattern(pattern) => evaluate_string_pattern(pattern, context),
         Identifier(name) => evaluate_identifier(name, context),
         Type(data_type) => evaluate_data_type(data_type, context),
         List(_) => todo!("implement list expression evaluation"),
@@ -189,7 +189,7 @@ pub fn evaluate_expression(
     }
 }
 
-fn evalute_string_pattern(
+fn evaluate_string_pattern(
     pattern: &Vec<PatternElement>,
     _context: &Context,
 ) -> Result<Object, EvalError> {
