@@ -1,3 +1,6 @@
+@output csv;
+@output_path "./example_03.csv";
+
 enum Role { 
     User; 
     Admin; 
@@ -10,4 +13,4 @@ template User {
     role = Role;
 }
 
-generate User[10];
+@generate User[10];

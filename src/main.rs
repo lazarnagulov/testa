@@ -68,6 +68,8 @@ fn main() {
                     constraint, data_type
                 )
             }
+            EvalError::FileError(error) => error,
+            EvalError::InvalidTarget(error) => format!("Invalid target {}", error),
         };
         eprintln!("{}", error_message);
         std::process::exit(1);

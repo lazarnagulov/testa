@@ -1,3 +1,6 @@
+@output csv;
+@output_path "./example_06.csv";
+
 type Age = int [range=0..=100];
 type HouseNumber = extend Age with [multiple_of=2];
 
@@ -10,4 +13,4 @@ template User {
     home_number = HouseNumber;
 }
 
-generate User[10];
+@generate User[10];

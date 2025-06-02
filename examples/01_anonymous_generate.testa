@@ -1,4 +1,7 @@
-generate _ [10] {
+@output csv;
+@output_path "./example_01.csv";
+
+@generate _ [10] {
     id = int;
     name = string;
     password = string;

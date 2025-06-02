@@ -1,5 +1,6 @@
 #[allow(dead_code)]
 use std::iter::Peekable;
+use std::path::PathBuf;
 
 use crate::lexer::{
     lexer::Lexer,
@@ -35,6 +36,7 @@ impl<'src> Parser<'src> {
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.peek_kind() {
             Output | Seed => self.parse_directive(),
+            OutputPath => self.parse_output_path(),
             Template => self.parse_template(),
             Resource => todo!(),
             Enum => self.parse_enum(),
@@ -42,6 +44,16 @@ impl<'src> Parser<'src> {
             Type => self.parse_type_declaration(),
             _ => Ok(Statement::Expression(self.parse_expression_statement()?)),
         }
+    }
+
+    fn parse_output_path(&mut self) -> Result<Statement, ParserError> {
+        self.consume_token();
+        let argument = self.expect_token(StringLiteral)?;
+        let path = &self.source[argument.0 + 1..argument.0 + argument.1 - 1];
+        self.expect_token(Semicolon)?;
+        Ok(Statement::OutputPathDirective {
+            argument: PathBuf::from(path),
+        })
     }
 
     fn parse_directive(&mut self) -> Result<Statement, ParserError> {
@@ -95,7 +107,7 @@ impl<'src> Parser<'src> {
             self.expect_token(Semicolon)?;
             Ok(Statement::Generate {
                 template_name: Some(name),
-                body: vec![],
+                body: Vec::new(),
                 count,
             })
         }

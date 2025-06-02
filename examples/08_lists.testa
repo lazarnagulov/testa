@@ -1,3 +1,6 @@
+@output csv;
+@output_path "./example_08.csv";
+
 type Age = int [range=0..=100];
 type Grade = int [range=6..=10];
 
@@ -9,4 +12,4 @@ template Student {
     grades = [Grade][count=1..5];
 }
 
-generate Student[10];
+@generate Student[10];

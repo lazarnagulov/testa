@@ -1,11 +1,16 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    rc::Rc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{
     constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum,
-    template::template::Template,
+    generator::generator::Target, template::template::Template,
 };
 
-use super::eval_error::EvalError;
+use super::{eval_error::EvalError, object::Object};
 
 pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;
@@ -14,9 +19,13 @@ pub trait Visitor<T>: std::fmt::Debug {
 // TODO: Consider changing String to &str
 #[derive(Debug, Default)]
 pub struct Context {
-    pub templates: HashMap<String, Rc<Template>>,
-    pub enums: HashMap<String, Enum>,
-    pub types: HashMap<String, Rc<ConstrainedType>>,
+    pub output_path: Option<PathBuf>,
+    pub target_format: Target,
+    pub target_config: HashMap<String, Object>,
+
+    templates: HashMap<String, Rc<Template>>,
+    enums: HashMap<String, Enum>,
+    types: HashMap<String, Rc<ConstrainedType>>,
 }
 
 impl Context {
@@ -34,6 +43,20 @@ impl Context {
 
     pub fn get_enum(&self, key: &str) -> Option<&Enum> {
         self.enums.get(key)
+    }
+
+    pub fn output_path(&self) -> PathBuf {
+        match &self.output_path {
+            Some(path) => path.clone(),
+            None => PathBuf::from(format!(
+                "testa_{}.{}",
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards")
+                    .as_nanos(),
+                self.target_format
+            )),
+        }
     }
 
     pub fn insert_type(

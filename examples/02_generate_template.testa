@@ -1,3 +1,6 @@
+@output csv;
+@output_path "./example_02.csv";
+
 template User {
     id = int;
     name = string;
@@ -6,4 +9,4 @@ template User {
     balance = float;
 }
 
-generate User[10];
+@generate User[10];

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod parser_tests {
     use core::panic;
-    use std::vec;
+    use std::{path::PathBuf, vec};
 
     use crate::parser::{
         ast::{
@@ -115,13 +115,13 @@ mod parser_tests {
 
     #[test]
     fn parse_anonymus_generate() {
-        let program = "generate _ [10] { name = string; price = float; }";
+        let program = "@generate _ [10] { name = string; price = float; }";
         let mut parser = Parser::new(program);
         let name_field = Field::new(
             "name".to_string(),
             Expression::new(
                 ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-                25,
+                26,
                 6,
             ),
             false,
@@ -130,7 +130,7 @@ mod parser_tests {
             "price".to_string(),
             Expression::new(
                 ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
-                41,
+                42,
                 5,
             ),
             false,
@@ -142,7 +142,7 @@ mod parser_tests {
                     vec![Statement::Generate {
                         template_name: None,
                         body: vec![name_field, price_field],
-                        count: Expression::new(ExpressionKind::IntLiteral(10), 12, 2)
+                        count: Expression::new(ExpressionKind::IntLiteral(10), 13, 2)
                     }]
                 );
             }
@@ -152,7 +152,7 @@ mod parser_tests {
 
     #[test]
     fn parse_generate() {
-        let program = "generate User [10];";
+        let program = "@generate User [10];";
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
@@ -161,7 +161,7 @@ mod parser_tests {
                     vec![Statement::Generate {
                         template_name: Some("User".to_string()),
                         body: vec![],
-                        count: Expression::new(ExpressionKind::IntLiteral(10), 15, 2)
+                        count: Expression::new(ExpressionKind::IntLiteral(10), 16, 2)
                     }]
                 );
             }
@@ -171,7 +171,7 @@ mod parser_tests {
 
     #[test]
     fn parse_missing_paren_generate() {
-        let program = "generate _ [10] { name = string; price = float;";
+        let program = "@generate _ [10] { name = string; price = float;";
         let mut parser = Parser::new(program);
         expect_missing_paren(&mut parser);
     }
@@ -514,6 +514,24 @@ mod parser_tests {
                     vec![Statement::OutputDirective {
                         argument: "csv".to_string(),
                         options: vec![]
+                    }]
+                );
+            }
+            Err(err) => handle_error(err),
+        }
+    }
+
+    #[test]
+    fn parse_output_path() {
+        let program = "@output_path \"./example.csv\";";
+        let mut parser = Parser::new(program);
+        match parser.parse() {
+            Ok(program) => {
+                println!("{:?}", program);
+                assert_eq!(
+                    program.0,
+                    vec![Statement::OutputPathDirective {
+                        argument: PathBuf::from("./example.csv"),
                     }]
                 );
             }

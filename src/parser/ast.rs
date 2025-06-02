@@ -1,4 +1,5 @@
 use core::fmt;
+use std::path::PathBuf;
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program(pub Vec<Statement>);
@@ -14,6 +15,9 @@ pub enum Statement {
     OutputDirective {
         argument: String,
         options: Vec<Field>,
+    },
+    OutputPathDirective {
+        argument: PathBuf,
     },
     TypeDecl {
         name: String,

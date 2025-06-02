@@ -1,5 +1,7 @@
 use std::{iter::Peekable, str::CharIndices};
 
+use crate::lexer::token::KEYWORD_REGISTRY;
+
 use super::token::{Token, TokenKind};
 
 #[derive(Clone)]
@@ -26,6 +28,7 @@ impl<'src> Lexer<'src> {
 
     fn next_token(&mut self) -> Token {
         use super::token::TokenKind::*;
+        let registry = &KEYWORD_REGISTRY;
         self.skip_whitespaces();
 
         let Some((current_index, current_char)) = self.peek() else {
@@ -179,40 +182,24 @@ impl<'src> Lexer<'src> {
             '$' => {
                 self.next();
                 let builtin = self.read_identifier(current_index);
-                match builtin {
-                    "$pick" => Token::new(Pick, current_index, 4),
-                    "$uuid" => Token::new(Uuid, current_index, 4),
-                    _ => panic!("Invalid builtin {}", builtin),
+                match registry.get(builtin) {
+                    Some(kind) => Token::new(kind.clone(), current_index, builtin.len()),
+                    None => panic!("Invalid builtin {}", builtin),
                 }
             }
             '@' => {
                 self.next();
                 let directive = self.read_identifier(current_index);
-                match directive {
-                    "@output" => Token::new(Output, current_index, 6),
-                    "@seed" => Token::new(Seed, current_index, 4),
-                    _ => panic!("Invalid directive {}", directive),
+                match registry.get(directive) {
+                    Some(kind) => Token::new(kind.clone(), current_index, directive.len()),
+                    None => panic!("Invalid directive {}", directive),
                 }
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let identifier = self.read_identifier(current_index);
-                match identifier {
-                    "generate" => Token::new(Generate, current_index, 8),
-                    "template" => Token::new(Template, current_index, 8),
-                    "resource" => Token::new(Resource, current_index, 8),
-                    "with" => Token::new(With, current_index, 4),
-                    "extend" => Token::new(Extend, current_index, 6),
-                    "true" => Token::new(True, current_index, 4),
-                    "false" => Token::new(False, current_index, 4),
-                    "enum" => Token::new(Enum, current_index, 4),
-                    "int" => Token::new(Int, current_index, 3),
-                    "float" => Token::new(Float, current_index, 5),
-                    "bool" => Token::new(Bool, current_index, 4),
-                    "string" => Token::new(Str, current_index, 6),
-                    "override" => Token::new(Override, current_index, 8),
-                    "type" => Token::new(Type, current_index, 4),
-                    "constraint" => Token::new(Constraint, current_index, 10),
-                    ident => Token::new(Identifier, current_index, ident.len()),
+                match registry.get(identifier) {
+                    Some(kind) => Token::new(kind.clone(), current_index, identifier.len()),
+                    None => Token::new(TokenKind::Identifier, current_index, identifier.len()),
                 }
             }
             '0'..='9' => self.make_number_token(current_index),
