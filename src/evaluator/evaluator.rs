@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write, rc::Rc};
+use std::{collections::HashMap, fs::File, io::Write, rc::Rc};
 
 use crate::{
     constraints::constrainted_type::ConstrainedType,
@@ -53,7 +53,24 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             context.insert_enum(&name, enumeration);
             Ok(Object::NoReturn)
         }
-        Statement::OutputDirective { .. } => todo!(),
+        Statement::OutputDirective { argument, options } => {
+            context.target_format = match argument.as_str() {
+                "csv" => Ok(Target::Csv),
+                value => Err(EvalError::InvalidTarget(value.to_string())),
+            }?;
+            context.target_config =
+                options.iter().try_fold(
+                    HashMap::new(),
+                    |mut map, field| match evaluate_expression(&field.value, context) {
+                        Ok(result) => {
+                            map.insert(field.name.clone(), result);
+                            Ok(map)
+                        }
+                        Err(e) => Err(e),
+                    },
+                )?;
+            Ok(Object::NoReturn)
+        }
         Statement::Resource { .. } => todo!(),
         Statement::TypeDecl { name, data_type } => {
             let Type(data_type) = data_type.kind else {
@@ -108,7 +125,9 @@ fn generate_file(
     })?;
     let generator = match context.target_format {
         Target::Csv => CsvGenerator::default().with_field_names(template.field_names().collect()),
-    };
+    }
+    .with_config(&context.target_config);
+
     if let Some(header) = generator.generate_header() {
         writeln!(file, "{}", header)
             .map_err(|error| EvalError::FileError(format!("Failed to write to file: {}", error)))?;

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::evaluator::object::Object;
 
 use super::generator::{FileGenerator, GenerationError, Record};
@@ -14,7 +16,7 @@ pub struct CsvGenerator<'a> {
 impl Default for CsvGenerator<'_> {
     fn default() -> Self {
         Self {
-            delimiter: ";".to_owned(),
+            delimiter: ",".to_owned(),
             header: true,
             quote: false,
             field_names: Vec::new(),
@@ -25,6 +27,35 @@ impl Default for CsvGenerator<'_> {
 impl<'a> CsvGenerator<'a> {
     pub fn with_field_names(mut self, field_names: Vec<&'a str>) -> Self {
         self.field_names = field_names;
+        self
+    }
+    pub fn with_config(mut self, config: &HashMap<String, Object>) -> Self {
+        config.iter().for_each(|(key, value)| match key.as_str() {
+            "delimiter" => {
+                if let Object::String(s) = value {
+                    self.delimiter = s.clone();
+                } else {
+                    eprintln!("WARNING: Expected string for 'delimiter'");
+                }
+            }
+            "header" => {
+                if let Object::Boolean(b) = value {
+                    self.header = *b;
+                } else {
+                    eprintln!("WARNING: Expected boolean for 'header'");
+                }
+            }
+            "quote" => {
+                if let Object::Boolean(b) = value {
+                    self.quote = *b;
+                } else {
+                    eprintln!("WARNING: Expected boolean for 'quote'");
+                }
+            }
+            _ => {
+                eprintln!("WARNING: Unknown config key: {}", key);
+            }
+        });
         self
     }
 }

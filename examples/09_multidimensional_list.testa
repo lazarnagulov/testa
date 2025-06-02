@@ -1,3 +1,4 @@
+@output csv { header = false; }
 @output_path "./example_09.csv";
 
 type IntList = [int][count=1..=5];

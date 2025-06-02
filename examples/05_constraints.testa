@@ -1,3 +1,4 @@
+@output csv;
 @output_path "./example_05.csv";
 
 template User {

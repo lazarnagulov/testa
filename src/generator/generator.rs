@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::evaluator::object::Object;
 
-pub trait FileGenerator : fmt::Debug + Default {
+pub trait FileGenerator: fmt::Debug {
     fn generate(&self, record: &Record) -> Result<String, GenerationError>;
     fn extension(&self) -> &'static str;
     fn generate_header(&self) -> Option<String>;
@@ -12,7 +12,7 @@ pub trait FileGenerator : fmt::Debug + Default {
 // TODO: Add plugin system?
 #[derive(Debug)]
 pub enum Target {
-    Csv, 
+    Csv,
 }
 
 impl fmt::Display for Target {
@@ -23,14 +23,13 @@ impl fmt::Display for Target {
     }
 }
 
-
 impl Default for Target {
     fn default() -> Self {
         Target::Csv
     }
 }
 
-
+// TODO: Should save names, hashmap is not ordered!
 #[derive(Debug)]
 pub struct Record {
     pub fields: Vec<Object>,
@@ -41,9 +40,6 @@ impl Record {
         Record { fields }
     }
 }
-
-#[derive(Debug)]
-pub struct Config {}
 
 #[derive(Debug)]
 pub enum GenerationError {

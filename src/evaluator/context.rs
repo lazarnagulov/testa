@@ -10,7 +10,7 @@ use crate::{
     generator::generator::Target, template::template::Template,
 };
 
-use super::eval_error::EvalError;
+use super::{eval_error::EvalError, object::Object};
 
 pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;
@@ -21,6 +21,7 @@ pub trait Visitor<T>: std::fmt::Debug {
 pub struct Context {
     pub output_path: Option<PathBuf>,
     pub target_format: Target,
+    pub target_config: HashMap<String, Object>,
 
     templates: HashMap<String, Rc<Template>>,
     enums: HashMap<String, Enum>,
