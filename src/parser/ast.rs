@@ -95,6 +95,7 @@ pub enum ExpressionKind {
     FloatLiteral(String),
     StringLiteral(String),
     BooleanLiteral(bool),
+    StringPattern(String),
     Identifier(String),
     List(Vec<Element>),
     Type(DataType),

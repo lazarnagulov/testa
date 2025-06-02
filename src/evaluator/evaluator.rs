@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fs::File, io::Write, rc::Rc};
 
+use rand::Rng;
+
 use crate::{
     constraints::constrainted_type::ConstrainedType,
     enumeration::enumeration::Enum,
@@ -164,6 +166,7 @@ pub fn evaluate_expression(
         }
         StringLiteral(value) => Ok(Object::new(value.to_owned())),
         BooleanLiteral(value) => Ok(Object::new(*value)),
+        StringPattern(pattern) => evalute_string_pattern(pattern, context),
         Identifier(name) => evaluate_identifier(name, context),
         Type(data_type) => evaluate_data_type(data_type, context),
         List(_) => todo!("implement list expression evaluation"),
@@ -185,6 +188,38 @@ pub fn evaluate_expression(
         }
         FuncCall { .. } => todo!(),
     }
+}
+
+fn evalute_string_pattern(pattern: &str, _context: &Context) -> Result<Object, EvalError> {
+    let mut rng = rand::rng();
+    let mut result = String::new();
+    let mut chars = pattern.chars().peekable();
+
+    while let Some(c) = chars.peek() {
+        match c {
+            '$' => {
+                if chars.clone().nth(1).is_some_and(|c| c == '{') {
+                    chars.next();
+                    chars.next();
+                    while chars.peek().is_some_and(|c| *c != '}') {
+                        match chars.peek().unwrap() {
+                            'a' => result.push(rng.random_range('a'..='z') as char),
+                            'A' => result.push(rng.random_range('A'..='Z') as char),
+                            '#' => result.push(rng.random_range('0'..='9') as char),
+                            _ => return Err(EvalError::InvalidStringPattern(pattern.to_owned())),
+                        }
+                        chars.next();
+                    }
+                } else {
+                    result.push('$');
+                }
+            }
+            val => result.push(*val),
+        }
+        chars.next();
+    }
+
+    Ok(Object::new(result))
 }
 
 pub fn evaluate_data_type(data_type: &DataType, context: &Context) -> Result<Object, EvalError> {

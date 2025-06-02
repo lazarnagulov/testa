@@ -337,6 +337,7 @@ impl<'src> Parser<'src> {
             Identifier | True | False | IntLiteral | StringLiteral | FloatLiteral => {
                 Ok(self.parse_literal()?)
             }
+            StringPattern => Ok(self.parse_string_pattern()?),
             BitNegate => Ok(self.parse_prefix_expression(PrefixOperator::BitNegate)?),
             ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
@@ -438,7 +439,17 @@ impl<'src> Parser<'src> {
         }
     }
 
-    // int [range = 0..=100, { it % 5 == 0 }, custom]
+    fn parse_string_pattern(&mut self) -> Result<Expression, ParserError> {
+        let (start, size) = self.consume_token();
+        let (literal_start, literal_size) = self.expect_token(StringLiteral)?;
+        let pattern = self.source[literal_start + 1..literal_start + literal_size - 1].to_string();
+        Ok(Expression::new(
+            ExpressionKind::StringPattern(pattern),
+            start,
+            size + literal_size,
+        ))
+    }
+
     fn parse_constraints(&mut self) -> Result<Vec<ConstraintExpression>, ParserError> {
         self.consume_token();
         let mut constraints: Vec<ConstraintExpression> = vec![];

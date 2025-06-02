@@ -70,6 +70,9 @@ fn main() {
             }
             EvalError::FileError(error) => error,
             EvalError::InvalidTarget(error) => format!("Invalid target {}", error),
+            EvalError::InvalidStringPattern(pattern) => {
+                format!("Invalid string pattern: {}", pattern)
+            }
         };
         eprintln!("{}", error_message);
         std::process::exit(1);
