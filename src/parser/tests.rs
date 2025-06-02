@@ -5,9 +5,7 @@ mod parser_tests {
 
     use crate::parser::{
         ast::{
-            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
-            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program,
-            Statement, Variant,
+            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement, PrefixOperator, Program, Statement, Variant
         },
         parser::Parser,
         parser_error::ParserError,
@@ -540,6 +538,26 @@ mod parser_tests {
     }
 
     #[test]
+    fn parse_literal_element_pattern() {
+        let program = "string_pattern \"testa$}${aaa[10]}john${A[25]##[13]}\";";
+        let mut parser = Parser::new(program);
+        let solution = ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::StringPattern(vec![
+                    PatternElement::Literal("testa$}".to_owned()),
+                    PatternElement::RepeatChar { ch: PatternChar::Lowercase, count: 12 },
+                    PatternElement::Literal("john".to_owned()),
+                    PatternElement::RepeatChar { ch: PatternChar::Uppercase, count: 25 },
+                    PatternElement::RepeatChar { ch: PatternChar::Digit, count: 14 },
+                ]),
+                0,
+                0,
+            ),
+        };
+        expect_expression(&mut parser, solution);
+    }
+
+    #[test]
     fn parse_directive_options() {
         let program = "@output csv { delimiter = \";\"; }";
         let mut parser = Parser::new(program);
@@ -597,6 +615,7 @@ mod parser_tests {
             ParserError::InvalidDirective => panic!("Invalid directive"),
             ParserError::Syntax(message) => panic!("{}", message),
             ParserError::UndefinedConstraint => panic!("Undefined constraint"),
+            ParserError::InvalidStringPattern(pattern) => panic!("Invalid pattern {}", pattern),
         }
     }
 }

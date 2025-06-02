@@ -4,6 +4,7 @@ pub enum ParserError {
     UndefinedConstraint,
     InvalidDirective,
     UnexpectedEOF,
+    InvalidStringPattern(String),
     Syntax(String),
 }
 

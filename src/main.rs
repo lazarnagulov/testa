@@ -33,6 +33,7 @@ fn main() {
             ParserError::UnexpectedEOF => format!("Missing enclosing \" or ;"),
             ParserError::Syntax(error) => error,
             ParserError::UndefinedConstraint => format!("Undefined constraint"),
+            ParserError::InvalidStringPattern(pattern) => format!("Invalid pattern {}", pattern),
         };
         eprintln!("{}", error_message);
         std::process::exit(1);
@@ -70,9 +71,6 @@ fn main() {
             }
             EvalError::FileError(error) => error,
             EvalError::InvalidTarget(error) => format!("Invalid target {}", error),
-            EvalError::InvalidStringPattern(pattern) => {
-                format!("Invalid string pattern: {}", pattern)
-            }
         };
         eprintln!("{}", error_message);
         std::process::exit(1);

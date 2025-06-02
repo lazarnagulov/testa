@@ -17,7 +17,6 @@ pub enum EvalError {
         expected: String,
         got: String,
     },
-    InvalidStringPattern(String),
     NotDefined(String),
     UncompatibleConstraint {
         data_type: String,

@@ -45,6 +45,9 @@ mod constraint_test {
             ParserError::InvalidDirective => panic!("Invalid directive"),
             ParserError::Syntax(message) => panic!("{}", message),
             ParserError::UndefinedConstraint => panic!("Undefined constraint"),
+            ParserError::InvalidStringPattern(pattern) => {
+                panic!("Invalid string pattern '{}'", pattern)
+            }
         }
     }
 }

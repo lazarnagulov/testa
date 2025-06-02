@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 use std::iter::Peekable;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::Chars};
 
 use crate::lexer::{
     lexer::Lexer,
@@ -440,14 +440,116 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_string_pattern(&mut self) -> Result<Expression, ParserError> {
-        let (start, size) = self.consume_token();
+        let (start, _size) = self.consume_token();
         let (literal_start, literal_size) = self.expect_token(StringLiteral)?;
-        let pattern = self.source[literal_start + 1..literal_start + literal_size - 1].to_string();
+        let literal = self.source[literal_start + 1..literal_start + literal_size - 1].to_string();
+        let mut chars = literal.chars().peekable();
+        let elements = self.parse_pattern_elements(&mut chars)?;
+        // TODO: Implement size
         Ok(Expression::new(
-            ExpressionKind::StringPattern(pattern),
+            ExpressionKind::StringPattern(elements),
             start,
-            size + literal_size,
+            0,
         ))
+    }
+
+    fn parse_pattern_elements(
+        &self,
+        chars: &mut Peekable<Chars>,
+    ) -> Result<Vec<PatternElement>, ParserError> {
+        let mut result = Vec::new();
+        let mut literal = String::new();
+
+        while let Some(&ch) = chars.peek() {
+            match ch {
+                '$' => {
+                    chars.next();
+                    if let Some(&'{') = chars.peek() {
+                        if !literal.is_empty() {
+                            result.push(PatternElement::Literal(std::mem::take(&mut literal)));
+                        }
+                        result.extend(self.parse_pattern_condition(chars)?)
+                    } else {
+                        literal.push('$');
+                    }
+                }
+                _ => {
+                    chars.next();
+                    literal.push(ch);
+                }
+            }
+        }
+
+        if !literal.is_empty() {
+            result.push(PatternElement::Literal(literal));
+        }
+
+        Ok(result)
+    }
+
+    fn parse_pattern_condition(
+        &self,
+        chars: &mut Peekable<Chars>,
+    ) -> Result<Vec<PatternElement>, ParserError> {
+        let mut result = Vec::new();
+        chars.next();
+        while let Some(current_char) = chars.next() {
+            if current_char == '}' {
+                break;
+            }
+            match current_char {
+                '[' => {
+                    if chars.peek().is_some_and(|ch| ch.is_ascii_digit()) {
+                        let mut number: i32 = 0;
+
+                        while let Some(&ch) = chars.peek() {
+                            if ch.is_ascii_digit() {
+                                number = number * 10 + (ch as i32 - '0' as i32);
+                                chars.next();
+                            } else {
+                                break;
+                            }
+                        }
+
+                        if chars.peek().is_none_or(|ch| *ch != ']') {
+                            return Err(ParserError::InvalidStringPattern("Missing ]".to_owned()));
+                        }
+
+                        if let Some(PatternElement::RepeatChar { ch: _, count }) = result.last_mut()
+                        {
+                            *count += number as usize - 1;
+                        } else {
+                            return Err(ParserError::InvalidStringPattern(
+                                format!("Expected a, A or # before [{}]", number).to_owned(),
+                            ));
+                        }
+                        chars.next();
+                    }
+                }
+                'a' | 'A' | '#' => {
+                    let mut count = 1;
+                    while let Some(next_char) = chars.peek() {
+                        if *next_char == current_char {
+                            count += 1;
+                            chars.next();
+                        } else {
+                            break;
+                        }
+                    }
+                    result.push(PatternElement::RepeatChar {
+                        ch: match current_char {
+                            'a' => PatternChar::Lowercase,
+                            'A' => PatternChar::Uppercase,
+                            '#' => PatternChar::Digit,
+                            _ => unreachable!()
+                        },
+                        count,
+                    });
+                }
+                _ => return Err(ParserError::InvalidStringPattern(current_char.to_string())),
+            }
+        }
+        Ok(result)
     }
 
     fn parse_constraints(&mut self) -> Result<Vec<ConstraintExpression>, ParserError> {

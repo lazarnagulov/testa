@@ -10,8 +10,7 @@ use crate::{
         generator::{FileGenerator, GenerationError, Target},
     },
     parser::ast::{
-        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PrefixOperator, Program,
-        Statement,
+        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar, PatternElement, PrefixOperator, Program, Statement
     },
     template::template::Template,
 };
@@ -190,35 +189,26 @@ pub fn evaluate_expression(
     }
 }
 
-fn evalute_string_pattern(pattern: &str, _context: &Context) -> Result<Object, EvalError> {
+fn evalute_string_pattern(
+    pattern: &Vec<PatternElement>,
+    _context: &Context,
+) -> Result<Object, EvalError> {
     let mut rng = rand::rng();
     let mut result = String::new();
-    let mut chars = pattern.chars().peekable();
 
-    while let Some(c) = chars.peek() {
-        match c {
-            '$' => {
-                if chars.clone().nth(1).is_some_and(|c| c == '{') {
-                    chars.next();
-                    chars.next();
-                    while chars.peek().is_some_and(|c| *c != '}') {
-                        match chars.peek().unwrap() {
-                            'a' => result.push(rng.random_range('a'..='z') as char),
-                            'A' => result.push(rng.random_range('A'..='Z') as char),
-                            '#' => result.push(rng.random_range('0'..='9') as char),
-                            _ => return Err(EvalError::InvalidStringPattern(pattern.to_owned())),
-                        }
-                        chars.next();
-                    }
-                } else {
-                    result.push('$');
+    pattern.iter().for_each(|element| match element {
+        PatternElement::Literal(literal) => result.push_str(literal),
+        PatternElement::RepeatChar { ch, count } => {
+            for _ in 0..*count {
+                match ch {
+                    PatternChar::Lowercase => result.push(rng.random_range('a'..'z') as char),
+                    PatternChar::Uppercase => result.push(rng.random_range('A'..'Z') as char),
+                    PatternChar::Digit => result.push(rng.random_range('0'..'9') as char),
                 }
             }
-            val => result.push(*val),
         }
-        chars.next();
-    }
-
+        PatternElement::RepeatGroup { .. } => todo!(),
+    });
     Ok(Object::new(result))
 }
 

@@ -95,7 +95,7 @@ pub enum ExpressionKind {
     FloatLiteral(String),
     StringLiteral(String),
     BooleanLiteral(bool),
-    StringPattern(String),
+    StringPattern(Vec<PatternElement>),
     Identifier(String),
     List(Vec<Element>),
     Type(DataType),
@@ -113,7 +113,20 @@ pub enum ExpressionKind {
     },
 }
 
-// TODO: Add start and size
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum PatternElement {
+    Literal(String),
+    RepeatChar { ch: PatternChar, count: usize },
+    RepeatGroup { chars: Vec<PatternChar>, count: usize },
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum PatternChar {
+    Lowercase,
+    Uppercase,
+    Digit
+}
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Element {
     pub value: Expression,
