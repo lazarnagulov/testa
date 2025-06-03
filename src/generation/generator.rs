@@ -10,8 +10,9 @@ pub trait FileGenerator: fmt::Debug {
 }
 
 // TODO: Add plugin system?
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Target {
+    #[default]
     Csv,
 }
 
@@ -20,12 +21,6 @@ impl fmt::Display for Target {
         match self {
             Target::Csv => write!(f, ".csv"),
         }
-    }
-}
-
-impl Default for Target {
-    fn default() -> Self {
-        Target::Csv
     }
 }
 

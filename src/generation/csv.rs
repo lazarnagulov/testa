@@ -73,7 +73,7 @@ impl FileGenerator for CsvGenerator<'_> {
                     if self.quote {
                         Ok(format!("\"{}\"", value))
                     } else {
-                        Ok(format!("{}", value))
+                        Ok(value.to_string())
                     }
                 }
                 Object::Range(_, _) => Err(GenerationError::NotSupported("Range")),

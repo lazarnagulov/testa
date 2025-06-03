@@ -7,8 +7,7 @@ mod parser_tests {
         ast::{
             ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement, PrefixOperator, Program, Statement, Variant
         },
-        parser::Parser,
-        parser_error::ParserError,
+        parser_error::ParserError, Parser,
     };
 
     #[test]

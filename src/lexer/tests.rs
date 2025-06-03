@@ -3,7 +3,7 @@ mod lexer_tests {
     use std::vec;
 
     use crate::lexer::{
-        lexer::Lexer,
+        Lexer,
         token::TokenKind::{self, *},
     };
 

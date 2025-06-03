@@ -3,17 +3,12 @@ use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
-    evaluator::{
-        context::{Context, Visitor},
-        eval_error::EvalError,
-        evaluator::{evaluate_data_type, evaluate_expression, evaluate_identifier},
-        object::Object,
-    },
-    parser::ast::{ConstraintExpression, DataType, DataTypeKind},
+    constraints::constraint::CONSTRAINT_REGISTRY, evaluator::{
+        self, context::{Context, Visitor}, eval_error::EvalError, object::Object
+    }, parser::ast::{ConstraintExpression, DataType, DataTypeKind}
 };
 
 use super::{
-    constraints::CONSTRAINT_REGISTRY,
     sampler::{ConstraintSet, Sampler},
 };
 
@@ -42,7 +37,7 @@ pub struct ConstrainedType {
 impl ConstrainedType {
     pub fn new(data_type: DataType, context: &Context) -> Result<Self, EvalError> {
         let parent = ConstrainedType::find_parent(&data_type.kind, context)?;
-        let Some(mut constraints) = data_type.constraints else {
+        let Some(constraints) = data_type.constraints else {
             return Ok(ConstrainedType {
                 parent: None,
                 type_kind: data_type.kind,
@@ -52,7 +47,7 @@ impl ConstrainedType {
         };
         let fundamental_type = ConstrainedType::get_fundamental_type(&data_type.kind, context);
         let evaluated_constraints =
-            ConstrainedType::evaluate_constraints(&mut constraints, fundamental_type, context)?;
+            ConstrainedType::evaluate_constraints(&constraints, fundamental_type, context)?;
         Ok(ConstrainedType {
             parent,
             type_kind: data_type.kind,
@@ -105,7 +100,7 @@ impl ConstrainedType {
             let builder = registry.get(&constraint.kind).ok_or_else(|| {
                 EvalError::NotDefined(format!("Constraint kind {:?}", constraint.kind))
             })?;
-            let object = evaluate_expression(&constraint.expression, context)?;
+            let object = evaluator::evaluate_expression(&constraint.expression, context)?;
 
             if !builder.is_compatible(type_kind) {
                 return Err(EvalError::incompatible_constraint(
@@ -136,7 +131,7 @@ impl ConstrainedType {
     ) -> Result<Option<Rc<ConstrainedType>>, EvalError> {
         match type_kind {
             DataTypeKind::Custom(parent_name) => {
-                match context.get_type(&parent_name).map(|rc| Rc::clone(rc)) {
+                match context.get_type(parent_name).map(Rc::clone) {
                     Some(parent) => Ok(Some(parent)),
                     None => Err(EvalError::NotDefined(format!("Type '{}'", parent_name))),
                 }
@@ -152,9 +147,9 @@ impl ConstrainedType {
             | DataTypeKind::Str
             | DataTypeKind::Float
             | DataTypeKind::Boolean
-            | DataTypeKind::List(_) => &kind,
+            | DataTypeKind::List(_) => kind,
             DataTypeKind::Custom(name) => {
-                let data_type = context.get_type(&name).unwrap();
+                let data_type = context.get_type(name).unwrap();
                 ConstrainedType::get_fundamental_type(&data_type.type_kind, context)
             }
         }
@@ -162,7 +157,7 @@ impl ConstrainedType {
 
     fn generate_without_constraints(&self, context: &Context) -> Result<Object, EvalError> {
         let mut rng = rand::rng();
-        return match &self.type_kind {
+        match &self.type_kind {
             DataTypeKind::Int => Ok(Object::new(rng.random::<i32>() as isize)),
             DataTypeKind::Str => {
                 let size = rng.random_range(6..=20);
@@ -180,13 +175,13 @@ impl ConstrainedType {
                 let mut values = vec![];
                 values.extend(
                     (0..count)
-                        .map(|_| evaluate_data_type(data_type, context))
+                        .map(|_| evaluator::evaluate_data_type(data_type, context))
                         .collect::<Result<Vec<_>, _>>()?,
                 );
                 Ok(Object::new(values))
             }
-            DataTypeKind::Custom(name) => evaluate_identifier(name, context),
-        };
+            DataTypeKind::Custom(name) => evaluator::evaluate_identifier(name, context),
+        }
     }
 
     fn sample(&self, constraints_set: &ConstraintSet) -> Result<Object, EvalError> {
@@ -213,9 +208,9 @@ impl Visitor<Object> for ConstrainedType {
                 unreachable!()
             };
             (0..count)
-                .map(|_| evaluate_data_type(&data_type, context))
+                .map(|_| evaluator::evaluate_data_type(data_type, context))
                 .collect::<Result<Vec<_>, _>>()
-                .map(|list| Object::List(list))
+                .map(Object::List)
         } else {
             self.sample(&constraints_set)
         }
