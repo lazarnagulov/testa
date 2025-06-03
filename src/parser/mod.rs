@@ -484,7 +484,8 @@ impl<'src> Parser<'src> {
                                 &mut literal_element,
                             )));
                         }
-                        result.extend(self.parse_pattern_condition(literal, chars)?)
+                        result.extend(self.parse_pattern_condition(literal, chars)?);
+                        continue;
                     } else {
                         literal_element.push('$');
                         if let Some((_, char)) = peeked_char {

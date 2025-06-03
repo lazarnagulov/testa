@@ -221,11 +221,16 @@ fn evaluate_string_pattern(
                                 ))
                             }
                         }
+                        Object::Range(start, end) => {
+                            Ok(rng.random_range(start as i32..=end as i32) as usize)
+                        }
                         obj => Err(EvalError::type_mismatch(
                             "int".to_owned(),
                             format!("{}", obj),
                         )),
                     }?;
+                } else {
+                    total_count += 1;
                 }
 
                 for _ in 0..total_count - 1 {
