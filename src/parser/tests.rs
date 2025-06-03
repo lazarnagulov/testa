@@ -540,8 +540,25 @@ mod parser_tests {
     }
 
     #[test]
+    fn parse_pattern_dollar_case() {
+        let program = "string_pattern \"dollar$$$$$$$$$$$$$$$$${aa}\";";
+        let mut parser = Parser::new(program);
+        let expression = ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::StringPattern(vec![
+                    PatternElement::Literal("dollar$$$$$$$$$$$$$$$$".to_owned()),
+                    PatternElement::RepeatChar { ch: PatternChar::Lowercase, count: 2, count_expression: None }                    
+                ]),
+                0,
+                0
+            )
+        };
+        expect_expression(&mut parser, expression);
+    }
+
+    #[test]
     fn parse_string_pattern() {
-        let program = "string_pattern \"testa$}${aaa[10 - 2 * 2]}john${A[25]##[13]}\";";
+        let program = "string_pattern \"testa$}${aaa[10]}john${A[25]##[13]}\";";
         let mut parser = Parser::new(program);
         let solution = ExpressionStatemnt {
             expression: Expression::new(
@@ -549,19 +566,19 @@ mod parser_tests {
                     PatternElement::Literal("testa$}".to_owned()),
                     PatternElement::RepeatChar {
                         ch: PatternChar::Lowercase,
-                        count: 2,
-                        count_expression: None,
+                        count: 3,
+                        count_expression: Some(Expression::new(ExpressionKind::IntLiteral(10), 0, 2)),
                     },
                     PatternElement::Literal("john".to_owned()),
                     PatternElement::RepeatChar {
                         ch: PatternChar::Uppercase,
-                        count: 25,
-                        count_expression: None,
+                        count: 1,
+                        count_expression: Some(Expression::new(ExpressionKind::IntLiteral(25), 0, 2)),
                     },
                     PatternElement::RepeatChar {
                         ch: PatternChar::Digit,
-                        count: 14,
-                        count_expression: None,
+                        count: 2,
+                        count_expression: Some(Expression::new(ExpressionKind::IntLiteral(13), 0, 2)),
                     },
                 ]),
                 0,

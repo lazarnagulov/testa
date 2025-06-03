@@ -474,22 +474,35 @@ impl<'src> Parser<'src> {
         let mut literal_element = String::new();
 
         while let Some((_, ch)) = chars.peek() {
+            let mut consumed = false;
             match ch {
                 '$' => {
-                    chars.next();
-                    let peeked_char = chars.peek();
-                    if peeked_char.is_some_and(|(_, ch)| *ch == '{') {
-                        if !literal_element.is_empty() {
+                    let mut dollar_count = 1;
+                    chars.next(); 
+                    consumed = true;
+
+                    while let Some(&(_, '$')) = chars.peek() {
+                        chars.next(); 
+                        dollar_count += 1;
+                    }
+
+                    match chars.peek() {
+                        Some(&(_, '{')) => {
+                            if dollar_count > 1 {
+                                for _ in 0..(dollar_count - 1) {
+                                    literal_element.push('$');
+                                }
+                            }
                             result.push(PatternElement::Literal(std::mem::take(
                                 &mut literal_element,
                             )));
+                            result.extend(self.parse_pattern_condition(literal, chars)?);
+                            continue;
                         }
-                        result.extend(self.parse_pattern_condition(literal, chars)?);
-                        continue;
-                    } else {
-                        literal_element.push('$');
-                        if let Some((_, char)) = peeked_char {
-                            literal_element.push(*char);
+                        _ => {
+                            for _ in 0..dollar_count {
+                                literal_element.push('$');
+                            }
                         }
                     }
                 }
@@ -497,7 +510,9 @@ impl<'src> Parser<'src> {
                     literal_element.push(*ch);
                 }
             }
-            chars.next();
+            if !consumed {
+                chars.next();
+            }
         }
 
         if !literal_element.is_empty() {
