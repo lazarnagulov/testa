@@ -2,7 +2,6 @@ pub mod ast;
 pub mod parser_error;
 pub mod tests;
 
-#[allow(dead_code)]
 use std::iter::Peekable;
 use std::{path::PathBuf, str::CharIndices};
 
@@ -396,7 +395,6 @@ impl<'src> Parser<'src> {
         }
     }
 
-    // type usize = int [range = 0..=255];
     fn parse_type_declaration(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
         let name = self.parse_identifier_as_string()?;
@@ -473,44 +471,29 @@ impl<'src> Parser<'src> {
         let mut result = Vec::new();
         let mut literal_element = String::new();
 
-        while let Some((_, ch)) = chars.peek() {
-            let mut consumed = false;
-            match ch {
-                '$' => {
-                    let mut dollar_count = 1;
-                    chars.next(); 
-                    consumed = true;
-
-                    while let Some(&(_, '$')) = chars.peek() {
-                        chars.next(); 
-                        dollar_count += 1;
-                    }
-
-                    match chars.peek() {
-                        Some(&(_, '{')) => {
-                            if dollar_count > 1 {
-                                for _ in 0..(dollar_count - 1) {
-                                    literal_element.push('$');
-                                }
-                            }
-                            result.push(PatternElement::Literal(std::mem::take(
-                                &mut literal_element,
-                            )));
-                            result.extend(self.parse_pattern_condition(literal, chars)?);
-                            continue;
-                        }
-                        _ => {
-                            for _ in 0..dollar_count {
-                                literal_element.push('$');
-                            }
-                        }
-                    }
+        while let Some(&(_, ch)) = chars.peek() {
+            if ch == '$' {
+                let mut dollar_count = 0;
+                while matches!(chars.peek(), Some(&(_, '$'))) {
+                    chars.next();
+                    dollar_count += 1;
                 }
-                _ => {
-                    literal_element.push(*ch);
+
+                if matches!(chars.peek(), Some(&(_, '{'))) {
+                    if dollar_count > 1 {
+                        literal_element.extend(std::iter::repeat_n('$', dollar_count - 1));
+                    }
+                    if !literal_element.is_empty() {
+                        result.push(PatternElement::Literal(std::mem::take(
+                            &mut literal_element,
+                        )));
+                    }
+                    result.extend(self.parse_pattern_condition(literal, chars)?);
+                } else {
+                    literal_element.extend(std::iter::repeat_n('$', dollar_count));
                 }
-            }
-            if !consumed {
+            } else {
+                literal_element.push(ch);
                 chars.next();
             }
         }

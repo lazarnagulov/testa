@@ -547,11 +547,15 @@ mod parser_tests {
             expression: Expression::new(
                 ExpressionKind::StringPattern(vec![
                     PatternElement::Literal("dollar$$$$$$$$$$$$$$$$".to_owned()),
-                    PatternElement::RepeatChar { ch: PatternChar::Lowercase, count: 2, count_expression: None }                    
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Lowercase,
+                        count: 2,
+                        count_expression: None,
+                    },
                 ]),
                 0,
-                0
-            )
+                0,
+            ),
         };
         expect_expression(&mut parser, expression);
     }
@@ -567,18 +571,30 @@ mod parser_tests {
                     PatternElement::RepeatChar {
                         ch: PatternChar::Lowercase,
                         count: 3,
-                        count_expression: Some(Expression::new(ExpressionKind::IntLiteral(10), 0, 2)),
+                        count_expression: Some(Expression::new(
+                            ExpressionKind::IntLiteral(10),
+                            0,
+                            2,
+                        )),
                     },
                     PatternElement::Literal("john".to_owned()),
                     PatternElement::RepeatChar {
                         ch: PatternChar::Uppercase,
                         count: 1,
-                        count_expression: Some(Expression::new(ExpressionKind::IntLiteral(25), 0, 2)),
+                        count_expression: Some(Expression::new(
+                            ExpressionKind::IntLiteral(25),
+                            0,
+                            2,
+                        )),
                     },
                     PatternElement::RepeatChar {
                         ch: PatternChar::Digit,
                         count: 2,
-                        count_expression: Some(Expression::new(ExpressionKind::IntLiteral(13), 0, 2)),
+                        count_expression: Some(Expression::new(
+                            ExpressionKind::IntLiteral(13),
+                            0,
+                            2,
+                        )),
                     },
                 ]),
                 0,
