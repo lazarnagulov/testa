@@ -8,12 +8,22 @@ use std::{collections::HashMap, fs::File, io::Write, rc::Rc};
 use rand::Rng;
 
 use crate::{
-    constraints::constrainted_type::ConstrainedType, enumeration::Enum, evaluator::{context::{Context, Visitor}, eval_error::EvalError, object::Object}, generation::{
+    constraints::constrainted_type::ConstrainedType,
+    enumeration::Enum,
+    evaluator::{
+        context::{Context, Visitor},
+        eval_error::EvalError,
+        object::Object,
+    },
+    generation::{
         csv::CsvGenerator,
         generator::{FileGenerator, GenerationError, Target},
-    }, parser::ast::{
-        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar, PatternElement, PrefixOperator, Program, Statement
-    }, template::Template
+    },
+    parser::ast::{
+        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar, PatternElement,
+        PrefixOperator, Program, Statement,
+    },
+    template::Template,
 };
 
 pub fn evaluate(program: Program, context: &mut Context) -> Result<Object, EvalError> {
@@ -186,24 +196,49 @@ pub fn evaluate_expression(
 
 fn evaluate_string_pattern(
     pattern: &[PatternElement],
-    _context: &Context,
+    context: &Context,
 ) -> Result<Object, EvalError> {
     let mut rng = rand::rng();
     let mut result = String::new();
 
-    pattern.iter().for_each(|element| match element {
-        PatternElement::Literal(literal) => result.push_str(literal),
-        PatternElement::RepeatChar { ch, count } => {
-            for _ in 0..*count {
-                match ch {
-                    PatternChar::Lowercase => result.push(rng.random_range('a'..='z') as char),
-                    PatternChar::Uppercase => result.push(rng.random_range('A'..='Z') as char),
-                    PatternChar::Digit => result.push(rng.random_range('0'..='9') as char),
+    for element in pattern {
+        match element {
+            PatternElement::Literal(literal) => result.push_str(literal),
+            PatternElement::RepeatChar {
+                ch,
+                count,
+                count_expression,
+            } => {
+                let mut total_count = *count;
+                if let Some(expression) = count_expression {
+                    total_count += match evaluate_expression(expression, context)? {
+                        Object::Int(value) => {
+                            if value > 0 {
+                                Ok(value as usize)
+                            } else {
+                                Err(EvalError::MiscellaneousError(
+                                    "expected int to be positive".to_owned(),
+                                ))
+                            }
+                        }
+                        obj => Err(EvalError::type_mismatch(
+                            "int".to_owned(),
+                            format!("{}", obj),
+                        )),
+                    }?;
+                }
+
+                for _ in 0..total_count - 1 {
+                    match ch {
+                        PatternChar::Lowercase => result.push(rng.random_range('a'..='z') as char),
+                        PatternChar::Uppercase => result.push(rng.random_range('A'..='Z') as char),
+                        PatternChar::Digit => result.push(rng.random_range('0'..='9') as char),
+                    }
                 }
             }
-        }
-        PatternElement::RepeatGroup { .. } => todo!(),
-    });
+            PatternElement::RepeatGroup { .. } => todo!(),
+        };
+    }
     Ok(Object::new(result))
 }
 

@@ -4,10 +4,13 @@ mod parser_tests {
     use std::{path::PathBuf, vec};
 
     use crate::parser::{
+        Parser,
         ast::{
-            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement, PrefixOperator, Program, Statement, Variant
+            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
+            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
+            PrefixOperator, Program, Statement, Variant,
         },
-        parser_error::ParserError, Parser,
+        parser_error::ParserError,
     };
 
     #[test]
@@ -537,17 +540,29 @@ mod parser_tests {
     }
 
     #[test]
-    fn parse_literal_element_pattern() {
-        let program = "string_pattern \"testa$}${aaa[10]}john${A[25]##[13]}\";";
+    fn parse_string_pattern() {
+        let program = "string_pattern \"testa$}${aaa[10 - 2 * 2]}john${A[25]##[13]}\";";
         let mut parser = Parser::new(program);
         let solution = ExpressionStatemnt {
             expression: Expression::new(
                 ExpressionKind::StringPattern(vec![
                     PatternElement::Literal("testa$}".to_owned()),
-                    PatternElement::RepeatChar { ch: PatternChar::Lowercase, count: 12 },
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Lowercase,
+                        count: 2,
+                        count_expression: None,
+                    },
                     PatternElement::Literal("john".to_owned()),
-                    PatternElement::RepeatChar { ch: PatternChar::Uppercase, count: 25 },
-                    PatternElement::RepeatChar { ch: PatternChar::Digit, count: 14 },
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Uppercase,
+                        count: 25,
+                        count_expression: None,
+                    },
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Digit,
+                        count: 14,
+                        count_expression: None,
+                    },
                 ]),
                 0,
                 0,

@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod evaluator_tests {
     use crate::{
-        evaluator::{self, context::Context, object::Object}, parser::Parser
+        evaluator::{self, context::Context, object::Object},
+        parser::Parser,
     };
 
     #[test]

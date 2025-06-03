@@ -3,9 +3,9 @@ pub mod token;
 
 use std::{iter::Peekable, str::CharIndices};
 
-use crate::lexer::token::{Token, TokenKind, KEYWORD_REGISTRY};
+use crate::lexer::token::{KEYWORD_REGISTRY, Token, TokenKind};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Lexer<'src> {
     content: &'src str,
     chars: Peekable<CharIndices<'src>>,

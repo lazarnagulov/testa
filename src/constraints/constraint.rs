@@ -309,10 +309,7 @@ impl Constraint for CountConstraint {
         if self.min == self.max {
             Some(Box::new(IdentitySampler::new(self.min)))
         } else {
-            Some(Box::new(UniformSampler::new(
-                self.min,
-                self.max,
-            )))
+            Some(Box::new(UniformSampler::new(self.min, self.max)))
         }
     }
 

@@ -61,10 +61,7 @@ pub struct CompositeSampler {
 }
 
 impl CompositeSampler {
-    pub fn new(
-        samplers: Vec<Box<dyn Sampler>>,
-        validators: Vec<ValidatorFn>,
-    ) -> Self {
+    pub fn new(samplers: Vec<Box<dyn Sampler>>, validators: Vec<ValidatorFn>) -> Self {
         CompositeSampler {
             samplers,
             validators,

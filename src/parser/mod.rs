@@ -4,12 +4,22 @@ pub mod tests;
 
 #[allow(dead_code)]
 use std::iter::Peekable;
-use std::{path::PathBuf, str::Chars};
+use std::{path::PathBuf, str::CharIndices};
 
-use crate::{lexer::{
-    Lexer,
-    token::TokenKind::{self, *},
-}, parser::{ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement, Precedence, PrefixOperator, Program, Statement, Variant}, parser_error::ParserError}};
+use crate::{
+    lexer::{
+        Lexer,
+        token::TokenKind::{self, *},
+    },
+    parser::{
+        ast::{
+            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
+            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
+            Precedence, PrefixOperator, Program, Statement, Variant,
+        },
+        parser_error::ParserError,
+    },
+};
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
@@ -445,8 +455,8 @@ impl<'src> Parser<'src> {
         let (start, _size) = self.consume_token();
         let (literal_start, literal_size) = self.expect_token(StringLiteral)?;
         let literal = self.source[literal_start + 1..literal_start + literal_size - 1].to_string();
-        let mut chars = literal.chars().peekable();
-        let elements = self.parse_pattern_elements(&mut chars)?;
+        let mut chars = literal.char_indices().peekable();
+        let elements = self.parse_pattern_elements(&literal, &mut chars)?;
         // TODO: Implement size
         Ok(Expression::new(
             ExpressionKind::StringPattern(elements),
@@ -457,33 +467,40 @@ impl<'src> Parser<'src> {
 
     fn parse_pattern_elements(
         &self,
-        chars: &mut Peekable<Chars>,
+        literal: &str,
+        chars: &mut Peekable<CharIndices>,
     ) -> Result<Vec<PatternElement>, ParserError> {
         let mut result = Vec::new();
-        let mut literal = String::new();
+        let mut literal_element = String::new();
 
-        while let Some(&ch) = chars.peek() {
+        while let Some((_, ch)) = chars.peek() {
             match ch {
                 '$' => {
                     chars.next();
-                    if let Some(&'{') = chars.peek() {
-                        if !literal.is_empty() {
-                            result.push(PatternElement::Literal(std::mem::take(&mut literal)));
+                    let peeked_char = chars.peek();
+                    if peeked_char.is_some_and(|(_, ch)| *ch == '{') {
+                        if !literal_element.is_empty() {
+                            result.push(PatternElement::Literal(std::mem::take(
+                                &mut literal_element,
+                            )));
                         }
-                        result.extend(self.parse_pattern_condition(chars)?)
+                        result.extend(self.parse_pattern_condition(literal, chars)?)
                     } else {
-                        literal.push('$');
+                        literal_element.push('$');
+                        if let Some((_, char)) = peeked_char {
+                            literal_element.push(*char);
+                        }
                     }
                 }
                 _ => {
-                    chars.next();
-                    literal.push(ch);
+                    literal_element.push(*ch);
                 }
             }
+            chars.next();
         }
 
-        if !literal.is_empty() {
-            result.push(PatternElement::Literal(literal));
+        if !literal_element.is_empty() {
+            result.push(PatternElement::Literal(literal_element));
         }
 
         Ok(result)
@@ -491,46 +508,49 @@ impl<'src> Parser<'src> {
 
     fn parse_pattern_condition(
         &self,
-        chars: &mut Peekable<Chars>,
+        literal: &str,
+        chars: &mut Peekable<CharIndices>,
     ) -> Result<Vec<PatternElement>, ParserError> {
         let mut result = Vec::new();
         chars.next();
-        while let Some(current_char) = chars.next() {
+        while let Some((current_index, current_char)) = chars.next() {
             if current_char == '}' {
                 break;
             }
             match current_char {
                 '[' => {
-                    if chars.peek().is_some_and(|ch| ch.is_ascii_digit()) {
-                        let mut number: i32 = 0;
-
-                        while let Some(&ch) = chars.peek() {
-                            if ch.is_ascii_digit() {
-                                number = number * 10 + (ch as i32 - '0' as i32);
-                                chars.next();
-                            } else {
-                                break;
-                            }
-                        }
-
-                        if chars.peek().is_none_or(|ch| *ch != ']') {
-                            return Err(ParserError::InvalidStringPattern("Missing ]".to_owned()));
-                        }
-
-                        if let Some(PatternElement::RepeatChar { ch: _, count }) = result.last_mut()
-                        {
-                            *count += number as usize - 1;
-                        } else {
-                            return Err(ParserError::InvalidStringPattern(
-                                format!("Expected a, A or # before [{}]", number).to_owned(),
-                            ));
+                    let mut last = current_index;
+                    while let Some(char) = chars.peek() {
+                        last = char.0;
+                        if char.1 == ']' {
+                            break;
                         }
                         chars.next();
+                    }
+                    if chars.peek().is_none_or(|(_, ch)| *ch != ']') {
+                        return Err(ParserError::InvalidStringPattern("Missing ]".to_owned()));
+                    }
+
+                    chars.next();
+                    let mut parser = Parser::new(&literal[current_index + 1..last]);
+                    let count_expression = parser.parse_expression(Precedence::Lowest)?;
+
+                    if let Some(PatternElement::RepeatChar {
+                        ch: _,
+                        count: _,
+                        count_expression: expression,
+                    }) = result.last_mut()
+                    {
+                        *expression = Some(count_expression);
+                    } else {
+                        return Err(ParserError::InvalidStringPattern(
+                            "Expected a, A or # before []".to_owned(),
+                        ));
                     }
                 }
                 'a' | 'A' | '#' => {
                     let mut count = 1;
-                    while let Some(next_char) = chars.peek() {
+                    while let Some((_, next_char)) = chars.peek() {
                         if *next_char == current_char {
                             count += 1;
                             chars.next();
@@ -543,9 +563,10 @@ impl<'src> Parser<'src> {
                             'a' => PatternChar::Lowercase,
                             'A' => PatternChar::Uppercase,
                             '#' => PatternChar::Digit,
-                            _ => unreachable!()
+                            _ => unreachable!(),
                         },
                         count,
+                        count_expression: None,
                     });
                 }
                 _ => return Err(ParserError::InvalidStringPattern(current_char.to_string())),

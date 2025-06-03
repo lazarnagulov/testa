@@ -2,7 +2,10 @@ use rand::Rng;
 
 use crate::{
     evaluator::{
-        self, context::{Context, Visitor}, eval_error::EvalError, object::Object
+        self,
+        context::{Context, Visitor},
+        eval_error::EvalError,
+        object::Object,
     },
     parser::ast::Variant,
 };

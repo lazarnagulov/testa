@@ -5,7 +5,9 @@ use std::{
 
 use crate::{
     evaluator::{
-        self, context::{Context, Visitor}, eval_error::EvalError
+        self,
+        context::{Context, Visitor},
+        eval_error::EvalError,
     },
     generation::generator::Record,
     parser::ast::Field,
