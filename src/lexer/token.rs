@@ -24,6 +24,8 @@ pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
     m.insert("string", TokenKind::Str);
     m.insert("override", TokenKind::Override);
     m.insert("type", TokenKind::Type);
+    m.insert("string_template", TokenKind::StringTemplate);
+    m.insert("string_pattern", TokenKind::StringPattern);
     m.insert("constraint", TokenKind::Constraint);
     m
 });
@@ -42,6 +44,8 @@ pub enum TokenKind {
 
     // keywords
     Template,
+    StringTemplate,
+    StringPattern,
     Resource,
     Constraint,
     Override,
@@ -116,6 +120,8 @@ impl Display for TokenKind {
             TokenKind::Bool => "bool",
             TokenKind::Extend => "extend",
             TokenKind::Override => "override",
+            TokenKind::StringTemplate => "string_template",
+            TokenKind::StringPattern => "string_pattern",
             TokenKind::With => "with",
             TokenKind::LParen => "(",
             TokenKind::RParen => ")",

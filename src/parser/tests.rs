@@ -4,12 +4,12 @@ mod parser_tests {
     use std::{path::PathBuf, vec};
 
     use crate::parser::{
+        Parser,
         ast::{
             ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
-            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PrefixOperator, Program,
-            Statement, Variant,
+            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
+            PrefixOperator, Program, Statement, Variant,
         },
-        parser::Parser,
         parser_error::ParserError,
     };
 
@@ -540,6 +540,71 @@ mod parser_tests {
     }
 
     #[test]
+    fn parse_pattern_dollar_case() {
+        let program = "string_pattern \"dollar$$$$$$$$$$$$$$$$${aa}\";";
+        let mut parser = Parser::new(program);
+        let expression = ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::StringPattern(vec![
+                    PatternElement::Literal("dollar$$$$$$$$$$$$$$$$".to_owned()),
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Lowercase,
+                        count: 2,
+                        count_expression: None,
+                    },
+                ]),
+                0,
+                0,
+            ),
+        };
+        expect_expression(&mut parser, expression);
+    }
+
+    #[test]
+    fn parse_string_pattern() {
+        let program = "string_pattern \"testa$}${aaa[10]}john${A[25]##[13]}\";";
+        let mut parser = Parser::new(program);
+        let solution = ExpressionStatemnt {
+            expression: Expression::new(
+                ExpressionKind::StringPattern(vec![
+                    PatternElement::Literal("testa$}".to_owned()),
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Lowercase,
+                        count: 3,
+                        count_expression: Some(Expression::new(
+                            ExpressionKind::IntLiteral(10),
+                            0,
+                            2,
+                        )),
+                    },
+                    PatternElement::Literal("john".to_owned()),
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Uppercase,
+                        count: 1,
+                        count_expression: Some(Expression::new(
+                            ExpressionKind::IntLiteral(25),
+                            0,
+                            2,
+                        )),
+                    },
+                    PatternElement::RepeatChar {
+                        ch: PatternChar::Digit,
+                        count: 2,
+                        count_expression: Some(Expression::new(
+                            ExpressionKind::IntLiteral(13),
+                            0,
+                            2,
+                        )),
+                    },
+                ]),
+                0,
+                0,
+            ),
+        };
+        expect_expression(&mut parser, solution);
+    }
+
+    #[test]
     fn parse_directive_options() {
         let program = "@output csv { delimiter = \";\"; }";
         let mut parser = Parser::new(program);
@@ -597,6 +662,7 @@ mod parser_tests {
             ParserError::InvalidDirective => panic!("Invalid directive"),
             ParserError::Syntax(message) => panic!("{}", message),
             ParserError::UndefinedConstraint => panic!("Undefined constraint"),
+            ParserError::InvalidStringPattern(pattern) => panic!("Invalid pattern {}", pattern),
         }
     }
 }

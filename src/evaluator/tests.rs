@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod evaluator_tests {
     use crate::{
-        evaluator::{context::Context, evaluator::evaluate, object::Object},
-        parser::parser::Parser,
+        evaluator::{self, context::Context, object::Object},
+        parser::Parser,
     };
 
     #[test]
@@ -36,7 +36,7 @@ mod evaluator_tests {
         .parse()
         .unwrap();
         let mut context = Context::default();
-        let result = evaluate(program, &mut context).unwrap();
+        let result = evaluator::evaluate(program, &mut context).unwrap();
         assert_eq!(result, Object::NoReturn);
         assert!(context.get_enum("Role").is_some());
         assert!(context.get_enum("Seniority").is_some());
@@ -61,7 +61,7 @@ mod evaluator_tests {
         .parse()
         .unwrap();
         let mut context = Context::default();
-        let result = evaluate(program, &mut context).unwrap();
+        let result = evaluator::evaluate(program, &mut context).unwrap();
         assert_eq!(result, Object::NoReturn);
         assert!(context.get_template("Product").is_some());
         assert!(context.get_template("User").is_some());
@@ -70,7 +70,7 @@ mod evaluator_tests {
     fn expect_object(source: &str, object: Object) {
         let program = Parser::new(source).parse().unwrap();
         let mut context = Context::default();
-        let result = evaluate(program, &mut context).unwrap();
+        let result = evaluator::evaluate(program, &mut context).unwrap();
         assert_eq!(result, object);
     }
 }

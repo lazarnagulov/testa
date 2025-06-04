@@ -1,6 +1,6 @@
 use core::fmt;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, fmt::Debug, i32};
+use std::{collections::HashMap, fmt::Debug};
 
 use crate::{
     evaluator::{eval_error::EvalError, object::Object},
@@ -309,10 +309,7 @@ impl Constraint for CountConstraint {
         if self.min == self.max {
             Some(Box::new(IdentitySampler::new(self.min)))
         } else {
-            Some(Box::new(UniformSampler::new(
-                self.min as i32,
-                self.max as i32,
-            )))
+            Some(Box::new(UniformSampler::new(self.min, self.max)))
         }
     }
 

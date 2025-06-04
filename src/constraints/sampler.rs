@@ -9,6 +9,8 @@ use crate::evaluator::object::Object;
 
 use super::constrainted_type::Constraint;
 
+type ValidatorFn = Box<dyn Fn(&Object) -> bool>;
+
 pub trait Sampler: std::fmt::Debug {
     fn sample(&self) -> Object;
 }
@@ -25,12 +27,12 @@ impl ConstraintSet {
 
     pub fn build_list_sampler(&mut self) -> Option<Box<dyn Sampler>> {
         let constraint = self.constraints.pop_front()?;
-        Some(constraint.build_sampler()?)
+        constraint.build_sampler()
     }
 
     pub fn build_sampler(&self) -> Box<dyn Sampler> {
         let mut samplers: Vec<Box<dyn Sampler>> = vec![];
-        let mut validators: Vec<Box<dyn Fn(&Object) -> bool>> = vec![];
+        let mut validators: Vec<ValidatorFn> = Vec::new();
 
         for constraint in &self.constraints {
             if let Some(sampler) = constraint.build_sampler() {
@@ -55,14 +57,11 @@ impl ConstraintSet {
 
 pub struct CompositeSampler {
     samplers: Vec<Box<dyn Sampler>>,
-    validators: Vec<Box<dyn Fn(&Object) -> bool>>,
+    validators: Vec<ValidatorFn>,
 }
 
 impl CompositeSampler {
-    pub fn new(
-        samplers: Vec<Box<dyn Sampler>>,
-        validators: Vec<Box<dyn Fn(&Object) -> bool>>,
-    ) -> Self {
+    pub fn new(samplers: Vec<Box<dyn Sampler>>, validators: Vec<ValidatorFn>) -> Self {
         CompositeSampler {
             samplers,
             validators,

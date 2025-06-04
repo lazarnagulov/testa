@@ -6,8 +6,8 @@ use std::{
 };
 
 use crate::{
-    constraints::constrainted_type::ConstrainedType, enumeration::enumeration::Enum,
-    generator::generator::Target, template::template::Template,
+    constraints::constrainted_type::ConstrainedType, enumeration::Enum,
+    generation::generator::Target, template::Template,
 };
 
 use super::{eval_error::EvalError, object::Object};

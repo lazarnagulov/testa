@@ -1,8 +1,8 @@
 use std::{env, fs::File, io::Read};
 
 use testa::{
-    evaluator::{context::Context, eval_error::*, evaluator::evaluate},
-    parser::{parser::Parser, parser_error::*},
+    evaluator::{self, context::Context, eval_error::*},
+    parser::{Parser, parser_error::*},
 };
 
 fn main() {
@@ -29,17 +29,18 @@ fn main() {
             ParserError::Expected { expected, got } => {
                 format!("Expected '{}' but got '{}'", expected, got)
             }
-            ParserError::InvalidDirective => format!("Invalid directive"),
-            ParserError::UnexpectedEOF => format!("Missing enclosing \" or ;"),
+            ParserError::InvalidDirective => "Invalid directive".to_string(),
+            ParserError::UnexpectedEOF => "Missing enclosing \" or ;".to_string(),
             ParserError::Syntax(error) => error,
-            ParserError::UndefinedConstraint => format!("Undefined constraint"),
+            ParserError::UndefinedConstraint => "Undefined constraint".to_string(),
+            ParserError::InvalidStringPattern(pattern) => format!("Invalid pattern {}", pattern),
         };
         eprintln!("{}", error_message);
         std::process::exit(1);
     });
     let mut context = Context::default();
 
-    evaluate(program, &mut context).unwrap_or_else(|err| {
+    evaluator::evaluate(program, &mut context).unwrap_or_else(|err| {
         let error_message = match err {
             EvalError::UnsupportedPrefixOperator { operator, object } => {
                 format!("Bad operand type for unary {}: '{}'", operator, object)

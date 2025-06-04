@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod constraint_test {
     use crate::{
-        evaluator::{context::Context, evaluator::evaluate},
-        parser::{parser::Parser, parser_error::ParserError},
+        evaluator::{self, context::Context},
+        parser::{Parser, parser_error::ParserError},
     };
 
     #[test]
@@ -12,7 +12,7 @@ mod constraint_test {
         match parser.parse() {
             Ok(program) => {
                 let mut context = Context::default();
-                evaluate(program, &mut context).unwrap();
+                evaluator::evaluate(program, &mut context).unwrap();
                 let data_type = context.get_type("even_positive_int");
                 assert!(data_type.is_some());
                 assert_eq!(data_type.unwrap().constraints.len(), 2);
@@ -28,7 +28,7 @@ mod constraint_test {
         match parser.parse() {
             Ok(program) => {
                 let mut context = Context::default();
-                evaluate(program, &mut context).unwrap();
+                evaluator::evaluate(program, &mut context).unwrap();
                 let data_type = context.get_type("even_positive_int");
                 assert!(data_type.is_some());
                 // TODO: add proper assertions
@@ -45,6 +45,9 @@ mod constraint_test {
             ParserError::InvalidDirective => panic!("Invalid directive"),
             ParserError::Syntax(message) => panic!("{}", message),
             ParserError::UndefinedConstraint => panic!("Undefined constraint"),
+            ParserError::InvalidStringPattern(pattern) => {
+                panic!("Invalid string pattern '{}'", pattern)
+            }
         }
     }
 }

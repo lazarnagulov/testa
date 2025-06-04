@@ -1,8 +1,0 @@
-@output csv;
-
-// Generates csv file with 5 tuples of (id, first_number, second_number)
-generate _ [5] {
-    id = $uuid();
-    first_number = int;
-    second_number = int;
-} 
