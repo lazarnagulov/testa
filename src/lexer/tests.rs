@@ -78,7 +78,7 @@ mod lexer_tests {
 
     #[test]
     fn lex_string_tokens() {
-        let program = "@generate @output $uuid john \"Peter\" 123 true false int float string 123.123 type constraint override";
+        let program = "@generate @output $uuid john \"Peter\" 123 true false int float string 123.123 type constraint override #[readonly]";
         let mut lexer = Lexer::new(program);
         expect_token(
             &mut lexer,
@@ -98,6 +98,7 @@ mod lexer_tests {
                 Type,
                 Constraint,
                 Override,
+                Tag,
             ],
         );
     }

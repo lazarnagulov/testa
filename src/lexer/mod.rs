@@ -43,6 +43,18 @@ impl<'src> Lexer<'src> {
             '}' => self.make_single_char_token(current_index, RBrace),
             ':' => self.make_single_char_token(current_index, Colon),
             ',' => self.make_single_char_token(current_index, Comma),
+            '#' => {
+                self.next();
+                if self
+                    .chars
+                    .next_if(|(_, next_char)| *next_char == '[')
+                    .is_some()
+                {
+                    self.make_attribute(current_index)
+                } else {
+                    panic!("Invalid token #");
+                }
+            }
             ';' => self.make_single_char_token(current_index, Semicolon),
             '%' => self.make_single_char_token(current_index, Percent),
             '[' => self.make_single_char_token(current_index, LBracket),
@@ -289,6 +301,21 @@ impl<'src> Lexer<'src> {
         }
         // Add "" to size
         2 + last - position
+    }
+
+    fn make_attribute(&mut self, position: usize) -> Token {
+        let mut last = position;
+        while self.peek().is_some_and(|(_, c)| c != ']') {
+            let (current_position, _) = self
+                .next()
+                .expect("This will always be Some, since it is checked in while");
+            last = current_position;
+        }
+        match self.next() {
+            Some(..) => {}
+            None => panic!("Invalid attribute: missing closing brace"),
+        }
+        Token::new(TokenKind::Tag, position, last - position + 1)
     }
 
     fn make_single_char_token(&mut self, current_index: usize, kind: TokenKind) -> Token {

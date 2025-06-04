@@ -9,6 +9,7 @@ pub enum Statement {
     Expression(ExpressionStatemnt),
     Template {
         parent: Option<String>,
+        attributes: Vec<Attribute>,
         name: String,
         body: Vec<Field>,
     },
@@ -55,18 +56,31 @@ impl Variant {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
+pub enum Attribute {
+    Flag(String),
+    KeyValue(String, String),
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Field {
     pub name: String,
     pub value: Expression,
     pub overridable: bool,
+    pub attributes: Vec<Attribute>,
 }
 
 impl Field {
-    pub fn new(name: String, value: Expression, overridable: bool) -> Self {
+    pub fn new(
+        name: String,
+        value: Expression,
+        overridable: bool,
+        attributes: Vec<Attribute>,
+    ) -> Self {
         Field {
             name,
             value,
             overridable,
+            attributes,
         }
     }
 }

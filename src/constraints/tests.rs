@@ -48,6 +48,7 @@ mod constraint_test {
             ParserError::InvalidStringPattern(pattern) => {
                 panic!("Invalid string pattern '{}'", pattern)
             }
+            ParserError::InvalidAttribute(token) => panic!("Cannot put attribute on {}", token),
         }
     }
 }
