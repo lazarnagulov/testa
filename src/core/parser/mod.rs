@@ -13,6 +13,7 @@ use crate::core::ast::nodes::{
 use crate::core::lexer::Lexer;
 use crate::core::lexer::token::TokenKind::{self, *};
 use crate::core::parser::parser_error::ParserError;
+use crate::core::utils::span::Span;
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
@@ -80,7 +81,7 @@ impl<'src> Parser<'src> {
         match directive.kind {
             Output => Ok(Statement::OutputDirective { argument, options }),
             Seed => todo!(),
-            _ => Err(ParserError::InvalidDirective),
+            _ => Err(ParserError::InvalidDirective(directive.span)),
         }
     }
 
@@ -146,12 +147,12 @@ impl<'src> Parser<'src> {
             False | True | StringLiteral | FloatLiteral | IntLiteral
         ) {
             let value = self.parse_expression(Precedence::Lowest)?;
-            let start = value.start;
-            let mut size = value.size;
+            let start = value.span.start;
+            let mut size = value.span.size;
             let weight = if self.peek_kind() == &Arrow {
                 self.lexer.next();
                 let weight_expression = self.parse_expression(Precedence::Lowest)?;
-                size += weight_expression.size + 2;
+                size += weight_expression.span.size + 2;
                 Some(weight_expression)
             } else {
                 None
@@ -195,8 +196,8 @@ impl<'src> Parser<'src> {
             || self.peek_kind() == &Tag
         {
             if self.peek_kind() == &Tag {
-                let (start, size) = self.consume_token();
-                let attribute = &self.source[start + 2..start + size];
+                let span = self.consume_token();
+                let attribute = &self.source[span.start + 2..span.start + span.size];
                 field_attributes.push(Attribute::Flag(attribute.to_owned()));
                 continue;
             }
@@ -340,10 +341,10 @@ impl<'src> Parser<'src> {
                     Precedence::Range,
                 )?,
                 token => {
-                    return Err(ParserError::syntax_err(&format!(
-                        "Invalid operator: {}",
-                        token
-                    )));
+                    return Err(ParserError::syntax_err(
+                        &format!("Invalid operator: {}", token),
+                        expression.span,
+                    ));
                 }
             }
         }
@@ -363,6 +364,8 @@ impl<'src> Parser<'src> {
                     obj => Err(ParserError::expected(
                         "data type or literal",
                         &format!("{}", obj),
+                        // TODO: think about how to get span
+                        Span::default(),
                     )),
                 }
             }
@@ -374,38 +377,41 @@ impl<'src> Parser<'src> {
             ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
             LParen => Ok(self.parse_group_expression()?),
-            kind => Err(ParserError::syntax_err(&format!(
-                "Invalid primary expression: {}",
-                kind
-            ))),
+            kind => Err(ParserError::syntax_err(
+                &format!("Invalid primary expression: {}", kind),
+                Span::default(),
+            )),
         }
     }
 
     fn parse_attribute(&mut self) -> Result<Statement, ParserError> {
-        let (start, size) = self.consume_token();
-        let attribute = &self.source[start + 2..start + size];
+        let span = self.consume_token();
+        let attribute = &self.source[span.start + 2..span.start + span.size];
         self.attributes.push(Attribute::Flag(attribute.to_owned()));
         match self.peek_kind() {
             Template => self.parse_template(),
             Type => self.parse_type_declaration(),
             Enum => self.parse_enum(),
             Tag => self.parse_attribute(),
-            tok => Err(ParserError::invalid_attribute(tok.to_string().as_str())),
+            tok => Err(ParserError::invalid_attribute(
+                tok.to_string().as_str(),
+                span,
+            )),
         }
     }
 
     fn parse_list_expression(&mut self) -> Result<Expression, ParserError> {
-        let (start, _) = self.consume_token();
+        let mut span = self.consume_token();
         let elements = self.parse_elements()?;
-        let size = elements.iter().fold(0, |acc, element| acc + element.size) + 1;
-        Ok(Expression::new(ExpressionKind::List(elements), start, size))
+        span.size = elements.iter().fold(0, |acc, element| acc + element.size) + 1;
+        Ok(Expression::new(ExpressionKind::List(elements), span))
     }
 
     fn parse_list_type(&mut self) -> Result<Expression, ParserError> {
         self.consume_token();
         let data_type = self.parse_type()?;
-        let start = data_type.start;
-        let size = data_type.size;
+        let mut span = data_type.span;
+        span.size += 1; // ]
         let ExpressionKind::Type(data_type) = data_type.kind else {
             unreachable!()
         };
@@ -417,14 +423,12 @@ impl<'src> Parser<'src> {
                     DataTypeKind::List(Box::new(data_type)),
                     Some(consraints),
                 )),
-                start,
-                start + size + 1,
+                span,
             ))
         } else {
             Ok(Expression::new(
                 ExpressionKind::Type(DataType::new(DataTypeKind::List(Box::new(data_type)), None)),
-                start,
-                start + size + 1,
+                span,
             ))
         }
     }
@@ -444,8 +448,7 @@ impl<'src> Parser<'src> {
 
     fn parse_type(&mut self) -> Result<Expression, ParserError> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.span.start;
-        let size = token.span.size;
+        let span = token.span.clone();
 
         if token.kind == LBracket {
             return self.parse_list_type();
@@ -461,12 +464,12 @@ impl<'src> Parser<'src> {
                 let name = self.parse_identifier_as_string()?;
                 let peek = self.peek_kind();
                 if peek != &With {
-                    return Err(ParserError::expected("with", &format!("{}", *peek)));
+                    return Err(ParserError::expected("with", &format!("{}", *peek), span));
                 }
                 DataTypeKind::Custom(name)
             }
             Identifier => DataTypeKind::Custom(self.parse_peeked_token_as_string()),
-            _ => unreachable!(),
+            _ => unreachable!("has to be a type"),
         };
 
         self.lexer.next();
@@ -475,20 +478,19 @@ impl<'src> Parser<'src> {
             // TODO: calculate start and size
             Ok(Expression::new(
                 ExpressionKind::Type(DataType::new(data_type_kind, Some(constraints))),
-                0,
-                0,
+                //TODO: add constraint size
+                span,
             ))
         } else {
             Ok(Expression::new(
                 ExpressionKind::Type(DataType::new(data_type_kind, None)),
-                start,
-                size,
+                span,
             ))
         }
     }
 
     fn parse_string_pattern(&mut self) -> Result<Expression, ParserError> {
-        let (start, _size) = self.consume_token();
+        let span = self.consume_token();
         let (literal_start, literal_size) = self.expect_token(StringLiteral)?;
         let literal = self.source[literal_start + 1..literal_start + literal_size - 1].to_string();
         let mut chars = literal.char_indices().peekable();
@@ -496,8 +498,7 @@ impl<'src> Parser<'src> {
         // TODO: Implement size
         Ok(Expression::new(
             ExpressionKind::StringPattern(elements),
-            start,
-            0,
+            span,
         ))
     }
 
@@ -565,7 +566,10 @@ impl<'src> Parser<'src> {
                         chars.next();
                     }
                     if chars.peek().is_none_or(|(_, ch)| *ch != ']') {
-                        return Err(ParserError::InvalidStringPattern("Missing ]".to_owned()));
+                        return Err(ParserError::InvalidStringPattern(
+                            Span::default(),
+                            "Missing ]".to_owned(),
+                        ));
                     }
 
                     chars.next();
@@ -581,6 +585,7 @@ impl<'src> Parser<'src> {
                         *expression = Some(count_expression);
                     } else {
                         return Err(ParserError::InvalidStringPattern(
+                            Span::default(),
                             "Expected a, A or # before []".to_owned(),
                         ));
                     }
@@ -606,14 +611,19 @@ impl<'src> Parser<'src> {
                         count_expression: None,
                     });
                 }
-                _ => return Err(ParserError::InvalidStringPattern(current_char.to_string())),
+                _ => {
+                    return Err(ParserError::InvalidStringPattern(
+                        Span::default(),
+                        current_char.to_string(),
+                    ));
+                }
             }
         }
         Ok(result)
     }
 
     fn parse_constraints(&mut self) -> Result<Vec<ConstraintExpression>, ParserError> {
-        self.consume_token();
+        let span = self.consume_token();
         let mut constraints: Vec<ConstraintExpression> = vec![];
 
         while self.peek_kind() == &Identifier {
@@ -628,14 +638,13 @@ impl<'src> Parser<'src> {
                 "count" => self.parse_constraint_expression(ConstraintKind::Count),
                 _ => {
                     if self.peek_kind() == &SingleEqual {
-                        Err(ParserError::UndefinedConstraint)
-                    } else {
-                        let expression = self.parse_expression(Precedence::Lowest)?;
-                        Ok(ConstraintExpression::new(
-                            expression,
-                            ConstraintKind::Custom,
-                        ))
+                        return Err(ParserError::UndefinedConstraint(span));
                     }
+                    let expression = self.parse_expression(Precedence::Lowest)?;
+                    Ok(ConstraintExpression::new(
+                        expression,
+                        ConstraintKind::Custom,
+                    ))
                 }
             }?;
             constraints.push(constraint);
@@ -659,68 +668,54 @@ impl<'src> Parser<'src> {
 
     fn parse_literal(&mut self) -> Result<Expression, ParserError> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.span.start;
-        let size = token.span.size;
+        let span = token.span.clone();
+
         let parsed = match &token.kind {
             StringLiteral => {
-                let literal = self.source[start + 1..start + size - 1].to_string();
+                let literal = self.source[span.start + 1..span.start + span.size - 1].to_string();
                 Ok(Expression::new(
                     ExpressionKind::StringLiteral(literal),
-                    start,
-                    size,
+                    span,
                 ))
             }
             Identifier => {
-                let literal = self.source[start..start + size].to_string();
-                Ok(Expression::new(
-                    ExpressionKind::Identifier(literal),
-                    start,
-                    size,
-                ))
+                let literal = self.source[span.start..span.start + span.size].to_string();
+                Ok(Expression::new(ExpressionKind::Identifier(literal), span))
             }
             FloatLiteral => {
-                let literal = self.source[start..start + size].to_string();
-                Ok(Expression::new(
-                    ExpressionKind::FloatLiteral(literal),
-                    start,
-                    size,
-                ))
+                let literal = self.source[span.start..span.start + span.size].to_string();
+                Ok(Expression::new(ExpressionKind::FloatLiteral(literal), span))
             }
-            True => Ok(Expression::new(
-                ExpressionKind::BooleanLiteral(true),
-                start,
-                size,
-            )),
-            False => Ok(Expression::new(
-                ExpressionKind::BooleanLiteral(false),
-                start,
-                size,
-            )),
+            True => Ok(Expression::new(ExpressionKind::BooleanLiteral(true), span)),
+            False => Ok(Expression::new(ExpressionKind::BooleanLiteral(false), span)),
             IntLiteral => {
-                let number = self.source[start..start + size].parse().unwrap();
+                let number = self.source[span.start..span.start + span.size]
+                    .parse()
+                    .unwrap();
                 Ok(Expression {
                     kind: ExpressionKind::IntLiteral(number),
-                    start,
-                    size,
+                    span,
                 })
             }
-            kind => Err(ParserError::expected("literal", &kind.to_string())),
+            kind => Err(ParserError::expected("literal", &kind.to_string(), span)),
         };
         self.lexer.next();
         parsed
     }
 
     fn parse_group_expression(&mut self) -> Result<Expression, ParserError> {
-        let (start, _) = self.consume_token();
+        let mut span = self.consume_token();
         let expression = self.parse_expression(Precedence::Lowest)?;
         match self.peek_kind() {
             RParen => {
                 let end = self.expect_token(RParen).unwrap().0;
-                Ok(Expression::new(expression.kind, start, (end + 1) - start))
+                span.size = (end + 1) - span.start;
+                Ok(Expression::new(expression.kind, span))
             }
             kind => Err(ParserError::Expected {
                 expected: ")".to_string(),
                 got: kind.to_string(),
+                span,
             }),
         }
     }
@@ -729,16 +724,15 @@ impl<'src> Parser<'src> {
         &mut self,
         operator: PrefixOperator,
     ) -> Result<Expression, ParserError> {
-        let (start, size) = self.consume_token();
+        let mut span = self.consume_token();
         let expression = self.parse_expression(Precedence::Prefix)?;
-        let size = size + expression.size;
+        span.size += expression.span.size;
         Ok(Expression::new(
             ExpressionKind::Prefix {
                 operator,
                 expression: Box::new(expression),
             },
-            start,
-            size,
+            span,
         ))
     }
 
@@ -750,8 +744,9 @@ impl<'src> Parser<'src> {
     ) -> Result<Expression, ParserError> {
         self.lexer.next();
         let right = self.parse_expression(precendence)?;
-        let start = left.start;
-        let end = right.start + right.size;
+        let span = right.span.clone();
+        let start = left.span.start;
+        let end = right.span.start + right.span.size;
 
         Ok(Expression::new(
             ExpressionKind::Infix {
@@ -759,26 +754,25 @@ impl<'src> Parser<'src> {
                 operator,
                 right: Box::new(right),
             },
-            start,
-            end - start,
+            Span::new(start, end - start, span.line, span.line_offset),
         ))
     }
 
     fn expect_token(&mut self, kind: TokenKind) -> Result<(usize, usize), ParserError> {
         let token = self.lexer.next().ok_or(ParserError::UnexpectedEOF)?;
         if token.kind != kind {
-            Err(ParserError::syntax_err(&format!(
-                "Expected {} but got {}",
-                kind, token.kind
-            )))
+            Err(ParserError::syntax_err(
+                &format!("Expected {} but got {}", kind, token.kind),
+                token.span,
+            ))
         } else {
             Ok((token.span.start, token.span.size))
         }
     }
 
-    fn consume_token(&mut self) -> (usize, usize) {
+    fn consume_token(&mut self) -> Span {
         let token = self.lexer.next().unwrap();
-        (token.span.start, token.span.size)
+        token.span
     }
 
     fn peek_kind(&mut self) -> &TokenKind {

@@ -26,15 +26,56 @@ fn main() {
     let mut parser = Parser::new(&source, file_path);
     let program = parser.parse().unwrap_or_else(|err| {
         let error_message = match err {
-            ParserError::Expected { expected, got } => {
-                format!("Expected '{}' but got '{}'", expected, got)
+            ParserError::Expected {
+                span,
+                expected,
+                got,
+            } => {
+                format!(
+                    "{}:{}:{} ERROR: Expected '{}' but got '{}'",
+                    file_path.display(),
+                    span.line,
+                    span.line_offset,
+                    expected,
+                    got
+                )
             }
-            ParserError::InvalidDirective => "Invalid directive".to_string(),
-            ParserError::UnexpectedEOF => "Missing enclosing \" or ;".to_string(),
-            ParserError::Syntax(error) => error,
-            ParserError::UndefinedConstraint => "Undefined constraint".to_string(),
-            ParserError::InvalidStringPattern(pattern) => format!("Invalid pattern {}", pattern),
-            ParserError::InvalidAttribute(token) => format!("Cannot put attribute on {}", token),
+            ParserError::InvalidDirective(span) => format!(
+                "{}:{}:{} ERROR: Invalid directive",
+                file_path.display(),
+                span.line,
+                span.line_offset
+            ),
+            ParserError::UnexpectedEOF => {
+                format!("{} ERROR: Missing enclosing \" or ;", file_path.display())
+            }
+            ParserError::Syntax(span, error) => format!(
+                "{}:{}:{} ERROR: {}",
+                file_path.display(),
+                span.line,
+                span.line_offset,
+                error
+            ),
+            ParserError::UndefinedConstraint(span) => format!(
+                "{}:{}:{} ERROR: Undefined constraint",
+                file_path.display(),
+                span.line,
+                span.line_offset
+            ),
+            ParserError::InvalidStringPattern(span, pattern) => format!(
+                "{}:{}:{} ERROR: Invalid pattern {}",
+                file_path.display(),
+                span.line,
+                span.line_offset,
+                pattern
+            ),
+            ParserError::InvalidAttribute(span, token) => format!(
+                "{}:{}:{} ERROR: Cannot put attribute on {}",
+                file_path.display(),
+                span.line,
+                span.line_offset,
+                token
+            ),
         };
         eprintln!("{}", error_message);
         std::process::exit(1);

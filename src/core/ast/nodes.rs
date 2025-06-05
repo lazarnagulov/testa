@@ -1,6 +1,8 @@
 use core::fmt;
 use std::path::PathBuf;
 
+use crate::core::utils::span::Span;
+
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program(pub Vec<Statement>);
 
@@ -95,13 +97,12 @@ pub struct ExpressionStatemnt {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Expression {
     pub kind: ExpressionKind,
-    pub start: usize,
-    pub size: usize,
+    pub span: Span,
 }
 
 impl Expression {
-    pub fn new(kind: ExpressionKind, start: usize, size: usize) -> Self {
-        Expression { kind, start, size }
+    pub fn new(kind: ExpressionKind, span: Span) -> Self {
+        Expression { kind, span }
     }
 }
 

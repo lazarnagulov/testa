@@ -17,9 +17,9 @@ pub struct Lexer<'src> {
     chars: Peekable<CharIndices<'src>>,
     path: &'src Path,
 
-    line: usize,
-    line_offset: usize,
-    current_position: usize,
+    pub line: usize,
+    pub line_offset: usize,
+    pub current_position: usize,
 }
 
 impl<'src> Lexer<'src> {

@@ -1,27 +1,34 @@
+use crate::core::utils::span::Span;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ParserError {
-    Expected { expected: String, got: String },
-    UndefinedConstraint,
-    InvalidDirective,
-    InvalidAttribute(String),
+    Expected {
+        span: Span,
+        expected: String,
+        got: String,
+    },
+    UndefinedConstraint(Span),
+    InvalidDirective(Span),
+    InvalidAttribute(Span, String),
     UnexpectedEOF,
-    InvalidStringPattern(String),
-    Syntax(String),
+    InvalidStringPattern(Span, String),
+    Syntax(Span, String),
 }
 
 impl ParserError {
-    pub fn invalid_attribute(token: &str) -> Self {
-        Self::InvalidAttribute(token.to_owned())
+    pub fn invalid_attribute(token: &str, span: Span) -> Self {
+        Self::InvalidAttribute(span, token.to_owned())
     }
 
-    pub fn expected(expected: &str, got: &str) -> Self {
+    pub fn expected(expected: &str, got: &str, span: Span) -> Self {
         Self::Expected {
             expected: expected.to_owned(),
             got: got.to_owned(),
+            span,
         }
     }
 
-    pub fn syntax_err(s: &str) -> Self {
-        Self::Syntax(format!("Syntax error: {s}"))
+    pub fn syntax_err(s: &str, span: Span) -> Self {
+        Self::Syntax(span, format!("Syntax error: {s}"))
     }
 }
