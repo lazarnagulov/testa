@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::evaluator::object::Object;
+use crate::interpreter::object::Object;
 
 pub trait FileGenerator: fmt::Debug {
     fn generate(&self, record: &Record) -> Result<String, GenerationError>;

@@ -3,17 +3,20 @@ use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
-    constraints::constraint::CONSTRAINT_REGISTRY,
-    core::ast::nodes::{ConstraintExpression, DataType, DataTypeKind},
-    evaluator::{
-        self,
+    core::{
+        ast::nodes::{ConstraintExpression, DataType, DataTypeKind},
+        constraints::{
+            constraint::CONSTRAINT_REGISTRY,
+            sampler::{ConstraintSet, Sampler},
+        },
+    },
+    interpreter::{
         context::{Context, Visitor},
         eval_error::EvalError,
+        evaluator,
         object::Object,
     },
 };
-
-use super::sampler::{ConstraintSet, Sampler};
 
 pub trait Constraint: std::fmt::Debug {
     fn validate(&self, value: &Object) -> bool;

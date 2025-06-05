@@ -5,12 +5,12 @@ use std::{
 
 use crate::{
     core::ast::nodes::Field,
-    evaluator::{
-        self,
+    generation::generator::Record,
+    interpreter::{
         context::{Context, Visitor},
         eval_error::EvalError,
+        evaluator,
     },
-    generation::generator::Record,
 };
 
 #[derive(Debug, Default, Clone)]

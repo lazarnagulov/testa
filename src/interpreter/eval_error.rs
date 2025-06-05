@@ -1,6 +1,7 @@
-use crate::core::ast::nodes::{InfixOperator, PrefixOperator};
-
-use super::object::Object;
+use crate::{
+    core::ast::nodes::{InfixOperator, PrefixOperator},
+    interpreter::object::Object,
+};
 
 #[derive(Debug)]
 pub enum EvalError {

@@ -1,29 +1,25 @@
-pub mod context;
-pub mod eval_error;
-pub mod object;
-pub mod tests;
-
 use std::{collections::HashMap, fs::File, io::Write, rc::Rc};
 
 use rand::Rng;
 
 use crate::{
-    constraints::constrainted_type::ConstrainedType,
-    core::ast::nodes::{
-        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar, PatternElement,
-        PrefixOperator, Program, Statement,
-    },
-    enumeration::Enum,
-    evaluator::{
-        context::{Context, Visitor},
-        eval_error::EvalError,
-        object::Object,
+    core::{
+        ast::nodes::{
+            DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar,
+            PatternElement, PrefixOperator, Program, Statement,
+        },
+        constraints::constrainted_type::ConstrainedType,
+        model::{enumeration::Enum, template::Template},
     },
     generation::{
         csv::CsvGenerator,
         generator::{FileGenerator, GenerationError, Target},
     },
-    template::Template,
+    interpreter::{
+        context::{Context, Visitor},
+        eval_error::EvalError,
+        object::Object,
+    },
 };
 
 pub fn evaluate(program: Program, context: &mut Context) -> Result<Object, EvalError> {

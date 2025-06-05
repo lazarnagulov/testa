@@ -1,4 +1,4 @@
-use crate::evaluator::{eval_error::EvalError, object::Object};
+use crate::interpreter::{eval_error::EvalError, object::Object};
 
 pub fn extract_int(object: &Object) -> Result<i32, EvalError> {
     match object {

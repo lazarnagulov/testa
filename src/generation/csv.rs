@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::evaluator::object::Object;
+use crate::interpreter::object::Object;
 
 use super::generator::{FileGenerator, GenerationError, Record};
 

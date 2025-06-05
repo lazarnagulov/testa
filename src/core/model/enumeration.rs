@@ -2,10 +2,10 @@ use rand::Rng;
 
 use crate::{
     core::ast::nodes::Variant,
-    evaluator::{
-        self,
+    interpreter::{
         context::{Context, Visitor},
         eval_error::EvalError,
+        evaluator,
         object::Object,
     },
 };

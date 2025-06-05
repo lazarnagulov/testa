@@ -2,7 +2,7 @@ use std::{env, fs::File, io::Read};
 
 use testa::{
     core::parser::{Parser, parser_error::*},
-    evaluator::{self, context::Context, eval_error::*},
+    interpreter::{context::Context, eval_error::EvalError, evaluator},
 };
 
 fn main() {
