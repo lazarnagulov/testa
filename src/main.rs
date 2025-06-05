@@ -1,8 +1,8 @@
 use std::{env, fs::File, io::Read};
 
 use testa::{
-    evaluator::{self, context::Context, eval_error::*},
-    parser::{Parser, parser_error::*},
+    core::parser::{Parser, parser_error::*},
+    interpreter::{context::Context, eval_error::EvalError, evaluator},
 };
 
 fn main() {

@@ -3,22 +3,20 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, fmt::Debug};
 
 use crate::{
-    evaluator::{eval_error::EvalError, object::Object},
-    parser::ast::{ConstraintKind, DataTypeKind},
+    core::{
+        ast::nodes::{ConstraintKind, DataTypeKind},
+        constraints::sampler::{BooleanSampler, IdentitySampler, Sampler, UniformSampler}, utils::extract_object,
+    },
+    interpreter::{eval_error::EvalError, object::Object},
 };
 
-use super::{
-    constrainted_type::Constraint,
-    sampler::{BooleanSampler, IdentitySampler, Sampler, UniformSampler},
-    util,
-};
+use super::constrainted_type::Constraint;
 
 pub trait ConstraintBuilder: Send + Sync + fmt::Debug {
     fn is_compatible(&self, type_kind: &DataTypeKind) -> bool;
     fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError>;
 }
 
-// TODO: Make it thread safe later
 pub static CONSTRAINT_REGISTRY: Lazy<HashMap<ConstraintKind, Box<dyn ConstraintBuilder>>> =
     Lazy::new(|| {
         let mut m: HashMap<ConstraintKind, Box<dyn ConstraintBuilder>> = HashMap::new();
@@ -40,7 +38,7 @@ impl ConstraintBuilder for RangeBuilder {
     }
 
     fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
-        let (start, end) = util::extract_range(object)?;
+        let (start, end) = extract_object::extract_range(object)?;
         Ok(Box::new(RangeConstraint::new(start, end)))
     }
 }
@@ -91,7 +89,7 @@ impl ConstraintBuilder for MultipleOfBuilder {
     }
 
     fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
-        let integer = util::extract_int(object)?;
+        let integer = extract_object::extract_int(object)?;
         Ok(Box::new(MultipleOfConstraint::new(integer)))
     }
 }
@@ -134,7 +132,7 @@ impl ConstraintBuilder for BiasBuilder {
     }
 
     fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
-        let float = util::extract_float(object)?;
+        let float = extract_object::extract_float(object)?;
         Ok(Box::new(BiasConstraint::new(float)))
     }
 }
@@ -177,7 +175,7 @@ impl ConstraintBuilder for MinBuilder {
     }
 
     fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
-        let integer = util::extract_int(object)?;
+        let integer = extract_object::extract_int(object)?;
         Ok(Box::new(MinConstraint::new(integer)))
     }
 }
@@ -220,7 +218,7 @@ impl ConstraintBuilder for MaxBuilder {
     }
 
     fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
-        let integer = util::extract_int(object)?;
+        let integer = extract_object::extract_int(object)?;
         Ok(Box::new(MaxConstraint::new(integer)))
     }
 }
@@ -263,10 +261,10 @@ impl ConstraintBuilder for CountBuilder {
     }
 
     fn build(&self, object: &Object) -> Result<Box<dyn Constraint>, EvalError> {
-        match util::extract_int(object) {
+        match extract_object::extract_int(object) {
             Ok(integer) => Ok(Box::new(CountConstraint::exact(integer))),
             Err(_) => {
-                let (start, end) = util::extract_range(object)?;
+                let (start, end) = extract_object::extract_range(object)?;
                 Ok(Box::new(CountConstraint::new(start as i32, end as i32)))
             }
         }

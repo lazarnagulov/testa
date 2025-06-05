@@ -1,8 +1,5 @@
-#[cfg(test)]
-mod constraint_test {
     use crate::{
-        evaluator::{self, context::Context},
-        parser::{Parser, parser_error::ParserError},
+        core::parser::{parser_error::ParserError, Parser}, interpreter::{context::Context, evaluator},
     };
 
     #[test]
@@ -51,4 +48,3 @@ mod constraint_test {
             ParserError::InvalidAttribute(token) => panic!("Cannot put attribute on {}", token),
         }
     }
-}

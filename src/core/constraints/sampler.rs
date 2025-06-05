@@ -5,7 +5,7 @@ use rand::{
     distr::{Distribution, Uniform},
 };
 
-use crate::evaluator::object::Object;
+use crate::interpreter::object::Object;
 
 use super::constrainted_type::Constraint;
 

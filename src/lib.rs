@@ -1,7 +1,4 @@
-pub mod constraints;
-pub mod enumeration;
-pub mod evaluator;
+pub mod core;
 pub mod generation;
-pub mod lexer;
-pub mod parser;
-pub mod template;
+pub mod interpreter;
+pub mod tests;

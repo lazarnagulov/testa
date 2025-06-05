@@ -4,13 +4,13 @@ use std::{
 };
 
 use crate::{
-    evaluator::{
-        self,
+    core::ast::nodes::Field,
+    generation::generator::Record,
+    interpreter::{
         context::{Context, Visitor},
         eval_error::EvalError,
+        evaluator,
     },
-    generation::generator::Record,
-    parser::ast::Field,
 };
 
 #[derive(Debug, Default, Clone)]
