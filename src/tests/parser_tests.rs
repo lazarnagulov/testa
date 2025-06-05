@@ -1,4 +1,5 @@
 use core::panic;
+use std::path::Path;
 use std::{path::PathBuf, vec};
 
 use crate::core::ast::nodes::{
@@ -11,7 +12,7 @@ use crate::core::parser::{Parser, parser_error::ParserError};
 #[test]
 fn parse_tagged_template() {
     let program = "#[abstract] template User {}";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -31,7 +32,7 @@ fn parse_tagged_template() {
 #[test]
 fn parse_tagged_template_field() {
     let program = "template User { #[primary_key] #[unique] id = string; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -63,7 +64,7 @@ fn parse_tagged_template_field() {
 #[test]
 fn parse_empty_template() {
     let program = "template User {}";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -83,7 +84,7 @@ fn parse_empty_template() {
 #[test]
 fn parse_single_field_template() {
     let program = "template User { name = string; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let field = Field::new(
         "name".to_string(),
         Expression::new(
@@ -114,7 +115,7 @@ fn parse_single_field_template() {
 fn parse_template() {
     let program =
         "template Product : Consumable { override name = string; quantity = int; price = float; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let name_field = Field::new(
         "name".to_string(),
         Expression::new(
@@ -164,14 +165,14 @@ fn parse_template() {
 #[test]
 fn parse_missing_paren_template() {
     let program = "template Invalid { name = string;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     expect_missing_paren(&mut parser);
 }
 
 #[test]
 fn parse_anonymus_generate() {
     let program = "@generate _ [10] { name = string; price = float; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let name_field = Field::new(
         "name".to_string(),
         Expression::new(
@@ -210,7 +211,7 @@ fn parse_anonymus_generate() {
 #[test]
 fn parse_generate() {
     let program = "@generate User [10];";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -229,14 +230,14 @@ fn parse_generate() {
 #[test]
 fn parse_missing_paren_generate() {
     let program = "@generate _ [10] { name = string; price = float;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     expect_missing_paren(&mut parser);
 }
 
 #[test]
 fn parse_weighted_variant_enum() {
     let program = "#[public] enum Role { User => 50; Admin => 10; Developer => 30; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -268,7 +269,7 @@ fn parse_weighted_variant_enum() {
 #[test]
 fn parse_empty_enum() {
     let program = "enum Role {}";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -287,7 +288,7 @@ fn parse_empty_enum() {
 #[test]
 fn parse_single_variant_enum() {
     let program = "enum Role { User; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -306,7 +307,7 @@ fn parse_single_variant_enum() {
 #[test]
 fn parse_list_type() {
     let program = "[int][range=1..=5];";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let expression = ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::Type(DataType::new(
@@ -334,7 +335,7 @@ fn parse_list_type() {
 #[test]
 fn parse_list_expression() {
     let program = "[1 => 5; \"John\"; true => 25];";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let expression = ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::List(vec![
@@ -371,7 +372,7 @@ fn parse_extended_type() {
             type positive_int = int[range=0..=1024];
             type even_positive_int = extend positive_int with [multiple_of=2];
         "#;
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let data_type = Expression::new(
         ExpressionKind::Type(DataType::new(
             DataTypeKind::Int,
@@ -428,7 +429,7 @@ fn parse_extended_type() {
 #[test]
 fn parse_enum() {
     let program = "enum Role { User; Admin; Moderator; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -451,14 +452,14 @@ fn parse_enum() {
 #[test]
 fn parse_missing_paren_enum() {
     let program = "enum Role { User; Admin; Moderator;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     expect_missing_paren(&mut parser);
 }
 
 #[test]
 fn parse_infix_expression() {
     let program = "2 + 10 * 20;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let solution = ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::Infix {
@@ -484,7 +485,7 @@ fn parse_infix_expression() {
 #[test]
 fn parse_grouped_expression() {
     let program = "(2 + 3) * 5;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let solution = ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::Infix {
@@ -510,7 +511,7 @@ fn parse_grouped_expression() {
 #[test]
 fn parse_missing_paren_expression() {
     let program = "(2 << 3 & 5 >> 1;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(_) => panic!("Program should have returned err."),
         Err(err) => match err {
@@ -526,7 +527,7 @@ fn parse_missing_paren_expression() {
 #[test]
 fn parse_prefix_expression() {
     let program = "-5; !true;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let negative_statement = Statement::Expression(ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::Prefix {
@@ -554,7 +555,7 @@ fn parse_prefix_expression() {
 #[test]
 fn parse_directive() {
     let program = "@output csv;";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(
@@ -572,7 +573,7 @@ fn parse_directive() {
 #[test]
 fn parse_output_path() {
     let program = "@output_path \"./example.csv\";";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             println!("{:?}", program);
@@ -590,7 +591,7 @@ fn parse_output_path() {
 #[test]
 fn parse_pattern_dollar_case() {
     let program = "string_pattern \"dollar$$$$$$$$$$$$$$$$${aa}\";";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let expression = ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::StringPattern(vec![
@@ -611,7 +612,7 @@ fn parse_pattern_dollar_case() {
 #[test]
 fn parse_string_pattern() {
     let program = "string_pattern \"testa$}${aaa[10]}john${A[25]##[13]}\";";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     let solution = ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::StringPattern(vec![
@@ -643,7 +644,7 @@ fn parse_string_pattern() {
 #[test]
 fn parse_directive_options() {
     let program = "@output csv { delimiter = \";\"; }";
-    let mut parser = Parser::new(program);
+    let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
             assert_eq!(

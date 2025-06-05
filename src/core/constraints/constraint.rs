@@ -5,7 +5,8 @@ use std::{collections::HashMap, fmt::Debug};
 use crate::{
     core::{
         ast::nodes::{ConstraintKind, DataTypeKind},
-        constraints::sampler::{BooleanSampler, IdentitySampler, Sampler, UniformSampler}, utils::extract_object,
+        constraints::sampler::{BooleanSampler, IdentitySampler, Sampler, UniformSampler},
+        utils::extract_object,
     },
     interpreter::{eval_error::EvalError, object::Object},
 };

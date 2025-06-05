@@ -2,6 +2,7 @@ pub mod parser_error;
 
 use std::iter::Peekable;
 use std::mem;
+use std::path::Path;
 use std::{path::PathBuf, str::CharIndices};
 
 use crate::core::ast::nodes::{
@@ -10,8 +11,8 @@ use crate::core::ast::nodes::{
     Precedence, PrefixOperator, Program, Statement, Variant,
 };
 use crate::core::lexer::Lexer;
-use crate::core::parser::parser_error::ParserError;
 use crate::core::lexer::token::TokenKind::{self, *};
+use crate::core::parser::parser_error::ParserError;
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
@@ -19,15 +20,17 @@ pub struct Parser<'src> {
     source: &'src str,
 
     attributes: Vec<Attribute>,
+    path: &'src Path,
 }
 
 impl<'src> Parser<'src> {
-    pub fn new(program: &'src str) -> Self {
-        let lexer = Lexer::new(program).peekable();
+    pub fn new(program: &'src str, path: &'src Path) -> Self {
+        let lexer = Lexer::new(program, path).peekable();
         Parser {
             lexer,
             source: program,
             attributes: Vec::new(),
+            path,
         }
     }
 
@@ -218,8 +221,8 @@ impl<'src> Parser<'src> {
 
     fn parse_peeked_token_as_string(&mut self) -> String {
         let token = self.lexer.peek().unwrap();
-        let start = token.start;
-        let size = token.size;
+        let start = token.span.start;
+        let size = token.span.size;
         self.source[start..start + size].to_string()
     }
 
@@ -441,8 +444,8 @@ impl<'src> Parser<'src> {
 
     fn parse_type(&mut self) -> Result<Expression, ParserError> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.start;
-        let size = token.size;
+        let start = token.span.start;
+        let size = token.span.size;
 
         if token.kind == LBracket {
             return self.parse_list_type();
@@ -566,7 +569,7 @@ impl<'src> Parser<'src> {
                     }
 
                     chars.next();
-                    let mut parser = Parser::new(&literal[current_index + 1..last]);
+                    let mut parser = Parser::new(&literal[current_index + 1..last], self.path);
                     let count_expression = parser.parse_expression(Precedence::Lowest)?;
 
                     if let Some(PatternElement::RepeatChar {
@@ -656,8 +659,8 @@ impl<'src> Parser<'src> {
 
     fn parse_literal(&mut self) -> Result<Expression, ParserError> {
         let token = self.lexer.peek().ok_or(ParserError::UnexpectedEOF)?;
-        let start = token.start;
-        let size = token.size;
+        let start = token.span.start;
+        let size = token.span.size;
         let parsed = match &token.kind {
             StringLiteral => {
                 let literal = self.source[start + 1..start + size - 1].to_string();
@@ -769,13 +772,13 @@ impl<'src> Parser<'src> {
                 kind, token.kind
             )))
         } else {
-            Ok((token.start, token.size))
+            Ok((token.span.start, token.span.size))
         }
     }
 
     fn consume_token(&mut self) -> (usize, usize) {
         let token = self.lexer.next().unwrap();
-        (token.start, token.size)
+        (token.span.start, token.span.size)
     }
 
     fn peek_kind(&mut self) -> &TokenKind {

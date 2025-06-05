@@ -1,20 +1,36 @@
+pub mod lexer_error;
 pub mod token;
 
-use std::{iter::Peekable, str::CharIndices};
+use std::{iter::Peekable, path::Path, str::CharIndices};
 
-use crate::core::lexer::token::{KEYWORD_REGISTRY, Token, TokenKind};
+use crate::core::{
+    lexer::{
+        lexer_error::LexerError,
+        token::{KEYWORD_REGISTRY, Token, TokenKind},
+    },
+    utils::span::Span,
+};
 
 #[derive(Clone, Debug)]
 pub struct Lexer<'src> {
     content: &'src str,
     chars: Peekable<CharIndices<'src>>,
+    path: &'src Path,
+
+    line: usize,
+    line_offset: usize,
+    current_position: usize,
 }
 
 impl<'src> Lexer<'src> {
-    pub fn new(program: &'src str) -> Self {
+    pub fn new(program: &'src str, path: &'src Path) -> Self {
         Lexer {
             content: program,
             chars: program.char_indices().peekable(),
+            line: 1,
+            line_offset: 1,
+            current_position: 0,
+            path,
         }
     }
 
@@ -26,22 +42,25 @@ impl<'src> Lexer<'src> {
         self.chars.clone().nth(n - 1)
     }
 
-    fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Result<Token, LexerError> {
         use crate::core::lexer::token::TokenKind::*;
         let registry = &KEYWORD_REGISTRY;
         self.skip_whitespaces();
 
         let Some((current_index, current_char)) = self.peek() else {
-            return Token::new(Eof, self.content.len(), 1);
+            return Ok(Token::new(
+                Eof,
+                Span::new(self.content.len(), 1, self.line, self.line_offset),
+            ));
         };
 
         match current_char {
-            '(' => self.make_single_char_token(current_index, LParen),
-            ')' => self.make_single_char_token(current_index, RParen),
-            '{' => self.make_single_char_token(current_index, LBrace),
-            '}' => self.make_single_char_token(current_index, RBrace),
-            ':' => self.make_single_char_token(current_index, Colon),
-            ',' => self.make_single_char_token(current_index, Comma),
+            '(' => Ok(self.make_single_char_token(current_index, LParen)),
+            ')' => Ok(self.make_single_char_token(current_index, RParen)),
+            '{' => Ok(self.make_single_char_token(current_index, LBrace)),
+            '}' => Ok(self.make_single_char_token(current_index, RBrace)),
+            ':' => Ok(self.make_single_char_token(current_index, Colon)),
+            ',' => Ok(self.make_single_char_token(current_index, Comma)),
             '#' => {
                 self.next();
                 if self
@@ -51,13 +70,16 @@ impl<'src> Lexer<'src> {
                 {
                     self.make_attribute(current_index)
                 } else {
-                    panic!("Invalid token #");
+                    Err(LexerError::InvalidToken(
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                        '#',
+                    ))
                 }
             }
-            ';' => self.make_single_char_token(current_index, Semicolon),
-            '%' => self.make_single_char_token(current_index, Percent),
-            '[' => self.make_single_char_token(current_index, LBracket),
-            ']' => self.make_single_char_token(current_index, RBracket),
+            ';' => Ok(self.make_single_char_token(current_index, Semicolon)),
+            '%' => Ok(self.make_single_char_token(current_index, Percent)),
+            '[' => Ok(self.make_single_char_token(current_index, LBracket)),
+            ']' => Ok(self.make_single_char_token(current_index, RBracket)),
             '.' => {
                 self.next();
                 if self
@@ -70,17 +92,26 @@ impl<'src> Lexer<'src> {
                         .next_if(|(_, next_char)| *next_char == '=')
                         .is_some()
                     {
-                        Token::new(DoublePeriodEqual, current_index, 3)
+                        Ok(Token::new(
+                            DoublePeriodEqual,
+                            Span::new(current_index, 3, self.line, self.line_offset),
+                        ))
                     } else {
-                        Token::new(DoublePeriod, current_index, 2)
+                        Ok(Token::new(
+                            DoublePeriod,
+                            Span::new(current_index, 2, self.line, self.line_offset),
+                        ))
                     }
                 } else {
-                    Token::new(SinglePeriod, current_index, 1)
+                    Ok(Token::new(
+                        SinglePeriod,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
-            '+' => self.make_single_char_token(current_index, Plus),
-            '-' => self.make_single_char_token(current_index, Minus),
-            '*' => self.make_single_char_token(current_index, Asterisk),
+            '+' => Ok(self.make_single_char_token(current_index, Plus)),
+            '-' => Ok(self.make_single_char_token(current_index, Minus)),
+            '*' => Ok(self.make_single_char_token(current_index, Asterisk)),
             '&' => {
                 self.next();
                 if self
@@ -88,12 +119,18 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '&')
                     .is_some()
                 {
-                    Token::new(And, current_index, 2)
+                    Ok(Token::new(
+                        And,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else {
-                    Token::new(BitAnd, current_index, 1)
+                    Ok(Token::new(
+                        BitAnd,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
-            '~' => self.make_single_char_token(current_index, BitNegate),
+            '~' => Ok(self.make_single_char_token(current_index, BitNegate)),
             '|' => {
                 self.next();
                 if self
@@ -101,12 +138,18 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '|')
                     .is_some()
                 {
-                    Token::new(Or, current_index, 2)
+                    Ok(Token::new(
+                        Or,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else {
-                    Token::new(BitOr, current_index, 1)
+                    Ok(Token::new(
+                        BitOr,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
-            '^' => self.make_single_char_token(current_index, BitXor),
+            '^' => Ok(self.make_single_char_token(current_index, BitXor)),
             '=' => {
                 self.next();
                 if self
@@ -114,15 +157,24 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '=')
                     .is_some()
                 {
-                    Token::new(DoubleEqual, current_index, 2)
+                    Ok(Token::new(
+                        DoubleEqual,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else if self
                     .chars
                     .next_if(|(_, next_char)| *next_char == '>')
                     .is_some()
                 {
-                    Token::new(Arrow, current_index, 2)
+                    Ok(Token::new(
+                        Arrow,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else {
-                    Token::new(SingleEqual, current_index, 1)
+                    Ok(Token::new(
+                        SingleEqual,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
             '!' => {
@@ -132,15 +184,24 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '=')
                     .is_some()
                 {
-                    Token::new(NotEqual, current_index, 2)
+                    Ok(Token::new(
+                        NotEqual,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else {
-                    Token::new(ExclamationMark, current_index, 1)
+                    Ok(Token::new(
+                        ExclamationMark,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
             '"' => {
                 self.next();
-                let size = self.read_string(current_index);
-                Token::new(StringLiteral, current_index, size)
+                let size = self.read_string(current_index)?;
+                Ok(Token::new(
+                    StringLiteral,
+                    Span::new(current_index, size, self.line, self.line_offset),
+                ))
             }
             '<' => {
                 self.next();
@@ -149,15 +210,24 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '=')
                     .is_some()
                 {
-                    Token::new(LessThanOrEqual, current_index, 2)
+                    Ok(Token::new(
+                        LessThanOrEqual,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else if self
                     .chars
                     .next_if(|(_, next_char)| *next_char == '<')
                     .is_some()
                 {
-                    Token::new(BitLShift, current_index, 2)
+                    Ok(Token::new(
+                        BitLShift,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else {
-                    Token::new(LessThan, current_index, 1)
+                    Ok(Token::new(
+                        LessThan,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
             '>' => {
@@ -167,15 +237,24 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '=')
                     .is_some()
                 {
-                    Token::new(GreaterThanOrEqual, current_index, 2)
+                    Ok(Token::new(
+                        GreaterThanOrEqual,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else if self
                     .chars
                     .next_if(|(_, next_char)| *next_char == '>')
                     .is_some()
                 {
-                    Token::new(BitRShift, current_index, 2)
+                    Ok(Token::new(
+                        BitRShift,
+                        Span::new(current_index, 2, self.line, self.line_offset),
+                    ))
                 } else {
-                    Token::new(GreaterThan, current_index, 1)
+                    Ok(Token::new(
+                        GreaterThan,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
             '/' => {
@@ -188,34 +267,58 @@ impl<'src> Lexer<'src> {
                     self.skip_line();
                     self.next_token()
                 } else {
-                    Token::new(Slash, current_index, 1)
+                    Ok(Token::new(
+                        Slash,
+                        Span::new(current_index, 1, self.line, self.line_offset),
+                    ))
                 }
             }
             '$' => {
                 self.next();
                 let builtin = self.read_identifier(current_index);
                 match registry.get(builtin) {
-                    Some(kind) => Token::new(kind.clone(), current_index, builtin.len()),
-                    None => panic!("Invalid builtin {}", builtin),
+                    Some(kind) => Ok(Token::new(
+                        kind.clone(),
+                        Span::new(current_index, builtin.len(), self.line, self.line_offset),
+                    )),
+                    None => Err(LexerError::InvalidBuiltIn(
+                        Span::new(current_index, builtin.len(), self.line, self.line_offset),
+                        builtin.to_string(),
+                    )),
                 }
             }
             '@' => {
                 self.next();
                 let directive = self.read_identifier(current_index);
                 match registry.get(directive) {
-                    Some(kind) => Token::new(kind.clone(), current_index, directive.len()),
-                    None => panic!("Invalid directive {}", directive),
+                    Some(kind) => Ok(Token::new(
+                        kind.clone(),
+                        Span::new(current_index, directive.len(), self.line, self.line_offset),
+                    )),
+                    None => Err(LexerError::InvalidDirective(
+                        Span::new(current_index, directive.len(), self.line, self.line_offset),
+                        directive.to_string(),
+                    )),
                 }
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let identifier = self.read_identifier(current_index);
                 match registry.get(identifier) {
-                    Some(kind) => Token::new(kind.clone(), current_index, identifier.len()),
-                    None => Token::new(Identifier, current_index, identifier.len()),
+                    Some(kind) => Ok(Token::new(
+                        kind.clone(),
+                        Span::new(current_index, identifier.len(), self.line, self.line_offset),
+                    )),
+                    None => Ok(Token::new(
+                        Identifier,
+                        Span::new(current_index, identifier.len(), self.line, self.line_offset),
+                    )),
                 }
             }
             '0'..='9' => self.make_number_token(current_index),
-            c => panic!("Invalid token {}", c),
+            c => Err(LexerError::InvalidToken(
+                Span::new(current_index, 1, self.line, self.line_offset),
+                c,
+            )),
         }
     }
 
@@ -240,7 +343,7 @@ impl<'src> Lexer<'src> {
         &self.content[position..=last]
     }
 
-    fn make_number_token(&mut self, position: usize) -> Token {
+    fn make_number_token(&mut self, position: usize) -> Result<Token, LexerError> {
         let mut last = position;
         let mut is_float = false;
         while self
@@ -248,20 +351,26 @@ impl<'src> Lexer<'src> {
             .is_some_and(|(_, c)| c.is_ascii_digit() || c == '.')
         {
             if self.peek().unwrap().1 == '.' && self.peek_n(2).is_some_and(|(_, c)| c == '.') {
-                return Token::new(
+                return Ok(Token::new(
                     if is_float {
                         TokenKind::FloatLiteral
                     } else {
                         TokenKind::IntLiteral
                     },
-                    position,
-                    last - position + 1,
-                );
+                    Span::new(position, last - position + 1, self.line, self.line_offset),
+                ));
             }
 
-            let token = self.next().unwrap();
+            let token = self
+                .next()
+                .expect("Next should exist, it is checked in while.");
             if is_float && token.1 == '.' {
-                panic!("Invalid float literal");
+                return Err(LexerError::InvalidNumberLiteral(Span::new(
+                    position,
+                    last - position,
+                    self.line,
+                    self.line_offset,
+                )));
             } else if token.1 == '.' {
                 is_float = true;
             }
@@ -270,39 +379,47 @@ impl<'src> Lexer<'src> {
 
         if let Some((_, char)) = self.peek() {
             if !matches!(char, ' ' | ';' | ',' | ']' | ')') {
-                panic!("Invalid int or float literal");
+                return Err(LexerError::InvalidNumberLiteral(Span::new(
+                    position,
+                    last - position,
+                    self.line,
+                    self.line_offset,
+                )));
             }
         }
 
-        Token::new(
+        Ok(Token::new(
             if is_float {
                 TokenKind::FloatLiteral
             } else {
                 TokenKind::IntLiteral
             },
-            position,
-            last - position + 1,
-        )
+            Span::new(position, last - position + 1, self.line, self.line_offset),
+        ))
     }
 
-    fn read_string(&mut self, position: usize) -> usize {
+    fn read_string(&mut self, position: usize) -> Result<usize, LexerError> {
         let mut last = position;
         while self.peek().is_some_and(|(_, c)| c != '"') {
-            let (current_position, ch) = self.next().unwrap();
+            let (current_position, ch) = self
+                .next()
+                .expect("Next should exist, it is checked in while.");
             if ch == '\n' {
-                panic!("Invalid string literal: missing closing quote");
+                return Err(LexerError::MissingChar(
+                    Span::new(position, last - position, self.line, self.line_offset),
+                    '"',
+                ));
             }
             last = current_position;
         }
-        match self.next() {
-            Some(..) => {}
-            None => panic!("Invalid string literal: missing closing quote"),
-        }
-        // Add "" to size
-        2 + last - position
+        self.next().ok_or(LexerError::MissingChar(
+            Span::new(position, last, self.line, self.line_offset),
+            '"',
+        ))?;
+        Ok(2 + last - position)
     }
 
-    fn make_attribute(&mut self, position: usize) -> Token {
+    fn make_attribute(&mut self, position: usize) -> Result<Token, LexerError> {
         let mut last = position;
         while self.peek().is_some_and(|(_, c)| c != ']') {
             let (current_position, _) = self
@@ -310,21 +427,40 @@ impl<'src> Lexer<'src> {
                 .expect("This will always be Some, since it is checked in while");
             last = current_position;
         }
-        match self.next() {
-            Some(..) => {}
-            None => panic!("Invalid attribute: missing closing brace"),
-        }
-        Token::new(TokenKind::Tag, position, last - position + 1)
+        self.next().ok_or(LexerError::MissingChar(
+            Span::new(position, last - position, self.line, self.line_offset),
+            ']',
+        ))?;
+        Ok(Token::new(
+            TokenKind::Tag,
+            Span::new(position, last - position + 1, self.line, self.line_offset),
+        ))
     }
 
     fn make_single_char_token(&mut self, current_index: usize, kind: TokenKind) -> Token {
-        let token = Token::new(kind, current_index, 1);
+        let token = Token::new(
+            kind,
+            Span::new(current_index, 1, self.line, self.line_offset),
+        );
         self.next();
         token
     }
 
     fn next(&mut self) -> Option<(usize, char)> {
-        self.chars.next()
+        if let Some((idx, ch)) = self.chars.next() {
+            self.current_position = idx;
+
+            if ch == '\n' {
+                self.line += 1;
+                self.line_offset = 1;
+            } else {
+                self.line_offset += 1;
+            }
+
+            Some((idx, ch))
+        } else {
+            None
+        }
     }
 
     fn skip_whitespaces(&mut self) {
@@ -338,11 +474,18 @@ impl Iterator for Lexer<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let token = self.next_token();
-        if token.kind == TokenKind::Eof {
-            None
-        } else {
-            Some(token)
+        match self.next_token() {
+            Ok(token) => {
+                if token.kind == TokenKind::Eof {
+                    None
+                } else {
+                    Some(token)
+                }
+            }
+            Err(error) => {
+                eprintln!("{}:{}", self.path.display(), error);
+                std::process::exit(1);
+            }
         }
     }
 }

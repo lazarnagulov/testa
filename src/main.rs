@@ -1,4 +1,4 @@
-use std::{env, fs::File, io::Read};
+use std::{env, fs::File, io::Read, path::Path};
 
 use testa::{
     core::parser::{Parser, parser_error::*},
@@ -11,7 +11,7 @@ fn main() {
         eprintln!("Expected file path");
         std::process::exit(1);
     }
-    let file_path = &args[1];
+    let file_path = Path::new(&args[1]);
 
     let mut file = File::open(file_path).unwrap_or_else(|err| {
         eprintln!("Failed to open file: {}", err);
@@ -23,7 +23,7 @@ fn main() {
         eprintln!("Failed to read file: {}", err);
         std::process::exit(1);
     });
-    let mut parser = Parser::new(&source);
+    let mut parser = Parser::new(&source, file_path);
     let program = parser.parse().unwrap_or_else(|err| {
         let error_message = match err {
             ParserError::Expected { expected, got } => {
