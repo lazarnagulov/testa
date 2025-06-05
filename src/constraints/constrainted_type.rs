@@ -4,13 +4,13 @@ use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
     constraints::constraint::CONSTRAINT_REGISTRY,
+    core::ast::nodes::{ConstraintExpression, DataType, DataTypeKind},
     evaluator::{
         self,
         context::{Context, Visitor},
         eval_error::EvalError,
         object::Object,
     },
-    parser::ast::{ConstraintExpression, DataType, DataTypeKind},
 };
 
 use super::sampler::{ConstraintSet, Sampler};

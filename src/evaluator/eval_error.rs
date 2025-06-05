@@ -1,4 +1,4 @@
-use crate::parser::ast::{InfixOperator, PrefixOperator};
+use crate::core::ast::nodes::{InfixOperator, PrefixOperator};
 
 use super::object::Object;
 

@@ -3,8 +3,8 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, fmt::Debug};
 
 use crate::{
+    core::ast::nodes::{ConstraintKind, DataTypeKind},
     evaluator::{eval_error::EvalError, object::Object},
-    parser::ast::{ConstraintKind, DataTypeKind},
 };
 
 use super::{

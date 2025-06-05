@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod constraint_test {
     use crate::{
+        core::parser::{Parser, parser_error::ParserError},
         evaluator::{self, context::Context},
-        parser::{Parser, parser_error::ParserError},
     };
 
     #[test]

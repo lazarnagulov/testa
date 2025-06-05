@@ -1,26 +1,19 @@
-pub mod ast;
+pub mod lexer;
 pub mod parser_error;
-pub mod tests;
+pub mod token;
 
 use std::iter::Peekable;
 use std::mem;
 use std::{path::PathBuf, str::CharIndices};
 
-use crate::parser::ast::Attribute;
-use crate::{
-    lexer::{
-        Lexer,
-        token::TokenKind::{self, *},
-    },
-    parser::{
-        ast::{
-            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
-            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
-            Precedence, PrefixOperator, Program, Statement, Variant,
-        },
-        parser_error::ParserError,
-    },
+use crate::core::ast::nodes::{
+    Attribute, ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
+    ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
+    Precedence, PrefixOperator, Program, Statement, Variant,
 };
+use crate::core::parser::lexer::Lexer;
+use crate::core::parser::parser_error::ParserError;
+use crate::core::parser::token::TokenKind::{self, *};
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
@@ -46,7 +39,6 @@ impl<'src> Parser<'src> {
             let stmt = self.parse_statement()?;
             statements.push(stmt);
         }
-        println!("{:?}", statements);
         Ok(Program(statements))
     }
 
@@ -138,7 +130,11 @@ impl<'src> Parser<'src> {
         let name = self.parse_identifier_as_string()?;
         self.expect_token(LBrace)?;
         let variants = self.parse_variants()?;
-        Ok(Statement::Enum { name, variants, attributes: mem::take(&mut self.attributes) })
+        Ok(Statement::Enum {
+            name,
+            variants,
+            attributes: mem::take(&mut self.attributes),
+        })
     }
 
     // FIXME: Something is wrong with start, size calculation

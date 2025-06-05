@@ -9,6 +9,10 @@ use rand::Rng;
 
 use crate::{
     constraints::constrainted_type::ConstrainedType,
+    core::ast::nodes::{
+        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar, PatternElement,
+        PrefixOperator, Program, Statement,
+    },
     enumeration::Enum,
     evaluator::{
         context::{Context, Visitor},
@@ -18,10 +22,6 @@ use crate::{
     generation::{
         csv::CsvGenerator,
         generator::{FileGenerator, GenerationError, Target},
-    },
-    parser::ast::{
-        DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar, PatternElement,
-        PrefixOperator, Program, Statement,
     },
     template::Template,
 };
@@ -59,7 +59,11 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             body,
             count,
         } => evaluate_generate(template_name, body, &count, context),
-        Statement::Enum { name, variants, attributes: _ } => {
+        Statement::Enum {
+            name,
+            variants,
+            attributes: _,
+        } => {
             let enumeration = Enum::new(variants, context)?;
             context.insert_enum(&name, enumeration);
             Ok(Object::NoReturn)
@@ -83,7 +87,11 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             Ok(Object::NoReturn)
         }
         Statement::Resource { .. } => todo!(),
-        Statement::TypeDecl { name, data_type, attributes: _ } => {
+        Statement::TypeDecl {
+            name,
+            data_type,
+            attributes: _,
+        } => {
             let Type(data_type) = data_type.kind else {
                 unreachable!()
             };
