@@ -99,6 +99,7 @@ pub enum TokenKind {
     GreaterThanOrEqual, // >=
 
     Identifier,
+    Tag,
     IntLiteral,
     StringLiteral,
     FloatLiteral,
@@ -132,6 +133,7 @@ impl Display for TokenKind {
             TokenKind::Semicolon => ";",
             TokenKind::SingleEqual => "=",
             TokenKind::Arrow => "=>",
+            TokenKind::Tag => "tag",
             TokenKind::Identifier => "identifier",
             TokenKind::Constraint => "constraint",
             TokenKind::Type => "type",

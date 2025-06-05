@@ -3,8 +3,10 @@ pub mod parser_error;
 pub mod tests;
 
 use std::iter::Peekable;
+use std::mem;
 use std::{path::PathBuf, str::CharIndices};
 
+use crate::parser::ast::Attribute;
 use crate::{
     lexer::{
         Lexer,
@@ -24,6 +26,8 @@ use crate::{
 pub struct Parser<'src> {
     lexer: Peekable<Lexer<'src>>,
     source: &'src str,
+
+    attributes: Vec<Attribute>,
 }
 
 impl<'src> Parser<'src> {
@@ -32,6 +36,7 @@ impl<'src> Parser<'src> {
         Parser {
             lexer,
             source: program,
+            attributes: Vec::new(),
         }
     }
 
@@ -41,6 +46,7 @@ impl<'src> Parser<'src> {
             let stmt = self.parse_statement()?;
             statements.push(stmt);
         }
+        println!("{:?}", statements);
         Ok(Program(statements))
     }
 
@@ -50,6 +56,7 @@ impl<'src> Parser<'src> {
             OutputPath => self.parse_output_path(),
             Template => self.parse_template(),
             Resource => todo!(),
+            Tag => self.parse_attribute(),
             Enum => self.parse_enum(),
             Generate => self.parse_generate(),
             Type => self.parse_type_declaration(),
@@ -86,6 +93,7 @@ impl<'src> Parser<'src> {
 
     fn parse_template(&mut self) -> Result<Statement, ParserError> {
         self.lexer.next();
+        let attributes = mem::take(&mut self.attributes);
         let name = self.parse_identifier_as_string()?;
         let parent = if self.peek_kind() == &Colon {
             self.consume_token();
@@ -97,6 +105,7 @@ impl<'src> Parser<'src> {
         Ok(Statement::Template {
             parent,
             name,
+            attributes,
             body: fields,
         })
     }
@@ -129,7 +138,7 @@ impl<'src> Parser<'src> {
         let name = self.parse_identifier_as_string()?;
         self.expect_token(LBrace)?;
         let variants = self.parse_variants()?;
-        Ok(Statement::Enum { name, variants })
+        Ok(Statement::Enum { name, variants, attributes: mem::take(&mut self.attributes) })
     }
 
     // FIXME: Something is wrong with start, size calculation
@@ -182,8 +191,18 @@ impl<'src> Parser<'src> {
 
     fn parse_fields(&mut self) -> Result<Vec<Field>, ParserError> {
         self.expect_token(LBrace)?;
-        let mut options = vec![];
-        while self.peek_kind() == &Identifier || self.peek_kind() == &Override {
+        let mut field_attributes = Vec::new();
+        let mut options = Vec::new();
+        while self.peek_kind() == &Identifier
+            || self.peek_kind() == &Override
+            || self.peek_kind() == &Tag
+        {
+            if self.peek_kind() == &Tag {
+                let (start, size) = self.consume_token();
+                let attribute = &self.source[start + 2..start + size];
+                field_attributes.push(Attribute::Flag(attribute.to_owned()));
+                continue;
+            }
             let overridable = self.peek_kind() == &Override;
             if overridable {
                 self.consume_token();
@@ -192,7 +211,12 @@ impl<'src> Parser<'src> {
             self.expect_token(SingleEqual)?;
             let expression = self.parse_expression(Precedence::Lowest)?;
             self.expect_token(Semicolon)?;
-            options.push(Field::new(name, expression, overridable));
+            options.push(Field::new(
+                name,
+                expression,
+                overridable,
+                mem::take(&mut field_attributes),
+            ));
         }
         self.expect_token(RBrace)?;
         Ok(options)
@@ -360,6 +384,19 @@ impl<'src> Parser<'src> {
         }
     }
 
+    fn parse_attribute(&mut self) -> Result<Statement, ParserError> {
+        let (start, size) = self.consume_token();
+        let attribute = &self.source[start + 2..start + size];
+        self.attributes.push(Attribute::Flag(attribute.to_owned()));
+        match self.peek_kind() {
+            Template => self.parse_template(),
+            Type => self.parse_type_declaration(),
+            Enum => self.parse_enum(),
+            Tag => self.parse_attribute(),
+            tok => Err(ParserError::invalid_attribute(tok.to_string().as_str())),
+        }
+    }
+
     fn parse_list_expression(&mut self) -> Result<Expression, ParserError> {
         let (start, _) = self.consume_token();
         let elements = self.parse_elements()?;
@@ -401,7 +438,11 @@ impl<'src> Parser<'src> {
         self.expect_token(SingleEqual)?;
         let data_type = self.parse_type()?;
         self.expect_token(Semicolon)?;
-        Ok(Statement::TypeDecl { name, data_type })
+        Ok(Statement::TypeDecl {
+            name,
+            data_type,
+            attributes: mem::take(&mut self.attributes),
+        })
     }
 
     fn parse_type(&mut self) -> Result<Expression, ParserError> {

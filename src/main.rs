@@ -34,6 +34,7 @@ fn main() {
             ParserError::Syntax(error) => error,
             ParserError::UndefinedConstraint => "Undefined constraint".to_string(),
             ParserError::InvalidStringPattern(pattern) => format!("Invalid pattern {}", pattern),
+            ParserError::InvalidAttribute(token) => format!("Cannot put attribute on {}", token),
         };
         eprintln!("{}", error_message);
         std::process::exit(1);

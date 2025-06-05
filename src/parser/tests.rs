@@ -6,12 +6,64 @@ mod parser_tests {
     use crate::parser::{
         Parser,
         ast::{
-            ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
-            ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
-            PrefixOperator, Program, Statement, Variant,
+            Attribute, ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element,
+            Expression, ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar,
+            PatternElement, PrefixOperator, Program, Statement, Variant,
         },
         parser_error::ParserError,
     };
+
+    #[test]
+    fn parse_tagged_template() {
+        let program = "#[abstract] template User {}";
+        let mut parser = Parser::new(program);
+        match parser.parse() {
+            Ok(program) => {
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Template {
+                        attributes: vec![Attribute::Flag("abstract".to_owned())],
+                        name: "User".to_string(),
+                        body: vec![],
+                        parent: None,
+                    }]
+                );
+            }
+            Err(err) => handle_error(err),
+        }
+    }
+
+    #[test]
+    fn parse_tagged_template_field() {
+        let program = "template User { #[primary_key] #[unique] id = string; }";
+        let mut parser = Parser::new(program);
+        match parser.parse() {
+            Ok(program) => {
+                assert_eq!(
+                    program.0,
+                    vec![Statement::Template {
+                        attributes: Vec::new(),
+                        name: "User".to_string(),
+                        body: vec![Field::new(
+                            "id".to_owned(),
+                            Expression::new(
+                                ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
+                                46,
+                                6
+                            ),
+                            false,
+                            vec![
+                                Attribute::Flag("primary_key".to_owned()),
+                                Attribute::Flag("unique".to_owned())
+                            ]
+                        )],
+                        parent: None,
+                    }]
+                );
+            }
+            Err(err) => handle_error(err),
+        }
+    }
 
     #[test]
     fn parse_empty_template() {
@@ -22,6 +74,7 @@ mod parser_tests {
                 assert_eq!(
                     program.0,
                     vec![Statement::Template {
+                        attributes: Vec::new(),
                         name: "User".to_string(),
                         body: vec![],
                         parent: None,
@@ -44,6 +97,7 @@ mod parser_tests {
                 6,
             ),
             false,
+            Vec::new(),
         );
         match parser.parse() {
             Ok(program) => {
@@ -51,6 +105,7 @@ mod parser_tests {
                     program.0,
                     vec![Statement::Template {
                         name: "User".to_string(),
+                        attributes: Vec::new(),
                         body: vec![field],
                         parent: None,
                     }]
@@ -72,6 +127,7 @@ mod parser_tests {
                 6,
             ),
             true,
+            Vec::new(),
         );
         let quantity_field = Field::new(
             "quantity".to_string(),
@@ -81,6 +137,7 @@ mod parser_tests {
                 3,
             ),
             false,
+            Vec::new(),
         );
         let price_field = Field::new(
             "price".to_string(),
@@ -90,6 +147,7 @@ mod parser_tests {
                 5,
             ),
             false,
+            Vec::new(),
         );
         match parser.parse() {
             Ok(program) => {
@@ -98,6 +156,7 @@ mod parser_tests {
                     vec![Statement::Template {
                         name: "Product".to_string(),
                         body: vec![name_field, quantity_field, price_field],
+                        attributes: Vec::new(),
                         parent: Some("Consumable".to_owned()),
                     }]
                 );
@@ -125,6 +184,7 @@ mod parser_tests {
                 6,
             ),
             false,
+            Vec::new(),
         );
         let price_field = Field::new(
             "price".to_string(),
@@ -134,6 +194,7 @@ mod parser_tests {
                 5,
             ),
             false,
+            Vec::new(),
         );
         match parser.parse() {
             Ok(program) => {
@@ -178,7 +239,7 @@ mod parser_tests {
 
     #[test]
     fn parse_weighted_variant_enum() {
-        let program = "enum Role { User => 50; Admin => 10; Developer => 30; }";
+        let program = "#[public] enum Role { User => 50; Admin => 10; Developer => 30; }";
         let mut parser = Parser::new(program);
         match parser.parse() {
             Ok(program) => {
@@ -189,17 +250,18 @@ mod parser_tests {
                         variants: vec![
                             Variant::new(
                                 "User".to_string(),
-                                Some(Expression::new(ExpressionKind::IntLiteral(50), 20, 2))
+                                Some(Expression::new(ExpressionKind::IntLiteral(50), 30, 2))
                             ),
                             Variant::new(
                                 "Admin".to_string(),
-                                Some(Expression::new(ExpressionKind::IntLiteral(10), 33, 2))
+                                Some(Expression::new(ExpressionKind::IntLiteral(10), 43, 2))
                             ),
                             Variant::new(
                                 "Developer".to_string(),
-                                Some(Expression::new(ExpressionKind::IntLiteral(30), 50, 2))
+                                Some(Expression::new(ExpressionKind::IntLiteral(30), 60, 2))
                             ),
-                        ]
+                        ],
+                        attributes: vec![Attribute::Flag("public".to_owned())],
                     }]
                 );
             }
@@ -217,7 +279,8 @@ mod parser_tests {
                     program.0,
                     vec![Statement::Enum {
                         name: "Role".to_string(),
-                        variants: vec![]
+                        variants: vec![],
+                        attributes: Vec::new(),
                     }]
                 );
             }
@@ -235,7 +298,9 @@ mod parser_tests {
                     program.0,
                     vec![Statement::Enum {
                         name: "Role".to_string(),
-                        variants: vec![Variant::new("User".to_string(), None)]
+                        variants: vec![Variant::new("User".to_string(), None)],
+                        attributes: Vec::new(),
+
                     }]
                 );
             }
@@ -315,6 +380,7 @@ mod parser_tests {
     #[test]
     fn parse_extended_type() {
         let program = r#"
+            #[public]
             type positive_int = int[range=0..=1024];
             type even_positive_int = extend positive_int with [multiple_of=2];
         "#;
@@ -325,15 +391,15 @@ mod parser_tests {
                 Some(vec![ConstraintExpression::new(
                     Expression::new(
                         ExpressionKind::Infix {
-                            left: Box::new(Expression::new(ExpressionKind::IntLiteral(0), 43, 1)),
+                            left: Box::new(Expression::new(ExpressionKind::IntLiteral(0), 65, 1)),
                             operator: InfixOperator::InclusiveRange,
                             right: Box::new(Expression::new(
                                 ExpressionKind::IntLiteral(1024),
-                                47,
+                                69,
                                 4,
                             )),
                         },
-                        43,
+                        65,
                         8,
                     ),
                     ConstraintKind::Range,
@@ -346,7 +412,7 @@ mod parser_tests {
             ExpressionKind::Type(DataType::new(
                 DataTypeKind::Custom("positive_int".to_owned()),
                 Some(vec![ConstraintExpression::new(
-                    Expression::new(ExpressionKind::IntLiteral(2), 129, 1),
+                    Expression::new(ExpressionKind::IntLiteral(2), 151, 1),
                     ConstraintKind::MultipleOf,
                 )]),
             )),
@@ -361,11 +427,13 @@ mod parser_tests {
                     vec![
                         Statement::TypeDecl {
                             name: "positive_int".to_owned(),
-                            data_type
+                            data_type,
+                            attributes: vec![Attribute::Flag("public".to_owned())]
                         },
                         Statement::TypeDecl {
                             name: "even_positive_int".to_owned(),
-                            data_type: extended_data_type
+                            data_type: extended_data_type,
+                            attributes: Vec::new()
                         }
                     ]
                 );
@@ -388,7 +456,8 @@ mod parser_tests {
                             Variant::new("User".to_string(), None),
                             Variant::new("Admin".to_string(), None),
                             Variant::new("Moderator".to_string(), None),
-                        ]
+                        ],
+                        attributes: Vec::new(),
                     }]
                 );
             }
@@ -618,6 +687,7 @@ mod parser_tests {
                             "delimiter".to_string(),
                             Expression::new(ExpressionKind::StringLiteral(";".to_string()), 26, 3),
                             false,
+                            Vec::new(),
                         )]
                     }]
                 );
@@ -663,6 +733,7 @@ mod parser_tests {
             ParserError::Syntax(message) => panic!("{}", message),
             ParserError::UndefinedConstraint => panic!("Undefined constraint"),
             ParserError::InvalidStringPattern(pattern) => panic!("Invalid pattern {}", pattern),
+            ParserError::InvalidAttribute(token) => panic!("Cannot put attribute on {}", token),
         }
     }
 }

@@ -39,7 +39,12 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         Statement::Expression(expression_statement) => {
             evaluate_expression(&expression_statement.expression, context)
         }
-        Statement::Template { parent, name, body } => {
+        Statement::Template {
+            parent,
+            name,
+            body,
+            attributes: _,
+        } => {
             let parent = match parent {
                 Some(parent_name) => context.get_template(&parent_name).map(Rc::clone),
                 None => None,
@@ -54,7 +59,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             body,
             count,
         } => evaluate_generate(template_name, body, &count, context),
-        Statement::Enum { name, variants } => {
+        Statement::Enum { name, variants, attributes: _ } => {
             let enumeration = Enum::new(variants, context)?;
             context.insert_enum(&name, enumeration);
             Ok(Object::NoReturn)
@@ -78,7 +83,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             Ok(Object::NoReturn)
         }
         Statement::Resource { .. } => todo!(),
-        Statement::TypeDecl { name, data_type } => {
+        Statement::TypeDecl { name, data_type, attributes: _ } => {
             let Type(data_type) = data_type.kind else {
                 unreachable!()
             };
@@ -130,7 +135,7 @@ fn generate_file(
         EvalError::MiscellaneousError(format!("Failed to create file: {}", error))
     })?;
     let generator = match context.target_format {
-        Target::Csv => CsvGenerator::default().with_field_names(template.field_names().collect()),
+        Target::Csv => CsvGenerator::default().with_field_names(template.all_field_names()),
     }
     .with_config(&context.target_config);
 
