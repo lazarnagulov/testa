@@ -1,7 +1,7 @@
 use std::vec;
 
-use crate::core::parser::{
-    lexer::Lexer,
+use crate::core::lexer::{
+    Lexer,
     token::TokenKind::{self, *},
 };
 

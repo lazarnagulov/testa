@@ -1,6 +1,8 @@
+pub mod token;
+
 use std::{iter::Peekable, str::CharIndices};
 
-use crate::core::parser::token::{KEYWORD_REGISTRY, Token, TokenKind};
+use crate::core::lexer::token::{KEYWORD_REGISTRY, Token, TokenKind};
 
 #[derive(Clone, Debug)]
 pub struct Lexer<'src> {
@@ -25,7 +27,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn next_token(&mut self) -> Token {
-        use crate::core::parser::token::TokenKind::*;
+        use crate::core::lexer::token::TokenKind::*;
         let registry = &KEYWORD_REGISTRY;
         self.skip_whitespaces();
 

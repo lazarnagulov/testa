@@ -1,6 +1,4 @@
-pub mod lexer;
 pub mod parser_error;
-pub mod token;
 
 use std::iter::Peekable;
 use std::mem;
@@ -11,9 +9,9 @@ use crate::core::ast::nodes::{
     ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
     Precedence, PrefixOperator, Program, Statement, Variant,
 };
-use crate::core::parser::lexer::Lexer;
+use crate::core::lexer::Lexer;
 use crate::core::parser::parser_error::ParserError;
-use crate::core::parser::token::TokenKind::{self, *};
+use crate::core::lexer::token::TokenKind::{self, *};
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
