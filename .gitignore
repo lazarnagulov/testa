@@ -51,6 +51,7 @@ target/
 *.nls
 *.out
 *.pdf
+!docs-v1.pdf
 *.pyg
 *.run.xml
 *.snm
