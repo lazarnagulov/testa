@@ -8,18 +8,14 @@ use crate::{
             DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar,
             PatternElement, PrefixOperator, Program, Statement,
         },
-        constraints::constrainted_type::ConstrainedType,
-        model::{enumeration::Enum, template::Template},
+        model::{constrainted_type::ConstrainedType, enumeration::Enum, template::Template},
+        semantics::context::{Context, Visitor},
     },
     generation::{
         csv::CsvGenerator,
         generator::{FileGenerator, GenerationError, Target},
     },
-    interpreter::{
-        context::{Context, Visitor},
-        eval_error::EvalError,
-        object::Object,
-    },
+    interpreter::{eval_error::EvalError, object::Object},
 };
 
 pub fn evaluate(program: Program, context: &mut Context) -> Result<Object, EvalError> {

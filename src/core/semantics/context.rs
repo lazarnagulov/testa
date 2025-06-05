@@ -6,14 +6,10 @@ use std::{
 };
 
 use crate::{
-    core::{
-        constraints::constrainted_type::ConstrainedType,
-        model::{enumeration::Enum, template::Template},
-    },
+    core::model::{constrainted_type::ConstrainedType, enumeration::Enum, template::Template},
     generation::generator::Target,
+    interpreter::{eval_error::EvalError, object::Object},
 };
-
-use super::{eval_error::EvalError, object::Object};
 
 pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;

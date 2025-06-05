@@ -10,8 +10,8 @@ use crate::core::ast::nodes::{
     Precedence, PrefixOperator, Program, Statement, Variant,
 };
 use crate::core::lexer::Lexer;
-use crate::core::parser::parser_error::ParserError;
 use crate::core::lexer::token::TokenKind::{self, *};
+use crate::core::parser::parser_error::ParserError;
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {

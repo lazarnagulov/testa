@@ -9,13 +9,9 @@ use crate::{
             constraint::CONSTRAINT_REGISTRY,
             sampler::{ConstraintSet, Sampler},
         },
+        semantics::context::{Context, Visitor},
     },
-    interpreter::{
-        context::{Context, Visitor},
-        eval_error::EvalError,
-        evaluator,
-        object::Object,
-    },
+    interpreter::{eval_error::EvalError, evaluator, object::Object},
 };
 
 pub trait Constraint: std::fmt::Debug {

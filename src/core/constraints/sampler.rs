@@ -5,9 +5,7 @@ use rand::{
     distr::{Distribution, Uniform},
 };
 
-use crate::interpreter::object::Object;
-
-use super::constrainted_type::Constraint;
+use crate::{core::model::constrainted_type::Constraint, interpreter::object::Object};
 
 type ValidatorFn = Box<dyn Fn(&Object) -> bool>;
 

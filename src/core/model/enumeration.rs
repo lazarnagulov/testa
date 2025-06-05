@@ -1,13 +1,11 @@
 use rand::Rng;
 
 use crate::{
-    core::ast::nodes::Variant,
-    interpreter::{
-        context::{Context, Visitor},
-        eval_error::EvalError,
-        evaluator,
-        object::Object,
+    core::{
+        ast::nodes::Variant,
+        semantics::context::{Context, Visitor},
     },
+    interpreter::{eval_error::EvalError, evaluator, object::Object},
 };
 
 #[derive(Debug, Default)]

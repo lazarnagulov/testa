@@ -1,7 +1,6 @@
-
 use crate::{
-    core::parser::Parser,
-    interpreter::{context::Context, evaluator, object::Object},
+    core::{parser::Parser, semantics::context::Context},
+    interpreter::{evaluator, object::Object},
 };
 
 #[test]
