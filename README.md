@@ -1,6 +1,8 @@
 # testA
 
-## Overview
+<p align=center>
+  <img src="./logo/logo.png" width=400>
+</p>
 
 TestA is a domain-specific language designed for generating structured test data in formats like JSON, CSV, and XML. It provides a simple, C-like syntax for defining templates, resources, enums, and generation rules, enabling quick and expressive data mockups for testing, prototyping, or seeding.
 
@@ -25,6 +27,26 @@ template User {
 
 @generate User [10];
 
+```
+
+## Getting started
+Before you begin, ensure you have `Rust` and `Cargo` installed:
+```bash
+rustc --version
+cargo --version
+```
+Clone this repository:
+```
+git clone https://github.com/lazarnagulov/testa.git
+cd testa
+```
+Compile project:
+```
+cargo build
+```
+Run the project:
+```
+cargo run -- ./examples/01_anonymous_generate.testa
 ```
 
 ## Syntax
