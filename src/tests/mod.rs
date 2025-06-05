@@ -6,3 +6,6 @@ pub mod parser_tests;
 
 #[cfg(test)]
 pub mod interpreter_tests;
+
+#[cfg(test)]
+pub mod constraint_tests;
