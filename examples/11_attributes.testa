@@ -1,6 +1,10 @@
 @output csv;
 @output_path "example11.csv";
 
+#[private]
+type Age = int [range=18..=36]; 
+
+#[public]
 enum Role { Guest => 7; Member => 5; Moderator => 2; Admin; }
 
 #[abstract]
@@ -19,7 +23,7 @@ template User : BaseUser {
     nickname = string;
 
     #[required]
-    age = int [range=18..=36];
+    age = Age;
 }
 
 @generate User[10];

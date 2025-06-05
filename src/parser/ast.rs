@@ -23,6 +23,7 @@ pub enum Statement {
     TypeDecl {
         name: String,
         data_type: Expression,
+        attributes: Vec<Attribute>,
     },
     ConstraintDecl {
         name: String,
@@ -31,6 +32,7 @@ pub enum Statement {
     Enum {
         name: String,
         variants: Vec<Variant>,
+        attributes: Vec<Attribute>,
     },
     Resource {
         name: String,
