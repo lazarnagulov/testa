@@ -8,6 +8,7 @@ use crate::core::ast::nodes::{
     PrefixOperator, Program, Statement, Variant,
 };
 use crate::core::parser::{Parser, parser_error::ParserError};
+use crate::core::utils::span::Span;
 
 #[test]
 fn parse_tagged_template() {
@@ -44,8 +45,7 @@ fn parse_tagged_template_field() {
                         "id".to_owned(),
                         Expression::new(
                             ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-                            46,
-                            6
+                            Span::new(46, 6, 1, 1)
                         ),
                         false,
                         vec![
@@ -89,8 +89,7 @@ fn parse_single_field_template() {
         "name".to_string(),
         Expression::new(
             ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-            23,
-            6,
+            Span::new(23, 6, 1, 1),
         ),
         false,
         Vec::new(),
@@ -120,8 +119,7 @@ fn parse_template() {
         "name".to_string(),
         Expression::new(
             ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-            48,
-            6,
+            Span::new(48, 6, 1, 1),
         ),
         true,
         Vec::new(),
@@ -130,8 +128,7 @@ fn parse_template() {
         "quantity".to_string(),
         Expression::new(
             ExpressionKind::Type(DataType::new(DataTypeKind::Int, None)),
-            67,
-            3,
+            Span::new(67, 3, 1, 1),
         ),
         false,
         Vec::new(),
@@ -140,8 +137,7 @@ fn parse_template() {
         "price".to_string(),
         Expression::new(
             ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
-            80,
-            5,
+            Span::new(80, 5, 1, 1),
         ),
         false,
         Vec::new(),
@@ -177,8 +173,7 @@ fn parse_anonymus_generate() {
         "name".to_string(),
         Expression::new(
             ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-            26,
-            6,
+            Span::new(26, 6, 1, 1),
         ),
         false,
         Vec::new(),
@@ -187,8 +182,7 @@ fn parse_anonymus_generate() {
         "price".to_string(),
         Expression::new(
             ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
-            42,
-            5,
+            Span::new(42, 5, 1, 1),
         ),
         false,
         Vec::new(),
@@ -200,7 +194,7 @@ fn parse_anonymus_generate() {
                 vec![Statement::Generate {
                     template_name: None,
                     body: vec![name_field, price_field],
-                    count: Expression::new(ExpressionKind::IntLiteral(10), 13, 2)
+                    count: Expression::new(ExpressionKind::IntLiteral(10), Span::new(13, 2, 1, 1))
                 }]
             );
         }
@@ -219,7 +213,7 @@ fn parse_generate() {
                 vec![Statement::Generate {
                     template_name: Some("User".to_string()),
                     body: vec![],
-                    count: Expression::new(ExpressionKind::IntLiteral(10), 16, 2)
+                    count: Expression::new(ExpressionKind::IntLiteral(10), Span::new(16, 2, 1, 1))
                 }]
             );
         }
@@ -247,15 +241,24 @@ fn parse_weighted_variant_enum() {
                     variants: vec![
                         Variant::new(
                             "User".to_string(),
-                            Some(Expression::new(ExpressionKind::IntLiteral(50), 30, 2))
+                            Some(Expression::new(
+                                ExpressionKind::IntLiteral(50),
+                                Span::new(32, 2, 1, 1)
+                            ))
                         ),
                         Variant::new(
                             "Admin".to_string(),
-                            Some(Expression::new(ExpressionKind::IntLiteral(10), 43, 2))
+                            Some(Expression::new(
+                                ExpressionKind::IntLiteral(10),
+                                Span::new(43, 2, 1, 1)
+                            ))
                         ),
                         Variant::new(
                             "Developer".to_string(),
-                            Some(Expression::new(ExpressionKind::IntLiteral(30), 60, 2))
+                            Some(Expression::new(
+                                ExpressionKind::IntLiteral(30),
+                                Span::new(60, 2, 1, 1)
+                            ))
                         ),
                     ],
                     attributes: vec![Attribute::Flag("public".to_owned())],
@@ -315,18 +318,22 @@ fn parse_list_type() {
                 Some(vec![ConstraintExpression::new(
                     Expression::new(
                         ExpressionKind::Infix {
-                            left: Box::new(Expression::new(ExpressionKind::IntLiteral(1), 12, 1)),
+                            left: Box::new(Expression::new(
+                                ExpressionKind::IntLiteral(1),
+                                Span::new(12, 1, 1, 1),
+                            )),
                             operator: InfixOperator::InclusiveRange,
-                            right: Box::new(Expression::new(ExpressionKind::IntLiteral(5), 16, 1)),
+                            right: Box::new(Expression::new(
+                                ExpressionKind::IntLiteral(5),
+                                Span::new(16, 1, 1, 1),
+                            )),
                         },
-                        12,
-                        5,
+                        Span::new(12, 5, 1, 1),
                     ),
                     ConstraintKind::Range,
                 )]),
             )),
-            1,
-            5,
+            Span::new(1, 5, 1, 1),
         ),
     };
     expect_expression(&mut parser, expression);
@@ -340,26 +347,34 @@ fn parse_list_expression() {
         expression: Expression::new(
             ExpressionKind::List(vec![
                 Element::new(
-                    Expression::new(ExpressionKind::IntLiteral(1), 1, 1),
-                    Some(Expression::new(ExpressionKind::IntLiteral(5), 6, 1)),
+                    Expression::new(ExpressionKind::IntLiteral(1), Span::new(1, 1, 1, 1)),
+                    Some(Expression::new(
+                        ExpressionKind::IntLiteral(5),
+                        Span::new(6, 1, 1, 1),
+                    )),
                     1,
                     4,
                 ),
                 Element::new(
-                    Expression::new(ExpressionKind::StringLiteral("John".to_owned()), 9, 6),
+                    Expression::new(
+                        ExpressionKind::StringLiteral("John".to_owned()),
+                        Span::new(9, 6, 1, 1),
+                    ),
                     None,
                     9,
                     6,
                 ),
                 Element::new(
-                    Expression::new(ExpressionKind::BooleanLiteral(true), 17, 4),
-                    Some(Expression::new(ExpressionKind::IntLiteral(25), 25, 2)),
+                    Expression::new(ExpressionKind::BooleanLiteral(true), Span::new(17, 4, 1, 1)),
+                    Some(Expression::new(
+                        ExpressionKind::IntLiteral(25),
+                        Span::new(25, 2, 1, 1),
+                    )),
                     17,
                     8,
                 ),
             ]),
-            0,
-            19,
+            Span::new(0, 19, 1, 1),
         ),
     };
     expect_expression(&mut parser, expression);
@@ -379,29 +394,32 @@ fn parse_extended_type() {
             Some(vec![ConstraintExpression::new(
                 Expression::new(
                     ExpressionKind::Infix {
-                        left: Box::new(Expression::new(ExpressionKind::IntLiteral(0), 65, 1)),
+                        left: Box::new(Expression::new(
+                            ExpressionKind::IntLiteral(0),
+                            Span::new(65, 1, 1, 1),
+                        )),
                         operator: InfixOperator::InclusiveRange,
-                        right: Box::new(Expression::new(ExpressionKind::IntLiteral(1024), 69, 4)),
+                        right: Box::new(Expression::new(
+                            ExpressionKind::IntLiteral(1024),
+                            Span::new(69, 4, 1, 1),
+                        )),
                     },
-                    65,
-                    8,
+                    Span::new(65, 8, 1, 1),
                 ),
                 ConstraintKind::Range,
             )]),
         )),
-        0,
-        0,
+        Span::default(),
     );
     let extended_data_type = Expression::new(
         ExpressionKind::Type(DataType::new(
             DataTypeKind::Custom("positive_int".to_owned()),
             Some(vec![ConstraintExpression::new(
-                Expression::new(ExpressionKind::IntLiteral(2), 151, 1),
+                Expression::new(ExpressionKind::IntLiteral(2), Span::new(151, 1, 1, 1)),
                 ConstraintKind::MultipleOf,
             )]),
         )),
-        0,
-        0,
+        Span::default(),
     );
 
     match parser.parse() {
@@ -463,20 +481,27 @@ fn parse_infix_expression() {
     let solution = ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::Infix {
-                left: Box::new(Expression::new(ExpressionKind::IntLiteral(2), 0, 1)),
+                left: Box::new(Expression::new(
+                    ExpressionKind::IntLiteral(2),
+                    Span::new(0, 1, 1, 1),
+                )),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::new(
                     ExpressionKind::Infix {
-                        left: Box::new(Expression::new(ExpressionKind::IntLiteral(10), 4, 2)),
+                        left: Box::new(Expression::new(
+                            ExpressionKind::IntLiteral(10),
+                            Span::new(4, 2, 1, 1),
+                        )),
                         operator: InfixOperator::Multiply,
-                        right: Box::new(Expression::new(ExpressionKind::IntLiteral(20), 9, 2)),
+                        right: Box::new(Expression::new(
+                            ExpressionKind::IntLiteral(20),
+                            Span::new(9, 2, 1, 1),
+                        )),
                     },
-                    4,
-                    7,
+                    Span::new(4, 7, 1, 1),
                 )),
             },
-            0,
-            11,
+            Span::new(0, 11, 1, 1),
         ),
     };
     expect_expression(&mut parser, solution);
@@ -491,18 +516,25 @@ fn parse_grouped_expression() {
             ExpressionKind::Infix {
                 left: Box::new(Expression::new(
                     ExpressionKind::Infix {
-                        left: Box::new(Expression::new(ExpressionKind::IntLiteral(2), 1, 1)),
+                        left: Box::new(Expression::new(
+                            ExpressionKind::IntLiteral(2),
+                            Span::new(1, 1, 1, 3),
+                        )),
                         operator: InfixOperator::Plus,
-                        right: Box::new(Expression::new(ExpressionKind::IntLiteral(3), 5, 1)),
+                        right: Box::new(Expression::new(
+                            ExpressionKind::IntLiteral(3),
+                            Span::new(5, 1, 1, 7),
+                        )),
                     },
-                    0,
-                    7,
+                    Span::new(0, 7, 1, 1),
                 )),
                 operator: InfixOperator::Multiply,
-                right: Box::new(Expression::new(ExpressionKind::IntLiteral(5), 10, 1)),
+                right: Box::new(Expression::new(
+                    ExpressionKind::IntLiteral(5),
+                    Span::new(10, 1, 1, 12),
+                )),
             },
-            0,
-            11,
+            Span::new(0, 11, 1, 12),
         ),
     };
     expect_expression(&mut parser, solution);
@@ -515,7 +547,11 @@ fn parse_missing_paren_expression() {
     match parser.parse() {
         Ok(_) => panic!("Program should have returned err."),
         Err(err) => match err {
-            ParserError::Expected { expected, got } => {
+            ParserError::Expected {
+                expected,
+                got,
+                span: _,
+            } => {
                 assert_eq!(expected, ")".to_string());
                 assert_eq!(got, ";".to_string())
             }
@@ -532,20 +568,24 @@ fn parse_prefix_expression() {
         expression: Expression::new(
             ExpressionKind::Prefix {
                 operator: PrefixOperator::Negative,
-                expression: Box::new(Expression::new(ExpressionKind::IntLiteral(5), 1, 1)),
+                expression: Box::new(Expression::new(
+                    ExpressionKind::IntLiteral(5),
+                    Span::new(1, 1, 1, 3),
+                )),
             },
-            0,
-            2,
+            Span::new(0, 2, 1, 1),
         ),
     });
     let logical_not_statement = Statement::Expression(ExpressionStatemnt {
         expression: Expression::new(
             ExpressionKind::Prefix {
                 operator: PrefixOperator::LogicalNegate,
-                expression: Box::new(Expression::new(ExpressionKind::BooleanLiteral(true), 5, 4)),
+                expression: Box::new(Expression::new(
+                    ExpressionKind::BooleanLiteral(true),
+                    Span::new(5, 4, 1, 10),
+                )),
             },
-            4,
-            5,
+            Span::new(4, 5, 1, 6),
         ),
     });
     let program = Program(vec![negative_statement, logical_not_statement]);
@@ -602,8 +642,7 @@ fn parse_pattern_dollar_case() {
                     count_expression: None,
                 },
             ]),
-            0,
-            0,
+            Span::new(0, 14, 1, 15),
         ),
     };
     expect_expression(&mut parser, expression);
@@ -620,22 +659,30 @@ fn parse_string_pattern() {
                 PatternElement::RepeatChar {
                     ch: PatternChar::Lowercase,
                     count: 3,
-                    count_expression: Some(Expression::new(ExpressionKind::IntLiteral(10), 0, 2)),
+                    count_expression: Some(Expression::new(
+                        ExpressionKind::IntLiteral(10),
+                        Span::new(0, 2, 1, 3),
+                    )),
                 },
                 PatternElement::Literal("john".to_owned()),
                 PatternElement::RepeatChar {
                     ch: PatternChar::Uppercase,
                     count: 1,
-                    count_expression: Some(Expression::new(ExpressionKind::IntLiteral(25), 0, 2)),
+                    count_expression: Some(Expression::new(
+                        ExpressionKind::IntLiteral(25),
+                        Span::new(0, 2, 1, 3),
+                    )),
                 },
                 PatternElement::RepeatChar {
                     ch: PatternChar::Digit,
                     count: 2,
-                    count_expression: Some(Expression::new(ExpressionKind::IntLiteral(13), 0, 2)),
+                    count_expression: Some(Expression::new(
+                        ExpressionKind::IntLiteral(13),
+                        Span::new(0, 2, 1, 3),
+                    )),
                 },
             ]),
-            0,
-            0,
+            Span::new(0, 14, 1, 15),
         ),
     };
     expect_expression(&mut parser, solution);
@@ -653,7 +700,10 @@ fn parse_directive_options() {
                     argument: "csv".to_string(),
                     options: vec![Field::new(
                         "delimiter".to_string(),
-                        Expression::new(ExpressionKind::StringLiteral(";".to_string()), 26, 3),
+                        Expression::new(
+                            ExpressionKind::StringLiteral(";".to_string()),
+                            Span::new(26, 3, 1, 30)
+                        ),
                         false,
                         Vec::new(),
                     )]
@@ -695,12 +745,37 @@ fn expect_expression(parser: &mut Parser, expression: ExpressionStatemnt) {
 
 fn handle_error(error: ParserError) {
     match error {
-        ParserError::Expected { expected, got } => panic!("Expected {} got {}", expected, got),
-        ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
-        ParserError::InvalidDirective => panic!("Invalid directive"),
-        ParserError::Syntax(message) => panic!("{}", message),
-        ParserError::UndefinedConstraint => panic!("Undefined constraint"),
-        ParserError::InvalidStringPattern(pattern) => panic!("Invalid pattern {}", pattern),
-        ParserError::InvalidAttribute(token) => panic!("Cannot put attribute on {}", token),
+        ParserError::Expected {
+            span,
+            expected,
+            got,
+        } => {
+            panic!(
+                "{}:{} ERROR: Expected '{}' but got '{}'",
+                span.line, span.line_offset, expected, got
+            )
+        }
+        ParserError::InvalidDirective(span) => panic!(
+            "{}:{} ERROR: Invalid directive",
+            span.line, span.line_offset
+        ),
+        ParserError::UnexpectedEOF => {
+            panic!("ERROR: Missing enclosing \" or ;")
+        }
+        ParserError::Syntax(span, error) => {
+            panic!("{}:{} ERROR: {}", span.line, span.line_offset, error)
+        }
+        ParserError::UndefinedConstraint(span) => panic!(
+            "{}:{} ERROR: Undefined constraint",
+            span.line, span.line_offset
+        ),
+        ParserError::InvalidStringPattern(span, pattern) => panic!(
+            "{}:{} ERROR: Invalid pattern {}",
+            span.line, span.line_offset, pattern
+        ),
+        ParserError::InvalidAttribute(span, token) => panic!(
+            "{}:{} ERROR: Cannot put attribute on {}",
+            span.line, span.line_offset, token
+        ),
     }
 }

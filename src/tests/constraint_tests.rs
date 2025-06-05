@@ -40,14 +40,37 @@ fn evluate_extend_type() {
 
 fn handle_parser_error(error: ParserError) {
     match error {
-        ParserError::Expected { expected, got } => panic!("Expected {} got {}", expected, got),
-        ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
-        ParserError::InvalidDirective => panic!("Invalid directive"),
-        ParserError::Syntax(message) => panic!("{}", message),
-        ParserError::UndefinedConstraint => panic!("Undefined constraint"),
-        ParserError::InvalidStringPattern(pattern) => {
-            panic!("Invalid string pattern '{}'", pattern)
+        ParserError::Expected {
+            span,
+            expected,
+            got,
+        } => {
+            panic!(
+                "{}:{} ERROR: Expected '{}' but got '{}'",
+                span.line, span.line_offset, expected, got
+            )
         }
-        ParserError::InvalidAttribute(token) => panic!("Cannot put attribute on {}", token),
+        ParserError::InvalidDirective(span) => panic!(
+            "{}:{} ERROR: Invalid directive",
+            span.line, span.line_offset
+        ),
+        ParserError::UnexpectedEOF => {
+            panic!("ERROR: Missing enclosing \" or ;")
+        }
+        ParserError::Syntax(span, error) => {
+            panic!("{}:{} ERROR: {}", span.line, span.line_offset, error)
+        }
+        ParserError::UndefinedConstraint(span) => panic!(
+            "{}:{} ERROR: Undefined constraint",
+            span.line, span.line_offset
+        ),
+        ParserError::InvalidStringPattern(span, pattern) => panic!(
+            "{}:{} ERROR: Invalid pattern {}",
+            span.line, span.line_offset, pattern
+        ),
+        ParserError::InvalidAttribute(span, token) => panic!(
+            "{}:{} ERROR: Cannot put attribute on {}",
+            span.line, span.line_offset, token
+        ),
     }
 }
