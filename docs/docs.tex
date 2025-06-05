@@ -68,11 +68,54 @@ enum |\textcolor{black}{Role}| {
     \caption{testA example}
     \label{listing:example}
     \end{listing}
-
-
     \newpage
+
     \section{Getting Started}
-    todo\dots
+    This section describes how to install the necessary tools and set up the 
+    project locally.
+
+    \subsection{Prerequisites}
+    To build and run this project, you must have the Rust toolchain installed,
+    which includes the Rust compiler as well as Cargo, Rust's package manager 
+    and build system. To install Rust and Cargo, run the following command in 
+    your terminal:
+
+    \begin{verbatim}
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    \end{verbatim}
+
+    After installation, restart your terminal and verify the installation with:
+
+    \begin{verbatim}
+rustc --version
+cargo --version
+    \end{verbatim}
+
+    \subsection{Cloning the Project}
+    Use \texttt{git} to clone the repository:
+
+    \begin{verbatim}
+    git clone https://github.com/lazarnagulov/testa.git
+    cd testa
+    \end{verbatim}
+
+    \subsection{Building the Project}
+    To compile the project, run:
+    \begin{verbatim}
+cargo build 
+    \end{verbatim}
+    To run the project:
+    \begin{verbatim}
+cargo run -- ./examples/01_anonymous_generate.testa
+    \end{verbatim}
+
+    \subsection{Running Tests}
+
+    To run the project's test suite:
+
+    \begin{verbatim}
+cargo test
+    \end{verbatim}
     \newpage
 
     \section{Features}
@@ -408,7 +451,8 @@ template User : BaseUser {
 
     \section{Changelog}
     \begin{itemize}
-        \item v0.1 - Implemented enumerations, templates (with inheritance), 
-        number and boolean constraints and csv generator
+        \item v0.1 - Added csv template generation (MVP).
+        \item v0.2 - Added support for enumerations and templates with inheritance.
+        \item v0.3 - Introduced string patterns and attributes.
     \end{itemize}
 \end{document}
