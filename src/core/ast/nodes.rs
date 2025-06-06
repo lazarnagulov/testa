@@ -58,9 +58,23 @@ impl Variant {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub enum Attribute {
-    Flag(String),
-    KeyValue(String, String),
+pub struct Attribute {
+    pub name: String,
+    pub value: Option<Expression>,
+}
+
+impl Attribute {
+    pub fn new(name: &str) -> Self {
+        Attribute {
+            name: name.to_owned(),
+            value: None,
+        }
+    }
+
+    pub fn with_value(mut self, value: Expression) -> Self {
+        self.value = Some(value);
+        self
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

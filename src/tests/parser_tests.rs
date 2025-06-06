@@ -17,7 +17,7 @@ fn parse_tagged_template() {
             assert_eq!(
                 program.0,
                 vec![Statement::Template {
-                    attributes: vec![Attribute::Flag("abstract".to_owned())],
+                    attributes: vec![Attribute::new("abstract")],
                     name: "User".to_string(),
                     body: vec![],
                     parent: None,
@@ -47,10 +47,7 @@ fn parse_tagged_template_field() {
                             6
                         ),
                         false,
-                        vec![
-                            Attribute::Flag("primary_key".to_owned()),
-                            Attribute::Flag("unique".to_owned())
-                        ]
+                        vec![Attribute::new("primary_key"), Attribute::new("unique")]
                     )],
                     parent: None,
                 }]
@@ -257,7 +254,7 @@ fn parse_weighted_variant_enum() {
                             Some(Expression::new(ExpressionKind::IntLiteral(30), 60, 2))
                         ),
                     ],
-                    attributes: vec![Attribute::Flag("public".to_owned())],
+                    attributes: vec![Attribute::new("public")],
                 }]
             );
         }
@@ -411,7 +408,7 @@ fn parse_extended_type() {
                     Statement::TypeDecl {
                         name: "positive_int".to_owned(),
                         data_type,
-                        attributes: vec![Attribute::Flag("public".to_owned())]
+                        attributes: vec![Attribute::new("public")]
                     },
                     Statement::TypeDecl {
                         name: "even_positive_int".to_owned(),

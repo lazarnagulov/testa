@@ -1,6 +1,23 @@
 #![allow(dead_code)]
 
-pub struct IR(Vec<Instruction>);
+use core::fmt;
+
+pub struct IR(pub Vec<Block>);
+
+pub struct Block {
+    pub label: String,
+    pub instructions: Vec<Instruction>,
+}
+
+impl fmt::Display for Block {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}:", self.label)?;
+        for instruction in &self.instructions {
+            writeln!(f, "  {}", instruction)?;
+        }
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum BaseType {
@@ -10,13 +27,40 @@ pub enum BaseType {
     Float,
 }
 
+impl fmt::Display for BaseType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BaseType::Int => write!(f, "int"),
+            BaseType::Str => write!(f, "string"),
+            BaseType::Bool => write!(f, "bool"),
+            BaseType::Float => write!(f, "float"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Value {
+    Temp(usize),
     Int(i32),
     Float(f32),
     Boolean(bool),
     Str(String),
-    Custom(String),
+    Identifier(String),
+    NoValue,
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Temp(id) => write!(f, "t{id}"),
+            Value::Int(value) => write!(f, "{value}"),
+            Value::Float(value) => write!(f, "{value}"),
+            Value::Boolean(value) => write!(f, "{value}"),
+            Value::Str(value) => write!(f, "{value}"),
+            Value::Identifier(value) => write!(f, "{value}"),
+            Value::NoValue => write!(f, ""),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -52,37 +96,149 @@ pub enum BinaryOp {
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    Const(Value),
     EnumBegin {
         name: String,
     },
     EnumVariant {
         name: String,
+        weight: Value,
     },
-    EnumEnd,
+    Attr {
+        name: String,
+    },
     TemplateBegin {
         name: String,
     },
     TemplateExtends {
         name: String,
     },
-    TemplateEnd,
     FieldBegin {
         name: String,
         ty: BaseType,
     },
-    FieldConst(Value),
-    FieldBinOp {
+    Add {
+        target: Value,
         left: Value,
-        op: BinaryOp,
         right: Value,
     },
-    FieldUnaryOp {
-        value: Value,
-        op: UnaryOp,
+    Sub {
+        target: Value,
+        left: Value,
+        right: Value,
     },
-    FieldAttr {
-        name: String,
+    Mul {
+        target: Value,
+        left: Value,
+        right: Value,
     },
-    FieldEnd,
+    Div {
+        target: Value,
+        left: Value,
+        right: Value,
+    },
+    Mod {
+        target: Value,
+        left: Value,
+        right: Value,
+    },
+    BitAnd {
+        target: Value,
+        left: Value,
+        right: Value,
+    },
+    BitOr {
+        target: Value,
+        left: Value,
+        right: Value,
+    },
+    BitXor {
+        target: Value,
+        left: Value,
+        right: Value,
+    },
+    BitNegate {
+        target: Value,
+        source: Value,
+    },
+    LShift {
+        target: Value,
+        left: Value,
+        right: Value,
+    },
+    RShift {
+        target: Value,
+        left: Value,
+        right: Value,
+    },
+    Negative {
+        target: Value,
+        source: Value,
+    },
+    End,
+}
+
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Instruction::EnumBegin { name } => write!(f, "ENUM_BEGIN {name}"),
+            Instruction::EnumVariant { name, weight } => write!(f, "    VARIANT {} {}", name, weight),
+            Instruction::Attr { name } => write!(f, "ATTR {}", name),
+            Instruction::End => write!(f, "END"),
+            Instruction::TemplateBegin { name } => write!(f, "TEMPLATE_BEGIN, {name}"),
+            Instruction::TemplateExtends { name } => write!(f, "EXTEND {name}"),
+            Instruction::FieldBegin { name, ty } => write!(f, "FIELD_BEGIN {name} {ty}"),
+            Instruction::Add {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} + {right}"),
+            Instruction::Sub {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} - {right}"),
+            Instruction::Mul {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} * {right}"),
+            Instruction::Div {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} / {right}"),
+            Instruction::Mod {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} % {right}"),
+            Instruction::BitAnd {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} & {right}"),
+            Instruction::BitOr {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} | {right}"),
+            Instruction::BitXor {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} ^ {right}"),
+            Instruction::BitNegate { target, source } => write!(f, "    {target} := ~{source}"),
+            Instruction::LShift {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} << {right}"),
+            Instruction::RShift {
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} >> {right}"),
+            Instruction::Negative { target, source } => write!(f, "    {target} = -{source}"),
+        }
+    }
 }

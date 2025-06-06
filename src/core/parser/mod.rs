@@ -194,7 +194,7 @@ impl<'src> Parser<'src> {
             if self.peek_kind() == &Tag {
                 let (start, size) = self.consume_token();
                 let attribute = &self.source[start + 2..start + size];
-                field_attributes.push(Attribute::Flag(attribute.to_owned()));
+                field_attributes.push(Attribute::new(attribute));
                 continue;
             }
             let overridable = self.peek_kind() == &Override;
@@ -381,7 +381,7 @@ impl<'src> Parser<'src> {
     fn parse_attribute(&mut self) -> Result<Statement, ParserError> {
         let (start, size) = self.consume_token();
         let attribute = &self.source[start + 2..start + size];
-        self.attributes.push(Attribute::Flag(attribute.to_owned()));
+        self.attributes.push(Attribute::new(attribute));
         match self.peek_kind() {
             Template => self.parse_template(),
             Type => self.parse_type_declaration(),
