@@ -1,10 +1,9 @@
 #![allow(dead_code)]
 use crate::core::{
     ast::nodes::{
-        Attribute, Expression, ExpressionKind, InfixOperator, PrefixOperator, Program, Statement,
-        Variant,
+        Attribute, ConstraintExpression, DataTypeKind, Expression, ExpressionKind, InfixOperator, PrefixOperator, Program, Statement, Variant
     },
-    ir::tac::{Block, IR, Instruction, Value},
+    ir::tac::{BaseType, Block, Instruction, Value, IR},
 };
 
 pub struct IRGenerator {
@@ -18,10 +17,10 @@ impl Default for IRGenerator {
         IRGenerator {
             temp_val_id: 0,
             blocks: vec![Block {
-                label: "ENTRY".to_string(),
+                label: "DECLARATIONS".to_string(),
                 instructions: vec![],
-            },Block {
-                label: "ENUMS".to_string(),
+            }, Block {
+                label: "ENTRY".to_string(),
                 instructions: vec![],
             }],
             current_block: 0,
@@ -47,7 +46,7 @@ impl IRGenerator {
                 Statement::Template { .. } => todo!(),
                 Statement::OutputDirective { .. } => todo!(),
                 Statement::OutputPathDirective { .. } => todo!(),
-                Statement::TypeDecl { .. } => todo!(),
+                Statement::TypeDecl { name, data_type, attributes } => self.generate_type_declaration(name, data_type, attributes),
                 Statement::ConstraintDecl { .. } => todo!(),
                 Statement::Enum { name, variants, attributes } => self.generate_enum(name, variants, attributes),
                 Statement::Resource { .. } => todo!(),
@@ -197,22 +196,34 @@ impl IRGenerator {
         }
     }
 
+    fn generate_attributes(&mut self, attributes: &[Attribute]) {
+        for attribute in attributes {
+            self.add_instruction(Instruction::Attr {
+                name: attribute.name.clone(),
+            });
+        }
+    }
+
+    fn generate_constraints(&mut self, constraints: &[ConstraintExpression]) {
+            for constraint in constraints {
+                let value = self.generate_expression(&constraint.expression);
+
+                self.add_instruction(Instruction::Constraint {
+                    name: constraint.kind.to_string().clone(),
+                    value
+                });
+            }
+    }
+
     fn generate_enum(
         &mut self,
         name: &str,
         variants: &[Variant],
         attributes: &[Attribute],
     ) -> Value {
-        self.current_block = 1;
-        self.add_instruction(Instruction::EnumBegin { name: name.to_owned() });
-
-
-        for attribute in attributes {
-            self.add_instruction(Instruction::Attr {
-                name: attribute.name.clone(),
-            });
-        }
-
+        self.current_block = 0;
+        self.add_instruction(Instruction::BeginEnum { name: name.to_owned() });
+        self.generate_attributes(attributes);
         for variant in variants {
             let weight = match &variant.weight {
                 Some(expression) => self.generate_expression(expression),
@@ -227,4 +238,25 @@ impl IRGenerator {
         self.add_instruction(Instruction::End);
         Value::NoValue
     }
+    
+    fn generate_type_declaration(&mut self, name: &str, data_type: &Expression, attributes: &[Attribute]) -> Value {
+        self.current_block = 0;
+        let ExpressionKind::Type(data_type) = &data_type.kind else {unreachable!()}; 
+        let base_type = match &data_type.kind {
+            DataTypeKind::Int => BaseType::Int,
+            DataTypeKind::Str => BaseType::Str,
+            DataTypeKind::Float => BaseType::Float,
+            DataTypeKind::Boolean => BaseType::Bool,
+            DataTypeKind::List(..) => todo!(),
+            DataTypeKind::Custom(_) => todo!(),
+        };
+        self.add_instruction(Instruction::BegindType { name: name.to_owned(), base_type  });
+        self.generate_attributes(attributes);
+        if let Some(constraints) = &data_type.constraints {
+            self.generate_constraints(constraints);
+        }
+        self.add_instruction(Instruction::End);
+        Value::NoValue
+    }
+
 }

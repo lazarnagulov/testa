@@ -96,7 +96,7 @@ pub enum BinaryOp {
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    EnumBegin {
+    BeginEnum {
         name: String,
     },
     EnumVariant {
@@ -106,15 +106,23 @@ pub enum Instruction {
     Attr {
         name: String,
     },
-    TemplateBegin {
+    Constraint {
+        name: String,
+        value: Value,
+    },
+    BeginTemplate {
         name: String,
     },
     TemplateExtends {
         name: String,
     },
-    FieldBegin {
+    BeginField {
         name: String,
         ty: BaseType,
+    },
+    BegindType {
+        name: String,
+        base_type: BaseType,
     },
     Add {
         target: Value,
@@ -180,65 +188,67 @@ pub enum Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Instruction::EnumBegin { name } => write!(f, "ENUM_BEGIN {name}"),
+            Instruction::BeginEnum { name } => write!(f, "ENUM_BEGIN {name}"),
             Instruction::EnumVariant { name, weight } => write!(f, "    VARIANT {} {}", name, weight),
             Instruction::Attr { name } => write!(f, "ATTR {}", name),
             Instruction::End => write!(f, "END"),
-            Instruction::TemplateBegin { name } => write!(f, "TEMPLATE_BEGIN, {name}"),
+            Instruction::BeginTemplate { name } => write!(f, "TEMPLATE_BEGIN, {name}"),
             Instruction::TemplateExtends { name } => write!(f, "EXTEND {name}"),
-            Instruction::FieldBegin { name, ty } => write!(f, "FIELD_BEGIN {name} {ty}"),
+            Instruction::BeginField { name, ty } => write!(f, "FIELD_BEGIN {name} {ty}"),
             Instruction::Add {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} + {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} + {right}"),
             Instruction::Sub {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} - {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} - {right}"),
             Instruction::Mul {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} * {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} * {right}"),
             Instruction::Div {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} / {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} / {right}"),
             Instruction::Mod {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} % {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} % {right}"),
             Instruction::BitAnd {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} & {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} & {right}"),
             Instruction::BitOr {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} | {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} | {right}"),
             Instruction::BitXor {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} ^ {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} ^ {right}"),
             Instruction::BitNegate { target, source } => write!(f, "    {target} := ~{source}"),
             Instruction::LShift {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} << {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} << {right}"),
             Instruction::RShift {
-                target,
-                left,
-                right,
-            } => write!(f, "    {target} := {left} >> {right}"),
+                                target,
+                                left,
+                                right,
+                            } => write!(f, "    {target} := {left} >> {right}"),
             Instruction::Negative { target, source } => write!(f, "    {target} = -{source}"),
+            Instruction::BegindType { name, base_type } => write!(f, "BEGIN_TYPE {name} : {base_type}"),
+            Instruction::Constraint { name, value } => write!(f, "    CONSTRAINT {name} {value}"),
         }
     }
 }
