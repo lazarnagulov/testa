@@ -232,7 +232,7 @@ impl<'src> Lexer<'src> {
         let mut last = position;
         while self
             .peek()
-            .is_some_and(|(_, c)| c.is_ascii_alphabetic() || c == '_')
+            .is_some_and(|(_, c)| c.is_ascii_alphanumeric() || c == '_')
         {
             let token = self.next().unwrap();
             last = token.0;
