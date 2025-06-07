@@ -119,6 +119,10 @@ pub enum Instruction {
     BeginField {
         name: String,
     },
+    Assign {
+        target: Value,
+        source: Value,
+    },
     BegindType {
         name: String,
         base_type: BaseType,
@@ -192,68 +196,69 @@ impl fmt::Display for Instruction {
         match self {
             Instruction::BeginEnum { name } => write!(f, "BEGIN_ENUM {name}"),
             Instruction::EnumVariant { name, weight } => {
-                        write!(f, "    VARIANT {} {}", name, weight)
-                    }
+                write!(f, "    VARIANT {} {}", name, weight)
+            }
             Instruction::Attr { name } => write!(f, "    ATTR {}", name),
             Instruction::EndType => write!(f, "END_TYPE"),
-            Instruction::BeginTemplate { name } => write!(f, "BEGIN_TEMPLATE {name}"),
+            Instruction::BeginTemplate { name } => write!(f, "TEMPLATE {name}"),
             Instruction::TemplateExtends { name } => write!(f, "    EXTEND {name}"),
-            Instruction::BeginField { name } => write!(f, "    BEGIN_FIELD {name}"),
+            Instruction::BeginField { name } => write!(f, "    FIELD {name}"),
+            Instruction::Assign { target, source } => write!(f, "    {target} := {source}"),
             Instruction::Add {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} + {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} + {right}"),
             Instruction::Sub {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} - {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} - {right}"),
             Instruction::Mul {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} * {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} * {right}"),
             Instruction::Div {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} / {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} / {right}"),
             Instruction::Mod {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} % {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} % {right}"),
             Instruction::BitAnd {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} & {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} & {right}"),
             Instruction::BitOr {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} | {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} | {right}"),
             Instruction::BitXor {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} ^ {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} ^ {right}"),
             Instruction::BitNegate { target, source } => write!(f, "    {target} := ~{source}"),
             Instruction::LShift {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} << {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} << {right}"),
             Instruction::RShift {
-                        target,
-                        left,
-                        right,
-                    } => write!(f, "    {target} := {left} >> {right}"),
+                target,
+                left,
+                right,
+            } => write!(f, "    {target} := {left} >> {right}"),
             Instruction::Negative { target, source } => write!(f, "    {target} = -{source}"),
             Instruction::BegindType { name, base_type } => {
-                        write!(f, "BEGIN_TYPE {name} : {base_type}")
-                    }
+                write!(f, "TYPE {name} : {base_type}")
+            }
             Instruction::Constraint { name, value } => write!(f, "    CONSTRAINT {name} {value}"),
             Instruction::EndField => write!(f, "    END_FIELD"),
             Instruction::EndTemplate => write!(f, "END_TEMPLATE"),

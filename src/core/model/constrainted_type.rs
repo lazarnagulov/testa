@@ -9,7 +9,7 @@ use crate::{
             constraint::CONSTRAINT_REGISTRY,
             sampler::{ConstraintSet, Sampler},
         },
-        semantics::context::{Context, Visitor},
+        semantics::context::{Context, Visitor}, utils,
     },
     interpreter::{eval_error::EvalError, evaluator, object::Object},
 };
@@ -47,7 +47,7 @@ impl ConstrainedType {
                 cached_sampler: RefCell::new(None),
             });
         };
-        let fundamental_type = ConstrainedType::get_fundamental_type(&data_type.kind, context);
+        let fundamental_type = utils::types::get_fundamental_type(&data_type.kind, context);
         let evaluated_constraints =
             ConstrainedType::evaluate_constraints(&constraints, fundamental_type, context)?;
         Ok(ConstrainedType {
@@ -140,20 +140,6 @@ impl ConstrainedType {
             }
             DataTypeKind::List(data_type) => ConstrainedType::find_parent(&data_type.kind, context),
             _ => Ok(None),
-        }
-    }
-
-    fn get_fundamental_type<'a>(kind: &'a DataTypeKind, context: &'a Context) -> &'a DataTypeKind {
-        match kind {
-            DataTypeKind::Int
-            | DataTypeKind::Str
-            | DataTypeKind::Float
-            | DataTypeKind::Boolean
-            | DataTypeKind::List(_) => kind,
-            DataTypeKind::Custom(name) => {
-                let data_type = context.get_type(name).unwrap();
-                ConstrainedType::get_fundamental_type(&data_type.type_kind, context)
-            }
         }
     }
 

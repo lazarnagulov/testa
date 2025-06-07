@@ -1,8 +1,10 @@
+#![allow(unused_imports)]
 use std::{env, fs::File, io::Read};
 
 use testa::{
     core::{
-        parser::{Parser, parser_error::*},
+        ir::generator::IRGenerator,
+        parser::{Parser, parser_error::ParserError},
         semantics::context::Context,
     },
     interpreter::{eval_error::EvalError, evaluator},
@@ -42,41 +44,49 @@ fn main() {
         eprintln!("{}", error_message);
         std::process::exit(1);
     });
-    let mut context = Context::default();
+    let generator = IRGenerator::default();
+    let ir = generator.generate(program);
+    let ir_string =
+        ir.0.iter()
+            .map(|b| b.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+    println!("{}", ir_string);
+    // let mut context = Context::default();
 
-    evaluator::evaluate(program, &mut context).unwrap_or_else(|err| {
-        let error_message = match err {
-            EvalError::UnsupportedPrefixOperator { operator, object } => {
-                format!("Bad operand type for unary {}: '{}'", operator, object)
-            }
-            EvalError::UnsupportedInfixOperand {
-                left,
-                operator,
-                right,
-            } => {
-                format!(
-                    "Unsupported operand type(s) for {}: {} and {}",
-                    operator, left, right
-                )
-            }
-            EvalError::TypeMismatch { expected, got } => {
-                format!("Expected '{}' but got '{}'", expected, got)
-            }
-            EvalError::NotDefined(name) => format!("{} is not defined", name),
-            EvalError::MiscellaneousError(error) => error,
-            EvalError::UncompatibleConstraint {
-                data_type,
-                constraint,
-            } => {
-                format!(
-                    "Incompatible constraint '{}' for type '{}'",
-                    constraint, data_type
-                )
-            }
-            EvalError::FileError(error) => error,
-            EvalError::InvalidTarget(error) => format!("Invalid target {}", error),
-        };
-        eprintln!("{}", error_message);
-        std::process::exit(1);
-    });
+    // evaluator::evaluate(program, &mut context).unwrap_or_else(|err| {
+    //     let error_message = match err {
+    //         EvalError::UnsupportedPrefixOperator { operator, object } => {
+    //             format!("Bad operand type for unary {}: '{}'", operator, object)
+    //         }
+    //         EvalError::UnsupportedInfixOperand {
+    //             left,
+    //             operator,
+    //             right,
+    //         } => {
+    //             format!(
+    //                 "Unsupported operand type(s) for {}: {} and {}",
+    //                 operator, left, right
+    //             )
+    //         }
+    //         EvalError::TypeMismatch { expected, got } => {
+    //             format!("Expected '{}' but got '{}'", expected, got)
+    //         }
+    //         EvalError::NotDefined(name) => format!("{} is not defined", name),
+    //         EvalError::MiscellaneousError(error) => error,
+    //         EvalError::UncompatibleConstraint {
+    //             data_type,
+    //             constraint,
+    //         } => {
+    //             format!(
+    //                 "Incompatible constraint '{}' for type '{}'",
+    //                 constraint, data_type
+    //             )
+    //         }
+    //         EvalError::FileError(error) => error,
+    //         EvalError::InvalidTarget(error) => format!("Invalid target {}", error),
+    //     };
+    //     eprintln!("{}", error_message);
+    //     std::process::exit(1);
+    // });
 }

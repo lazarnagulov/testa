@@ -4,7 +4,7 @@ use crate::core::{
         Attribute, ConstraintExpression, DataTypeKind, Expression, ExpressionKind, Field,
         InfixOperator, PrefixOperator, Program, Statement, Variant,
     },
-    ir::tac::{BaseType, Block, IR, Instruction, Value},
+    ir::tac::{BaseType, Block, Instruction, Value, IR}
 };
 
 pub struct IRGenerator {
@@ -88,25 +88,7 @@ impl IRGenerator {
                 expression,
             } => {
                 let value = self.generate_expression(expression);
-                match operator {
-                    PrefixOperator::BitNegate => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::BitNegate {
-                            target: Value::Temp(temp_id),
-                            source: value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    PrefixOperator::LogicalNegate => todo!(),
-                    PrefixOperator::Negative => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::Negative {
-                            target: Value::Temp(temp_id),
-                            source: value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                }
+                self.generate_unary_instruction(operator, value)
             }
             ExpressionKind::Infix {
                 left,
@@ -115,120 +97,102 @@ impl IRGenerator {
             } => {
                 let left_value = self.generate_expression(left);
                 let right_value = self.generate_expression(right);
-                match operator {
-                    InfixOperator::Plus => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::Add {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::Minus => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::Sub {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::Divide => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::Div {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::Mod => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::Mod {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::Multiply => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::Mul {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::BitAnd => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::BitAnd {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::BitOr => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::BitOr {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::BitXor => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::BitXor {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::BitLShift => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::LShift {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    InfixOperator::BitRShift => {
-                        let temp_id = self.get_id();
-                        self.add_instruction(Instruction::RShift {
-                            target: Value::Temp(temp_id),
-                            left: left_value,
-                            right: right_value,
-                        });
-                        Value::Temp(temp_id)
-                    }
-                    op => todo!("{}", op),
-                }
+                self.generate_binary_instruction(left_value, operator, right_value)
             }
             ExpressionKind::FuncCall { .. } => todo!(),
         }
     }
 
+    fn generate_unary_instruction(&mut self, operator: &PrefixOperator, source: Value) -> Value {
+        let temp_id = self.get_id();
+        let target = Value::Temp(temp_id);
+        let instruction = match operator {
+            PrefixOperator::BitNegate => Instruction::BitNegate { target: target.clone(), source },
+            PrefixOperator::LogicalNegate => todo!("Implement LogicalNegate"),
+            PrefixOperator::Negative => Instruction::Negative { target: target.clone(), source },
+        };
+        self.add_instruction(instruction);
+        target
+    }
+
+    fn generate_binary_instruction(
+        &mut self,
+        left: Value,
+        operator: &InfixOperator,
+        right: Value,
+    ) -> Value {
+        let temp_id = self.get_id();
+        let target = Value::Temp(temp_id);
+        let instruction = match operator {
+            InfixOperator::Plus => Instruction::Add {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::Minus => Instruction::Sub {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::Divide => Instruction::Div {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::Mod => Instruction::Mod {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::Multiply => Instruction::Mul {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::BitAnd => Instruction::BitAnd {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::BitOr => Instruction::BitOr {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::BitXor => Instruction::BitXor {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::BitLShift => Instruction::LShift {
+                target: target.clone(),
+                left,
+                right,
+            },
+            InfixOperator::BitRShift => Instruction::RShift {
+                target: target.clone(),
+                left,
+                right,
+            },
+            op => todo!("Implement binary op: {op}"),
+        };
+        self.add_instruction(instruction);
+        target
+    }
+
     fn generate_attributes(&mut self, attributes: &[Attribute]) {
         for attribute in attributes {
-            self.add_instruction(Instruction::Attr {
-                name: attribute.name.clone(),
-            });
+            let name = attribute.name.to_string();
+            self.add_instruction(Instruction::Attr { name });
         }
     }
 
     fn generate_constraints(&mut self, constraints: &[ConstraintExpression]) {
         for constraint in constraints {
             let value = self.generate_expression(&constraint.expression);
+            let name = constraint.kind.to_string();
 
-            self.add_instruction(Instruction::Constraint {
-                name: constraint.kind.to_string().clone(),
-                value,
-            });
+            self.add_instruction(Instruction::Constraint { name, value });
         }
     }
 
@@ -243,19 +207,23 @@ impl IRGenerator {
             name: name.to_owned(),
         });
         self.generate_attributes(attributes);
-        for variant in variants {
-            let weight = match &variant.weight {
-                Some(expression) => self.generate_expression(expression),
-                None => Value::Int(1),
-            };
-            self.add_instruction(Instruction::EnumVariant {
-                name: variant.name.clone(),
-                weight,
-            });
-        }
+        self.generate_variants(variants);
 
         self.add_instruction(Instruction::EndEnum);
         Value::NoValue
+    }
+
+    fn generate_variants(&mut self, variants: &[Variant]) {
+        for variant in variants {
+            let weight = variant
+                .weight
+                .as_ref()
+                .map(|expr| self.generate_expression(expr))
+                .unwrap_or(Value::Int(1));
+
+            let name = variant.name.clone();
+            self.add_instruction(Instruction::EnumVariant { name, weight });
+        }
     }
 
     fn generate_type_declaration(
@@ -314,7 +282,11 @@ impl IRGenerator {
                 name: field.name.clone(),
             });
             self.generate_attributes(&field.attributes);
-            self.generate_expression(&field.value);
+            let value = self.generate_expression(&field.value);
+            self.add_instruction(Instruction::Assign {
+                target: Value::Identifier(field.name.clone()),
+                source: value,
+            });
             self.add_instruction(Instruction::EndField);
         }
     }
