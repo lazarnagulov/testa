@@ -99,6 +99,10 @@ pub enum Instruction {
     BeginEnum {
         name: String,
     },
+    BeginDirective {
+        name: String,
+        argument: String,
+    },
     EnumVariant {
         name: String,
         weight: Value,
@@ -189,11 +193,13 @@ pub enum Instruction {
     EndField,
     EndTemplate,
     EndEnum,
+    EndDirective,
 }
 
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Instruction::BeginDirective { name, argument } => write!(f, "BEGIN_DIRECTIVE {name} {argument}"),
             Instruction::BeginEnum { name } => write!(f, "BEGIN_ENUM {name}"),
             Instruction::EnumVariant { name, weight } => {
                 write!(f, "    VARIANT {} {}", name, weight)
@@ -263,6 +269,7 @@ impl fmt::Display for Instruction {
             Instruction::EndField => write!(f, "    END_FIELD"),
             Instruction::EndTemplate => write!(f, "END_TEMPLATE"),
             Instruction::EndEnum => write!(f, "END_ENUM"),
+            Instruction::EndDirective => write!(f, "END_DIRECTIVE"),
         }
     }
 }

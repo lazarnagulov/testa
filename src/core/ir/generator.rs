@@ -53,8 +53,9 @@ impl IRGenerator {
                     name,
                     body: fields,
                 } => self.generate_template(parent.clone(), attributes, name, fields),
-                Statement::OutputDirective { .. } => todo!(),
-                Statement::OutputPathDirective { .. } => todo!(),
+                Statement::OutputDirective { argument, options } => self.generate_directive("output", argument, options),
+                // TODO: do something with to_str().unwrap()?
+                Statement::OutputPathDirective { argument } => self.generate_directive("output_path", argument.to_str().unwrap(), &[]),
                 Statement::TypeDecl {
                     name,
                     data_type,
@@ -79,10 +80,10 @@ impl IRGenerator {
             ExpressionKind::FloatLiteral(value) => Value::Float(value.parse::<f32>().unwrap()),
             ExpressionKind::StringLiteral(value) => Value::Str(value.clone()),
             ExpressionKind::BooleanLiteral(value) => Value::Boolean(*value),
-            ExpressionKind::StringPattern(..) => todo!(),
+            ExpressionKind::StringPattern(..) => todo!("Implement string pattern expression"),
             ExpressionKind::Identifier(identifier) => Value::Identifier(identifier.clone()),
-            ExpressionKind::List(..) => todo!(),
-            ExpressionKind::Type(..) => todo!(),
+            ExpressionKind::List(..) => todo!("Implement list expression"),
+            ExpressionKind::Type(..) => todo!("Implement type expression"),
             ExpressionKind::Prefix {
                 operator,
                 expression,
@@ -290,4 +291,15 @@ impl IRGenerator {
             self.add_instruction(Instruction::EndField);
         }
     }
+    
+    fn generate_directive(&mut self, name: &str, argument: &str, options: &[Field]) -> Value {
+        self.add_instruction(Instruction::BeginDirective {
+            name: name.to_owned(),
+            argument: argument.to_owned()
+        });
+        self.generate_fields(options);
+        self.add_instruction(Instruction::EndDirective);
+        Value::NoValue
+    }
+
 }
