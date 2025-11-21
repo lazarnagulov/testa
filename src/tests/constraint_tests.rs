@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-    core::parser::{Parser, parser_error::ParserError},
+    core::{parser::{Parser, parser_error::ParserError}},
     interpreter::{context::Context, evaluator},
 };
 
@@ -72,5 +72,6 @@ fn handle_parser_error(error: ParserError) {
             "{}:{} ERROR: Cannot put attribute on {}",
             span.line, span.line_offset, token
         ),
+        ParserError::LexerError(lexer_error) => panic!("{}", lexer_error.to_string())
     }
 }

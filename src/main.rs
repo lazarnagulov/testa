@@ -76,12 +76,12 @@ fn main() {
                 span.line_offset,
                 token
             ),
+            ParserError::LexerError(lexer_error) => lexer_error.to_string(),
         };
         eprintln!("{}", error_message);
         std::process::exit(1);
     });
     let mut context = Context::default();
-
     evaluator::evaluate(program, &mut context).unwrap_or_else(|err| {
         let error_message = match err {
             EvalError::UnsupportedPrefixOperator { operator, object } => {

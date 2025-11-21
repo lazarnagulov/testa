@@ -1,4 +1,4 @@
-use crate::core::utils::span::Span;
+use crate::core::{lexer::lexer_error::LexerError, utils::span::Span};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ParserError {
@@ -11,6 +11,7 @@ pub enum ParserError {
     InvalidDirective(Span),
     InvalidAttribute(Span, String),
     UnexpectedEOF,
+    LexerError(LexerError),
     InvalidStringPattern(Span, String),
     Syntax(Span, String),
 }
@@ -30,5 +31,11 @@ impl ParserError {
 
     pub fn syntax_err(s: &str, span: Span) -> Self {
         Self::Syntax(span, format!("Syntax error: {s}"))
+    }
+}
+
+impl From<LexerError> for ParserError {
+    fn from(err: LexerError) -> Self {
+        ParserError::LexerError(err) 
     }
 }
