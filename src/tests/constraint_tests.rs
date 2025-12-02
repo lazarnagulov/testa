@@ -1,50 +1,77 @@
-    use crate::{
-        core::parser::{parser_error::ParserError, Parser}, interpreter::{context::Context, evaluator},
-    };
+use std::path::Path;
 
-    #[test]
-    fn evaluate_type_declaration() {
-        let source = "type even_positive_int = int [range=0..=1024, multiple_of=2];";
-        let mut parser = Parser::new(source);
-        match parser.parse() {
-            Ok(program) => {
-                let mut context = Context::default();
-                evaluator::evaluate(program, &mut context).unwrap();
-                let data_type = context.get_type("even_positive_int");
-                assert!(data_type.is_some());
-                assert_eq!(data_type.unwrap().constraints.len(), 2);
-            }
-            Err(error) => handle_parser_error(error),
-        }
-    }
+use crate::{
+    core::{parser::{Parser, error::ParserError}},
+    interpreter::{context::Context, evaluator},
+};
 
-    #[test]
-    fn evluate_extend_type() {
-        let source = "type positive_int = int [range=0..=1024]; type even_positive_int = extend positive_int with [multiple_of=2];";
-        let mut parser = Parser::new(source);
-        match parser.parse() {
-            Ok(program) => {
-                let mut context = Context::default();
-                evaluator::evaluate(program, &mut context).unwrap();
-                let data_type = context.get_type("even_positive_int");
-                assert!(data_type.is_some());
-                // TODO: add proper assertions
-                println!("{:?}", data_type);
-            }
-            Err(error) => handle_parser_error(error),
+#[test]
+fn evaluate_type_declaration() {
+    let source = "type even_positive_int = int [range=0..=1024, multiple_of=2];";
+    let mut parser = Parser::new(source, Path::new(""));
+    match parser.parse() {
+        Ok(program) => {
+            let mut context = Context::default();
+            evaluator::evaluate(program, &mut context).unwrap();
+            let data_type = context.get_type("even_positive_int");
+            assert!(data_type.is_some());
+            assert_eq!(data_type.unwrap().constraints.len(), 2);
         }
+        Err(error) => handle_parser_error(error),
     }
+}
 
-    fn handle_parser_error(error: ParserError) {
-        match error {
-            ParserError::Expected { expected, got } => panic!("Expected {} got {}", expected, got),
-            ParserError::UnexpectedEOF => panic!("Unexpected end of file"),
-            ParserError::InvalidDirective => panic!("Invalid directive"),
-            ParserError::Syntax(message) => panic!("{}", message),
-            ParserError::UndefinedConstraint => panic!("Undefined constraint"),
-            ParserError::InvalidStringPattern(pattern) => {
-                panic!("Invalid string pattern '{}'", pattern)
-            }
-            ParserError::InvalidAttribute(token) => panic!("Cannot put attribute on {}", token),
+#[test]
+fn evluate_extend_type() {
+    let source = "type positive_int = int [range=0..=1024]; type even_positive_int = extend positive_int with [multiple_of=2];";
+    let mut parser = Parser::new(source, Path::new(""));
+    match parser.parse() {
+        Ok(program) => {
+            let mut context = Context::default();
+            evaluator::evaluate(program, &mut context).unwrap();
+            let data_type = context.get_type("even_positive_int");
+            assert!(data_type.is_some());
+            // TODO: add proper assertions
+            println!("{:?}", data_type);
         }
+        Err(error) => handle_parser_error(error),
     }
+}
+
+fn handle_parser_error(error: ParserError) {
+    match error {
+        ParserError::Expected {
+            span,
+            expected,
+            got,
+        } => {
+            panic!(
+                "{}:{} ERROR: Expected '{}' but got '{}'",
+                span., span.line_offset, expected, got
+            )
+        }
+        ParserError::InvalidDirective { span} => panic!(
+            "{}:{} ERROR: Invalid directive",
+            span.line, span.line_offset
+        ),
+        ParserError::UnexpectedEof { .. } => {
+            panic!("ERROR: Missing enclosing \" or ;")
+        }
+        ParserError::Syntax { span, message } => {
+            panic!("{}:{} ERROR: {}", span.line, span.line_offset, message)
+        }
+        ParserError::UndefinedConstraint { span} => panic!(
+            "{}:{} ERROR: Undefined constraint",
+            span.line, span.line_offset
+        ),
+        ParserError::InvalidStringPattern { span, pattern} => panic!(
+            "{}:{} ERROR: Invalid pattern {}",
+            span.line, span.line_offset, pattern
+        ),
+        ParserError::InvalidAttribute { span, token} => panic!(
+            "{}:{} ERROR: Cannot put attribute on {}",
+            span.line, span.line_offset, token
+        ),
+        ParserError::LexerError(lexer_error) => panic!("{}", lexer_error.to_string())
+    }
+}

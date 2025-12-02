@@ -1,7 +1,7 @@
-use std::{env, fs::File, io::Read};
+use std::{ env, fs::File, io::Read, path::Path};
 
 use testa::{
-    core::parser::{Parser, parser_error::*},
+    core::parser::Parser,
     interpreter::{context::Context, eval_error::EvalError, evaluator},
 };
 
@@ -11,7 +11,7 @@ fn main() {
         eprintln!("Expected file path");
         std::process::exit(1);
     }
-    let file_path = &args[1];
+    let file_path = Path::new(&args[1]);
 
     let mut file = File::open(file_path).unwrap_or_else(|err| {
         eprintln!("Failed to open file: {}", err);
@@ -23,22 +23,9 @@ fn main() {
         eprintln!("Failed to read file: {}", err);
         std::process::exit(1);
     });
-    let mut parser = Parser::new(&source);
-    let program = parser.parse().unwrap_or_else(|err| {
-        let error_message = match err {
-            ParserError::Expected { expected, got } => {
-                format!("Expected '{}' but got '{}'", expected, got)
-            }
-            ParserError::InvalidDirective => "Invalid directive".to_string(),
-            ParserError::UnexpectedEOF => "Missing enclosing \" or ;".to_string(),
-            ParserError::Syntax(error) => error,
-            ParserError::UndefinedConstraint => "Undefined constraint".to_string(),
-            ParserError::InvalidStringPattern(pattern) => format!("Invalid pattern {}", pattern),
-            ParserError::InvalidAttribute(token) => format!("Cannot put attribute on {}", token),
-        };
-        eprintln!("{}", error_message);
-        std::process::exit(1);
-    });
+    let mut parser = Parser::new(&source, file_path);
+    let program = parser.parse().unwrap();
+
     let mut context = Context::default();
 
     evaluator::evaluate(program, &mut context).unwrap_or_else(|err| {

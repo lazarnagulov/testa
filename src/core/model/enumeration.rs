@@ -1,7 +1,7 @@
 use rand::Rng;
 
 use crate::{
-    core::ast::nodes::Variant,
+    core::ast::Variant,
     interpreter::{
         context::{Context, Visitor},
         eval_error::EvalError,

@@ -1,5 +1,5 @@
 use crate::{
-    core::ast::nodes::{InfixOperator, PrefixOperator},
+    core::ast::{InfixOperator, PrefixOperator},
     interpreter::object::Object,
 };
 

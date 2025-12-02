@@ -2,15 +2,17 @@ use std::{collections::HashMap, fmt::Display};
 
 use once_cell::sync::Lazy;
 
+use crate::core::{lexer::error::LexerError, utils::span::Span};
+
 pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
     let mut m: HashMap<&str, TokenKind> = HashMap::new();
-    m.insert("@output", TokenKind::Output);
-    m.insert("@generate", TokenKind::Generate);
-    m.insert("@seed", TokenKind::Seed);
-    m.insert("@output_path", TokenKind::OutputPath);
-    m.insert("$pick", TokenKind::Pick);
-    m.insert("$uuid", TokenKind::Uuid);
-    m.insert("$template", TokenKind::Uuid);
+    m.insert("output", TokenKind::Output);
+    m.insert("generate", TokenKind::Generate);
+    m.insert("seed", TokenKind::Seed);
+    m.insert("output_path", TokenKind::OutputPath);
+    m.insert("pick", TokenKind::Pick);
+    m.insert("uuid", TokenKind::Uuid);
+    m.insert("template", TokenKind::Uuid);
     m.insert("template", TokenKind::Template);
     m.insert("resource", TokenKind::Resource);
     m.insert("with", TokenKind::With);
@@ -99,6 +101,7 @@ pub enum TokenKind {
     GreaterThanOrEqual, // >=
 
     Identifier,
+    Error(LexerError),
     Tag,
     IntLiteral,
     StringLiteral,
@@ -171,6 +174,7 @@ impl Display for TokenKind {
             TokenKind::Enum => "enum",
             TokenKind::False => "false",
             TokenKind::True => "true",
+            TokenKind::Error(lexer_error) => &format!("error({})", lexer_error),
         };
         f.write_str(str)
     }
@@ -179,12 +183,11 @@ impl Display for TokenKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub start: usize,
-    pub size: usize,
+    pub span: Span,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, start: usize, size: usize) -> Self {
-        Token { kind, start, size }
+    pub fn new(kind: TokenKind, span: Span) -> Self {
+        Token { kind, span }
     }
 }

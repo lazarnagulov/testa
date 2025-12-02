@@ -1,13 +1,24 @@
+pub mod error;
 pub mod token;
 
 use std::{iter::Peekable, str::CharIndices};
 
-use crate::core::lexer::token::{KEYWORD_REGISTRY, Token, TokenKind};
+use crate::core::{
+    lexer::{
+        error::LexerError,
+        token::{KEYWORD_REGISTRY, Token, TokenKind},
+    },
+    utils::span::{Location, Span},
+};
 
 #[derive(Clone, Debug)]
 pub struct Lexer<'src> {
     content: &'src str,
     chars: Peekable<CharIndices<'src>>,
+
+    pub line: u32,
+    pub column: u32,
+    pub current_offset: usize,
 }
 
 impl<'src> Lexer<'src> {
@@ -15,7 +26,14 @@ impl<'src> Lexer<'src> {
         Lexer {
             content: program,
             chars: program.char_indices().peekable(),
+            line: 1,
+            column: 1,
+            current_offset: 0,
         }
+    }
+
+    fn current_location(&self) -> Location {
+        Location::new(self.current_offset, self.line, self.column)
     }
 
     fn peek(&mut self) -> Option<(usize, char)> {
@@ -26,196 +44,199 @@ impl<'src> Lexer<'src> {
         self.chars.clone().nth(n - 1)
     }
 
-    fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Result<Token, LexerError> {
         use crate::core::lexer::token::TokenKind::*;
         let registry = &KEYWORD_REGISTRY;
         self.skip_whitespaces();
 
-        let Some((current_index, current_char)) = self.peek() else {
-            return Token::new(Eof, self.content.len(), 1);
+        let Some((_, current_char)) = self.peek() else {
+            let loc = Location::new(self.content.len(), self.line, self.column);
+            return Ok(Token::new(Eof, Span::single_char(loc)));
         };
 
+        let start_location = self.current_location();
+
         match current_char {
-            '(' => self.make_single_char_token(current_index, LParen),
-            ')' => self.make_single_char_token(current_index, RParen),
-            '{' => self.make_single_char_token(current_index, LBrace),
-            '}' => self.make_single_char_token(current_index, RBrace),
-            ':' => self.make_single_char_token(current_index, Colon),
-            ',' => self.make_single_char_token(current_index, Comma),
+            '(' => Ok(self.make_single_char_token(start_location, LParen)),
+            ')' => Ok(self.make_single_char_token(start_location, RParen)),
+            '{' => Ok(self.make_single_char_token(start_location, LBrace)),
+            '}' => Ok(self.make_single_char_token(start_location, RBrace)),
+            ':' => Ok(self.make_single_char_token(start_location, Colon)),
+            ',' => Ok(self.make_single_char_token(start_location, Comma)),
             '#' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '[')
-                    .is_some()
+                self.advance();
+                if self.consume_if('[')
                 {
-                    self.make_attribute(current_index)
+                    self.make_attribute(start_location)
                 } else {
-                    panic!("Invalid token #");
+                    Err(LexerError::InvalidToken {
+                        span: Span::single_char(start_location),
+                        token: '#',
+                    })
                 }
             }
-            ';' => self.make_single_char_token(current_index, Semicolon),
-            '%' => self.make_single_char_token(current_index, Percent),
-            '[' => self.make_single_char_token(current_index, LBracket),
-            ']' => self.make_single_char_token(current_index, RBracket),
+            ';' => Ok(self.make_single_char_token(start_location, Semicolon)),
+            '%' => Ok(self.make_single_char_token(start_location, Percent)),
+            '[' => Ok(self.make_single_char_token(start_location, LBracket)),
+            ']' => Ok(self.make_single_char_token(start_location, RBracket)),
             '.' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '.')
-                    .is_some()
+                self.advance();
+                if self.consume_if('.')
                 {
-                    if self
-                        .chars
-                        .next_if(|(_, next_char)| *next_char == '=')
-                        .is_some()
+                    if self.consume_if('=')
                     {
-                        Token::new(DoublePeriodEqual, current_index, 3)
+                        Ok(Token::new(
+                            DoublePeriodEqual,
+                            Span::from_len(start_location, 3),
+                        ))
                     } else {
-                        Token::new(DoublePeriod, current_index, 2)
+                        Ok(Token::new(DoublePeriod, Span::from_len(start_location, 2)))
                     }
                 } else {
-                    Token::new(SinglePeriod, current_index, 1)
+                    Ok(Token::new(SinglePeriod, Span::single_char(start_location)))
                 }
             }
-            '+' => self.make_single_char_token(current_index, Plus),
-            '-' => self.make_single_char_token(current_index, Minus),
-            '*' => self.make_single_char_token(current_index, Asterisk),
+            '+' => Ok(self.make_single_char_token(start_location, Plus)),
+            '-' => Ok(self.make_single_char_token(start_location, Minus)),
+            '*' => Ok(self.make_single_char_token(start_location, Asterisk)),
             '&' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '&')
-                    .is_some()
+                self.advance();
+                if self.consume_if('&')
                 {
-                    Token::new(And, current_index, 2)
+                    Ok(Token::new(And, Span::from_len(start_location, 2)))
                 } else {
-                    Token::new(BitAnd, current_index, 1)
+                    Ok(Token::new(BitAnd, Span::single_char(start_location)))
                 }
             }
-            '~' => self.make_single_char_token(current_index, BitNegate),
+            '~' => Ok(self.make_single_char_token(start_location, BitNegate)),
             '|' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '|')
-                    .is_some()
+                self.advance();
+                if self.consume_if('|')
                 {
-                    Token::new(Or, current_index, 2)
+                    Ok(Token::new(Or, Span::from_len(start_location, 2)))
                 } else {
-                    Token::new(BitOr, current_index, 1)
+                    Ok(Token::new(BitOr, Span::single_char(start_location)))
                 }
             }
-            '^' => self.make_single_char_token(current_index, BitXor),
+            '^' => Ok(self.make_single_char_token(start_location, BitXor)),
             '=' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                self.advance();
+                if self.consume_if('=')
                 {
-                    Token::new(DoubleEqual, current_index, 2)
-                } else if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '>')
-                    .is_some()
+                    Ok(Token::new(DoubleEqual, Span::from_len(start_location, 2)))
+                } else if self.consume_if('>')
                 {
-                    Token::new(Arrow, current_index, 2)
+                    Ok(Token::new(Arrow, Span::from_len(start_location, 2)))
                 } else {
-                    Token::new(SingleEqual, current_index, 1)
+                    Ok(Token::new(SingleEqual, Span::single_char(start_location)))
                 }
             }
             '!' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                self.advance();
+                if self.consume_if('=')
                 {
-                    Token::new(NotEqual, current_index, 2)
+                    Ok(Token::new(NotEqual, Span::from_len(start_location, 2)))
                 } else {
-                    Token::new(ExclamationMark, current_index, 1)
+                    Ok(Token::new(
+                        ExclamationMark,
+                        Span::single_char(start_location),
+                    ))
                 }
             }
             '"' => {
-                self.next();
-                let size = self.read_string(current_index);
-                Token::new(StringLiteral, current_index, size)
+                self.advance();
+                let end_location = self.read_string(start_location)?;
+                Ok(Token::new(
+                    StringLiteral,
+                    Span::new(start_location, end_location),
+                ))
             }
             '<' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                self.advance();
+                if self.consume_if('=')
                 {
-                    Token::new(LessThanOrEqual, current_index, 2)
-                } else if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '<')
-                    .is_some()
+                    Ok(Token::new(
+                        LessThanOrEqual,
+                        Span::from_len(start_location, 2),
+                    ))
+                } else if self.consume_if('<')
                 {
-                    Token::new(BitLShift, current_index, 2)
+                    Ok(Token::new(BitLShift, Span::from_len(start_location, 2)))
                 } else {
-                    Token::new(LessThan, current_index, 1)
+                    Ok(Token::new(LessThan, Span::single_char(start_location)))
                 }
             }
             '>' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                self.advance();
+                if self.consume_if('=')
                 {
-                    Token::new(GreaterThanOrEqual, current_index, 2)
-                } else if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '>')
-                    .is_some()
+                    Ok(Token::new(
+                        GreaterThanOrEqual,
+                        Span::from_len(start_location, 2),
+                    ))
+                } else if self.consume_if('>')
                 {
-                    Token::new(BitRShift, current_index, 2)
+                    Ok(Token::new(BitRShift, Span::from_len(start_location, 2)))
                 } else {
-                    Token::new(GreaterThan, current_index, 1)
+                    Ok(Token::new(GreaterThan, Span::single_char(start_location)))
                 }
             }
             '/' => {
-                self.next();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '/')
-                    .is_some()
+                self.advance();
+                if self.consume_if('/')
                 {
                     self.skip_line();
                     self.next_token()
                 } else {
-                    Token::new(Slash, current_index, 1)
+                    Ok(Token::new(Slash, Span::single_char(start_location)))
                 }
             }
             '$' => {
-                self.next();
-                let builtin = self.read_identifier(current_index);
+                self.advance();
+                let (builtin, end_location) = self.read_identifier();
                 match registry.get(builtin) {
-                    Some(kind) => Token::new(kind.clone(), current_index, builtin.len()),
-                    None => panic!("Invalid builtin {}", builtin),
+                    Some(kind) => Ok(Token::new(
+                        kind.clone(),
+                        Span::new(start_location, end_location),
+                    )),
+                    None => Err(LexerError::InvalidBuiltIn {
+                        span: Span::new(start_location, end_location),
+                        value: builtin.to_string(),
+                    }),
                 }
             }
             '@' => {
-                self.next();
-                let directive = self.read_identifier(current_index);
+                self.advance();
+                let (directive, end_location) = self.read_identifier();
                 match registry.get(directive) {
-                    Some(kind) => Token::new(kind.clone(), current_index, directive.len()),
-                    None => panic!("Invalid directive {}", directive),
+                    Some(kind) => Ok(Token::new(
+                        kind.clone(),
+                        Span::new(start_location, end_location),
+                    )),
+                    None => Err(LexerError::InvalidDirective {
+                        span: Span::new(start_location, end_location),
+                        value: directive.to_string(),
+                    }),
                 }
             }
             'a'..='z' | 'A'..='Z' | '_' => {
-                let identifier = self.read_identifier(current_index);
+                let (identifier, end_location) = self.read_identifier();
                 match registry.get(identifier) {
-                    Some(kind) => Token::new(kind.clone(), current_index, identifier.len()),
-                    None => Token::new(Identifier, current_index, identifier.len()),
+                    Some(kind) => Ok(Token::new(
+                        kind.clone(),
+                        Span::new(start_location, end_location),
+                    )),
+                    None => Ok(Token::new(
+                        Identifier,
+                        Span::new(start_location, end_location),
+                    )),
                 }
             }
-            '0'..='9' => self.make_number_token(current_index),
-            c => panic!("Invalid token {}", c),
+            '0'..='9' => self.make_number_token(start_location),
+            c => Err(LexerError::InvalidToken {
+                span: Span::single_char(start_location),
+                token: c,
+            }),
         }
     }
 
@@ -224,125 +245,170 @@ impl<'src> Lexer<'src> {
             if c == '\n' {
                 return;
             }
-            self.next();
+            self.advance();
         }
     }
 
-    fn read_identifier(&mut self, position: usize) -> &'src str {
-        let mut last = position;
+    fn read_identifier(&mut self) -> (&'src str, Location) {
+        let start = self.current_offset;
+        let mut end_location = self.current_location();
+
         while self
             .peek()
-            .is_some_and(|(_, c)| c.is_ascii_alphabetic() || c == '_')
+            .is_some_and(|(_, c)| c.is_ascii_alphanumeric() || c == '_')
         {
-            let token = self.next().unwrap();
-            last = token.0;
+            self.advance();
+            end_location = self.current_location();
         }
-        &self.content[position..=last]
+
+        (&self.content[start..self.current_offset], end_location)
     }
 
-    fn make_number_token(&mut self, position: usize) -> Token {
-        let mut last = position;
+    fn make_number_token(&mut self, start_location: Location) -> Result<Token, LexerError> {
         let mut is_float = false;
+        let mut end_location = start_location;
+
         while self
             .peek()
             .is_some_and(|(_, c)| c.is_ascii_digit() || c == '.')
         {
             if self.peek().unwrap().1 == '.' && self.peek_n(2).is_some_and(|(_, c)| c == '.') {
-                return Token::new(
+                return Ok(Token::new(
                     if is_float {
                         TokenKind::FloatLiteral
                     } else {
                         TokenKind::IntLiteral
                     },
-                    position,
-                    last - position + 1,
-                );
+                    Span::new(start_location, end_location),
+                ));
             }
 
-            let token = self.next().unwrap();
-            if is_float && token.1 == '.' {
-                panic!("Invalid float literal");
-            } else if token.1 == '.' {
+            let (_, ch) = self
+                .advance()
+                .expect("Next should exist, it is checked in while.");
+
+            if is_float && ch == '.' {
+                return Err(LexerError::InvalidNumberLiteral {
+                    span: Span::new(start_location, self.current_location()),
+                    value: "#".to_string(),
+                });
+            } else if ch == '.' {
                 is_float = true;
             }
-            last = token.0;
+
+            end_location = self.current_location();
         }
 
-        if let Some((_, char)) = self.peek() {
-            if !matches!(char, ' ' | ';' | ',' | ']' | ')') {
-                panic!("Invalid int or float literal");
+        if let Some((_, c)) = self.peek() {
+            if !matches!(c, ' ' | ';' | ',' | ']' | ')') {
+                return Err(LexerError::InvalidNumberLiteral {
+                    span: Span::new(start_location, end_location),
+                    value: c.to_string(),
+                });
             }
         }
-
-        Token::new(
+        Ok(Token::new(
             if is_float {
                 TokenKind::FloatLiteral
             } else {
                 TokenKind::IntLiteral
             },
-            position,
-            last - position + 1,
-        )
+            Span::new(start_location, end_location),
+        ))
     }
 
-    fn read_string(&mut self, position: usize) -> usize {
-        let mut last = position;
+    fn read_string(&mut self, start_location: Location) -> Result<Location, LexerError> {
+        let mut end_location = self.current_location();
+
         while self.peek().is_some_and(|(_, c)| c != '"') {
-            let (current_position, ch) = self.next().unwrap();
+            let (_, ch) = self
+                .advance()
+                .expect("Next should exist, it is checked in while.");
+
             if ch == '\n' {
-                panic!("Invalid string literal: missing closing quote");
+                return Err(LexerError::MissingChar {
+                    span: Span::new(start_location, self.current_location()),
+                    expected: '"',
+                });
             }
-            last = current_position;
+
+            end_location = self.current_location();
         }
-        match self.next() {
-            Some(..) => {}
-            None => panic!("Invalid string literal: missing closing quote"),
-        }
-        // Add "" to size
-        2 + last - position
+
+        self.advance().ok_or_else(|| LexerError::MissingChar {
+            span: Span::new(start_location, end_location),
+            expected: '"',
+        })?;
+
+        Ok(self.current_location())
     }
 
-    fn make_attribute(&mut self, position: usize) -> Token {
-        let mut last = position;
+    fn make_attribute(&mut self, start_location: Location) -> Result<Token, LexerError> {
+        let mut end_location = self.current_location();
+
         while self.peek().is_some_and(|(_, c)| c != ']') {
-            let (current_position, _) = self
-                .next()
-                .expect("This will always be Some, since it is checked in while");
-            last = current_position;
+            self.advance();
+            end_location = self.current_location();
         }
-        match self.next() {
-            Some(..) => {}
-            None => panic!("Invalid attribute: missing closing brace"),
-        }
-        Token::new(TokenKind::Tag, position, last - position + 1)
+
+        self.advance().ok_or_else(|| LexerError::MissingChar {
+            span: Span::new(start_location, end_location),
+            expected: ']',
+        })?;
+
+        Ok(Token::new(
+            TokenKind::Tag,
+            Span::new(start_location, self.current_location()),
+        ))
     }
 
-    fn make_single_char_token(&mut self, current_index: usize, kind: TokenKind) -> Token {
-        let token = Token::new(kind, current_index, 1);
-        self.next();
+    fn consume_if(&mut self, expected: char) -> bool {
+        if self.peek().is_some_and(|(_, c)| c == expected) {
+            self.advance();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn make_single_char_token(&mut self, location: Location, kind: TokenKind) -> Token {
+        let token = Token::new(kind, Span::single_char(location));
+        self.advance();
         token
     }
 
-    fn next(&mut self) -> Option<(usize, char)> {
-        self.chars.next()
+    fn advance(&mut self) -> Option<(usize, char)> {
+        if let Some((idx, ch)) = self.chars.next() {
+            self.current_offset = idx + ch.len_utf8();
+
+            if ch == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+
+            Some((idx, ch))
+        } else {
+            None
+        }
     }
 
     fn skip_whitespaces(&mut self) {
         while self.peek().is_some_and(|(_, c)| c.is_whitespace()) {
-            self.next();
+            self.advance();
         }
     }
 }
 
 impl Iterator for Lexer<'_> {
-    type Item = Token;
+    type Item = Result<Token, LexerError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let token = self.next_token();
-        if token.kind == TokenKind::Eof {
-            None
-        } else {
-            Some(token)
+        match self.next_token() {
+            Ok(token) if token.kind == TokenKind::Eof => None,
+            Ok(token) => Some(Ok(token)),
+            Err(error) => Some(Err(error)),
         }
     }
 }
