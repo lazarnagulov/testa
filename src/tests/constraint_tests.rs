@@ -47,7 +47,7 @@ fn handle_parser_error(error: ParserError) {
         } => {
             panic!(
                 "{}:{} ERROR: Expected '{}' but got '{}'",
-                span.line, span.line_offset, expected, got
+                span., span.line_offset, expected, got
             )
         }
         ParserError::InvalidDirective { span} => panic!(

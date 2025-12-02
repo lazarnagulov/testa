@@ -60,39 +60,39 @@ impl ParserError {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
             Self::Expected { span, expected, got } => {
-                Diagnostic::error(span.clone(), format!("Expected {} but got {}", expected, got))
+                Diagnostic::error(*span, format!("Expected {} but got {}", expected, got))
                     .with_code(DiagnosticCode::ExpectedToken)
             }
 
             Self::UndefinedConstraint { span } => {
-                Diagnostic::error(span.clone(), "Undefined constraint".to_string())
+                Diagnostic::error(*span, "Undefined constraint".to_string())
                     .with_code(DiagnosticCode::UndefinedConstraint)
             }
 
             Self::InvalidDirective { span } => {
-                Diagnostic::error(span.clone(), "Invalid directive".to_string())
+                Diagnostic::error(*span, "Invalid directive".to_string())
                     .with_code(DiagnosticCode::InvalidDirective)
             }
 
             Self::InvalidAttribute { span, token } => {
-                Diagnostic::error(span.clone(), format!("Invalid attribute '{}'", token))
+                Diagnostic::error(*span, format!("Invalid attribute '{}'", token))
                     .with_code(DiagnosticCode::InvalidAttribute)
             }
 
             Self::UnexpectedEof { span } => {
-                Diagnostic::error(span.clone(), "Unexpected end of file".to_string())
+                Diagnostic::error(*span, "Unexpected end of file".to_string())
                     .with_code(DiagnosticCode::UnexpectedEof)
             }
 
             Self::LexerError(err) => err.to_diagnostic(),
 
             Self::InvalidStringPattern { span, pattern } => {
-                Diagnostic::error(span.clone(), format!("Invalid string pattern '{}'", pattern))
+                Diagnostic::error(*span, format!("Invalid string pattern '{}'", pattern))
                     .with_code(DiagnosticCode::InvalidStringPattern)
             }
 
             Self::Syntax { span, message } => {
-                Diagnostic::error(span.clone(), message)
+                Diagnostic::error(*span, message)
                     .with_code(DiagnosticCode::SyntaxError)
             }
         }

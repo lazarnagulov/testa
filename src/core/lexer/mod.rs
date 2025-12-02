@@ -8,7 +8,7 @@ use crate::core::{
         error::LexerError,
         token::{KEYWORD_REGISTRY, Token, TokenKind},
     },
-    utils::span::Span,
+    utils::span::{Location, Span},
 };
 
 #[derive(Clone, Debug)]
@@ -16,21 +16,24 @@ pub struct Lexer<'src> {
     content: &'src str,
     chars: Peekable<CharIndices<'src>>,
 
-    pub line: usize,
-    pub line_offset: usize,
-    pub current_position: usize,
+    pub line: u32,
+    pub column: u32,
+    pub current_offset: usize,
 }
 
 impl<'src> Lexer<'src> {
-
     pub fn new(program: &'src str) -> Self {
         Lexer {
             content: program,
             chars: program.char_indices().peekable(),
             line: 1,
-            line_offset: 1,
-            current_position: 0,
+            column: 1,
+            current_offset: 0,
         }
+    }
+
+    fn current_location(&self) -> Location {
+        Location::new(self.current_offset, self.line, self.column)
     }
 
     fn peek(&mut self) -> Option<(usize, char)> {
@@ -46,20 +49,20 @@ impl<'src> Lexer<'src> {
         let registry = &KEYWORD_REGISTRY;
         self.skip_whitespaces();
 
-        let Some((current_index, current_char)) = self.peek() else {
-            return Ok(Token::new(
-                Eof,
-                Span::new(self.content.len(), 1, self.line, self.line_offset),
-            ));
+        let Some((_, current_char)) = self.peek() else {
+            let loc = Location::new(self.content.len(), self.line, self.column);
+            return Ok(Token::new(Eof, Span::single_char(loc)));
         };
 
+        let start_location = self.current_location();
+
         match current_char {
-            '(' => Ok(self.make_single_char_token(current_index, LParen)),
-            ')' => Ok(self.make_single_char_token(current_index, RParen)),
-            '{' => Ok(self.make_single_char_token(current_index, LBrace)),
-            '}' => Ok(self.make_single_char_token(current_index, RBrace)),
-            ':' => Ok(self.make_single_char_token(current_index, Colon)),
-            ',' => Ok(self.make_single_char_token(current_index, Comma)),
+            '(' => Ok(self.make_single_char_token(start_location, LParen)),
+            ')' => Ok(self.make_single_char_token(start_location, RParen)),
+            '{' => Ok(self.make_single_char_token(start_location, LBrace)),
+            '}' => Ok(self.make_single_char_token(start_location, RBrace)),
+            ':' => Ok(self.make_single_char_token(start_location, Colon)),
+            ',' => Ok(self.make_single_char_token(start_location, Comma)),
             '#' => {
                 self.advance();
                 if self
@@ -67,18 +70,18 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '[')
                     .is_some()
                 {
-                    self.make_attribute(current_index)
+                    self.make_attribute(start_location)
                 } else {
-                    Err(LexerError::InvalidToken { 
-                        span: Span::new(current_index, 1, self.line, self.line_offset), 
-                        token: '#' 
+                    Err(LexerError::InvalidToken {
+                        span: Span::single_char(start_location),
+                        token: '#',
                     })
                 }
             }
-            ';' => Ok(self.make_single_char_token(current_index, Semicolon)),
-            '%' => Ok(self.make_single_char_token(current_index, Percent)),
-            '[' => Ok(self.make_single_char_token(current_index, LBracket)),
-            ']' => Ok(self.make_single_char_token(current_index, RBracket)),
+            ';' => Ok(self.make_single_char_token(start_location, Semicolon)),
+            '%' => Ok(self.make_single_char_token(start_location, Percent)),
+            '[' => Ok(self.make_single_char_token(start_location, LBracket)),
+            ']' => Ok(self.make_single_char_token(start_location, RBracket)),
             '.' => {
                 self.advance();
                 if self
@@ -93,24 +96,24 @@ impl<'src> Lexer<'src> {
                     {
                         Ok(Token::new(
                             DoublePeriodEqual,
-                            Span::new(current_index, 3, self.line, self.line_offset),
+                            Span::from_len(start_location, 3),
                         ))
                     } else {
                         Ok(Token::new(
                             DoublePeriod,
-                            Span::new(current_index, 2, self.line, self.line_offset),
+                            Span::from_len(start_location, 2),
                         ))
                     }
                 } else {
                     Ok(Token::new(
                         SinglePeriod,
-                        Span::new(current_index, 1, self.line, self.line_offset),
+                        Span::single_char(start_location),
                     ))
                 }
             }
-            '+' => Ok(self.make_single_char_token(current_index, Plus)),
-            '-' => Ok(self.make_single_char_token(current_index, Minus)),
-            '*' => Ok(self.make_single_char_token(current_index, Asterisk)),
+            '+' => Ok(self.make_single_char_token(start_location, Plus)),
+            '-' => Ok(self.make_single_char_token(start_location, Minus)),
+            '*' => Ok(self.make_single_char_token(start_location, Asterisk)),
             '&' => {
                 self.advance();
                 if self
@@ -118,18 +121,12 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '&')
                     .is_some()
                 {
-                    Ok(Token::new(
-                        And,
-                        Span::new(current_index, 2, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(And, Span::from_len(start_location, 2)))
                 } else {
-                    Ok(Token::new(
-                        BitAnd,
-                        Span::new(current_index, 1, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(BitAnd, Span::single_char(start_location)))
                 }
             }
-            '~' => Ok(self.make_single_char_token(current_index, BitNegate)),
+            '~' => Ok(self.make_single_char_token(start_location, BitNegate)),
             '|' => {
                 self.advance();
                 if self
@@ -137,18 +134,12 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '|')
                     .is_some()
                 {
-                    Ok(Token::new(
-                        Or,
-                        Span::new(current_index, 2, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(Or, Span::from_len(start_location, 2)))
                 } else {
-                    Ok(Token::new(
-                        BitOr,
-                        Span::new(current_index, 1, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(BitOr, Span::single_char(start_location)))
                 }
             }
-            '^' => Ok(self.make_single_char_token(current_index, BitXor)),
+            '^' => Ok(self.make_single_char_token(start_location, BitXor)),
             '=' => {
                 self.advance();
                 if self
@@ -156,24 +147,15 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '=')
                     .is_some()
                 {
-                    Ok(Token::new(
-                        DoubleEqual,
-                        Span::new(current_index, 2, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(DoubleEqual, Span::from_len(start_location, 2)))
                 } else if self
                     .chars
                     .next_if(|(_, next_char)| *next_char == '>')
                     .is_some()
                 {
-                    Ok(Token::new(
-                        Arrow,
-                        Span::new(current_index, 2, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(Arrow, Span::from_len(start_location, 2)))
                 } else {
-                    Ok(Token::new(
-                        SingleEqual,
-                        Span::new(current_index, 1, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(SingleEqual, Span::single_char(start_location)))
                 }
             }
             '!' => {
@@ -183,23 +165,20 @@ impl<'src> Lexer<'src> {
                     .next_if(|(_, next_char)| *next_char == '=')
                     .is_some()
                 {
-                    Ok(Token::new(
-                        NotEqual,
-                        Span::new(current_index, 2, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(NotEqual, Span::from_len(start_location, 2)))
                 } else {
                     Ok(Token::new(
                         ExclamationMark,
-                        Span::new(current_index, 1, self.line, self.line_offset),
+                        Span::single_char(start_location),
                     ))
                 }
             }
             '"' => {
                 self.advance();
-                let size = self.read_string(current_index)?;
+                let end_location = self.read_string(start_location)?;
                 Ok(Token::new(
                     StringLiteral,
-                    Span::new(current_index, size, self.line, self.line_offset),
+                    Span::new(start_location, end_location),
                 ))
             }
             '<' => {
@@ -211,22 +190,16 @@ impl<'src> Lexer<'src> {
                 {
                     Ok(Token::new(
                         LessThanOrEqual,
-                        Span::new(current_index, 2, self.line, self.line_offset),
+                        Span::from_len(start_location, 2),
                     ))
                 } else if self
                     .chars
                     .next_if(|(_, next_char)| *next_char == '<')
                     .is_some()
                 {
-                    Ok(Token::new(
-                        BitLShift,
-                        Span::new(current_index, 2, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(BitLShift, Span::from_len(start_location, 2)))
                 } else {
-                    Ok(Token::new(
-                        LessThan,
-                        Span::new(current_index, 1, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(LessThan, Span::single_char(start_location)))
                 }
             }
             '>' => {
@@ -238,22 +211,16 @@ impl<'src> Lexer<'src> {
                 {
                     Ok(Token::new(
                         GreaterThanOrEqual,
-                        Span::new(current_index, 2, self.line, self.line_offset),
+                        Span::from_len(start_location, 2),
                     ))
                 } else if self
                     .chars
                     .next_if(|(_, next_char)| *next_char == '>')
                     .is_some()
                 {
-                    Ok(Token::new(
-                        BitRShift,
-                        Span::new(current_index, 2, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(BitRShift, Span::from_len(start_location, 2)))
                 } else {
-                    Ok(Token::new(
-                        GreaterThan,
-                        Span::new(current_index, 1, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(GreaterThan, Span::single_char(start_location)))
                 }
             }
             '/' => {
@@ -266,56 +233,53 @@ impl<'src> Lexer<'src> {
                     self.skip_line();
                     self.next_token()
                 } else {
-                    Ok(Token::new(
-                        Slash,
-                        Span::new(current_index, 1, self.line, self.line_offset),
-                    ))
+                    Ok(Token::new(Slash, Span::single_char(start_location)))
                 }
             }
             '$' => {
                 self.advance();
-                let builtin = self.read_identifier(current_index);
+                let (builtin, end_location) = self.read_identifier();
                 match registry.get(builtin) {
                     Some(kind) => Ok(Token::new(
                         kind.clone(),
-                        Span::new(current_index, builtin.len(), self.line, self.line_offset),
+                        Span::new(start_location, end_location),
                     )),
                     None => Err(LexerError::InvalidBuiltIn {
-                        span: Span::new(current_index, builtin.len(), self.line, self.line_offset),
+                        span: Span::new(start_location, end_location),
                         value: builtin.to_string(),
                     }),
                 }
             }
             '@' => {
                 self.advance();
-                let directive = self.read_identifier(current_index);
+                let (directive, end_location) = self.read_identifier();
                 match registry.get(directive) {
                     Some(kind) => Ok(Token::new(
                         kind.clone(),
-                        Span::new(current_index, directive.len(), self.line, self.line_offset),
+                        Span::new(start_location, end_location),
                     )),
                     None => Err(LexerError::InvalidDirective {
-                        span: Span::new(current_index, directive.len(), self.line, self.line_offset),
+                        span: Span::new(start_location, end_location),
                         value: directive.to_string(),
                     }),
                 }
             }
             'a'..='z' | 'A'..='Z' | '_' => {
-                let identifier = self.read_identifier(current_index);
+                let (identifier, end_location) = self.read_identifier();
                 match registry.get(identifier) {
                     Some(kind) => Ok(Token::new(
                         kind.clone(),
-                        Span::new(current_index, identifier.len(), self.line, self.line_offset),
+                        Span::new(start_location, end_location),
                     )),
                     None => Ok(Token::new(
                         Identifier,
-                        Span::new(current_index, identifier.len(), self.line, self.line_offset),
+                        Span::new(start_location, end_location),
                     )),
                 }
             }
-            '0'..='9' => self.make_number_token(current_index),
+            '0'..='9' => self.make_number_token(start_location),
             c => Err(LexerError::InvalidToken {
-                span: Span::new(current_index, 1, self.line, self.line_offset),
+                span: Span::single_char(start_location),
                 token: c,
             }),
         }
@@ -330,21 +294,25 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    fn read_identifier(&mut self, position: usize) -> &'src str {
-        let mut last = position;
+    fn read_identifier(&mut self) -> (&'src str, Location) {
+        let start = self.current_offset;
+        let mut end_location = self.current_location();
+
         while self
             .peek()
             .is_some_and(|(_, c)| c.is_ascii_alphanumeric() || c == '_')
         {
-            let token = self.advance().unwrap();
-            last = token.0;
+            self.advance();
+            end_location = self.current_location();
         }
-        &self.content[position..=last]
+
+        (&self.content[start..self.current_offset], end_location)
     }
 
-    fn make_number_token(&mut self, position: usize) -> Result<Token, LexerError> {
-        let mut last = position;
+    fn make_number_token(&mut self, start_location: Location) -> Result<Token, LexerError> {
         let mut is_float = false;
+        let mut end_location = start_location;
+
         while self
             .peek()
             .is_some_and(|(_, c)| c.is_ascii_digit() || c == '.')
@@ -356,36 +324,31 @@ impl<'src> Lexer<'src> {
                     } else {
                         TokenKind::IntLiteral
                     },
-                    Span::new(position, last - position + 1, self.line, self.line_offset),
+                    Span::new(start_location, end_location),
                 ));
             }
 
-            let token = self
+            let (_, ch) = self
                 .advance()
                 .expect("Next should exist, it is checked in while.");
-            if is_float && token.1 == '.' {
-                return Err(LexerError::InvalidNumberLiteral { span: Span::new(
-                    position,
-                    last - position + 1,
-                    self.line,
-                    self.line_offset),
+            
+            if is_float && ch == '.' {
+                return Err(LexerError::InvalidNumberLiteral {
+                    span: Span::new(start_location, self.current_location()),
                     value: "#".to_string(),
                 });
-            } else if token.1 == '.' {
+            } else if ch == '.' {
                 is_float = true;
             }
-            last = token.0;
+            
+            end_location = self.current_location();
         }
 
         if let Some((_, char)) = self.peek() {
             if !matches!(char, ' ' | ';' | ',' | ']' | ')') {
                 return Err(LexerError::InvalidNumberLiteral {
-                    span: Span::new(
-                    position,
-                    last - position,
-                    self.line,
-                    self.line_offset),
-                    value: "#".to_string()
+                    span: Span::new(start_location, end_location),
+                    value: "#".to_string(),
                 });
             }
         }
@@ -396,67 +359,73 @@ impl<'src> Lexer<'src> {
             } else {
                 TokenKind::IntLiteral
             },
-            Span::new(position, last - position + 1, self.line, self.line_offset),
+            Span::new(start_location, end_location),
         ))
     }
 
-    fn read_string(&mut self, position: usize) -> Result<usize, LexerError> {
-        let mut last = position;
+    fn read_string(&mut self, start_location: Location) -> Result<Location, LexerError> {
+        let mut end_location = self.current_location();
+
         while self.peek().is_some_and(|(_, c)| c != '"') {
-            let (current_position, ch) = self
+            let (_, ch) = self
                 .advance()
                 .expect("Next should exist, it is checked in while.");
+            
             if ch == '\n' {
                 return Err(LexerError::MissingChar {
-                    span: Span::new(position, last - position, self.line, self.line_offset),
+                    span: Span::new(start_location, self.current_location()),
                     expected: '"',
                 });
             }
-            last = current_position;
+            
+            end_location = self.current_location();
         }
-        self.advance().ok_or(LexerError::MissingChar {
-            span: Span::new(position, last, self.line, self.line_offset),
+
+        self.advance().ok_or_else(|| LexerError::MissingChar {
+            span: Span::new(start_location, end_location),
             expected: '"',
         })?;
-        Ok(2 + last - position)
+
+        Ok(self.current_location())
     }
 
-    fn make_attribute(&mut self, position: usize) -> Result<Token, LexerError> {
-        let mut last = position;
+    fn make_attribute(&mut self, start_location: Location) -> Result<Token, LexerError> {
+        let mut end_location = self.current_location();
+
         while self.peek().is_some_and(|(_, c)| c != ']') {
-            let (current_position, _) = self
-                .advance()
-                .expect("This will always be Some, since it is checked in while");
-            last = current_position;
+            self.advance();
+            end_location = self.current_location();
         }
-        self.advance().ok_or(LexerError::MissingChar {
-            span: Span::new(position, last - position, self.line, self.line_offset),
+
+        self.advance().ok_or_else(|| LexerError::MissingChar {
+            span: Span::new(start_location, end_location),
             expected: ']',
         })?;
+
         Ok(Token::new(
             TokenKind::Tag,
-            Span::new(position, last - position + 1, self.line, self.line_offset),
+            Span::new(start_location, self.current_location()),
         ))
     }
 
-    fn make_single_char_token(&mut self, current_index: usize, kind: TokenKind) -> Token {
-        let token = Token::new(
-            kind,
-            Span::new(current_index, 1, self.line, self.line_offset),
-        );
+    fn make_single_char_token(&mut self, location: Location, kind: TokenKind) -> Token {
+        let token = Token::new(kind, Span::single_char(location));
         self.advance();
         token
     }
 
     fn advance(&mut self) -> Option<(usize, char)> {
         if let Some((idx, ch)) = self.chars.next() {
-            self.current_position = idx;
+            let char_len = ch.len_utf8();
+            let new_offset = idx + char_len;
+
+            self.current_offset = new_offset;
 
             if ch == '\n' {
                 self.line += 1;
-                self.line_offset = 1;
+                self.column = 1;
             } else {
-                self.line_offset += 1;
+                self.column += 1;
             }
 
             Some((idx, ch))

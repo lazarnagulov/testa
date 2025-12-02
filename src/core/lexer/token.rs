@@ -6,13 +6,13 @@ use crate::core::{lexer::error::LexerError, utils::span::Span};
 
 pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
     let mut m: HashMap<&str, TokenKind> = HashMap::new();
-    m.insert("@output", TokenKind::Output);
-    m.insert("@generate", TokenKind::Generate);
-    m.insert("@seed", TokenKind::Seed);
-    m.insert("@output_path", TokenKind::OutputPath);
-    m.insert("$pick", TokenKind::Pick);
-    m.insert("$uuid", TokenKind::Uuid);
-    m.insert("$template", TokenKind::Uuid);
+    m.insert("output", TokenKind::Output);
+    m.insert("generate", TokenKind::Generate);
+    m.insert("seed", TokenKind::Seed);
+    m.insert("output_path", TokenKind::OutputPath);
+    m.insert("pick", TokenKind::Pick);
+    m.insert("uuid", TokenKind::Uuid);
+    m.insert("template", TokenKind::Uuid);
     m.insert("template", TokenKind::Template);
     m.insert("resource", TokenKind::Resource);
     m.insert("with", TokenKind::With);

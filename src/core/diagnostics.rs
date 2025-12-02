@@ -22,7 +22,7 @@ pub enum DiagnosticCode {
     UnexpectedToken,
     UnexpectedCharacter,
     ExpectedToken,
-    
+
     InvalidBuiltIn,
     InvalidDirective,
     InvalidNumberLiteral,
@@ -36,7 +36,7 @@ pub enum DiagnosticCode {
     DuplicateDefinition,
     TypeMismatch,
     InvalidAttribute,
-    
+
     UnusedType,
     UnusedTemplate,
 }
@@ -48,7 +48,7 @@ impl Diagnostic {
             message: message.into(),
             severity: Severity::Error,
             code: None,
-            hint: None
+            hint: None,
         }
     }
 
