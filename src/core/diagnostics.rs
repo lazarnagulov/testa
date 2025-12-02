@@ -20,9 +20,18 @@ pub enum Severity {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiagnosticCode {
     UnexpectedToken,
+    UnexpectedCharacter,
     ExpectedToken,
     
+    InvalidBuiltIn,
+    InvalidDirective,
+    InvalidNumberLiteral,
+    UnexpectedEof,
+
+    InvalidStringPattern,
     UndefinedType,
+    SyntaxError,
+    UndefinedConstraint,
     UndefinedTemplate,
     DuplicateDefinition,
     TypeMismatch,

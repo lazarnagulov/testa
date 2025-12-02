@@ -1,4 +1,4 @@
-pub mod parser_error;
+pub mod error;
 
 use std::iter::Peekable;
 use std::mem;
@@ -13,7 +13,7 @@ use crate::core::ast::nodes::{
 use crate::core::lexer::Lexer;
 use crate::core::lexer::token::Token;
 use crate::core::lexer::token::TokenKind::{self, *};
-use crate::core::parser::parser_error::ParserError;
+use crate::core::parser::error::ParserError;
 use crate::core::utils::span::Span;
 
 // TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
@@ -82,7 +82,7 @@ impl<'src> Parser<'src> {
         match directive.kind {
             Output => Ok(Statement::OutputDirective { argument, options }),
             Seed => todo!(),
-            _ => Err(ParserError::InvalidDirective(directive.span)),
+            _ => Err(ParserError::InvalidDirective{ span: directive.span }),
         }
     }
 
@@ -342,10 +342,10 @@ impl<'src> Parser<'src> {
                     Precedence::Range,
                 )?,
                 token => {
-                    return Err(ParserError::syntax_err(
-                        &format!("Invalid operator: {}", token),
-                        expression.span,
-                    ));
+                    return Err(ParserError::Syntax {
+                        message: format!("Invalid operator: {}", token),
+                        span: expression.span,
+                    });
                 }
             }
         }
@@ -362,12 +362,11 @@ impl<'src> Parser<'src> {
                     True | False | IntLiteral | StringLiteral | FloatLiteral => {
                         self.parse_list_expression()
                     }
-                    obj => Err(ParserError::expected(
-                        "data type or literal",
-                        &format!("{}", obj),
-                        // TODO: think about how to get span
-                        Span::default(),
-                    )),
+                    obj => Err(ParserError::Expected {
+                        expected: "data type or literal".to_owned(),
+                        got: format!("{}", obj),
+                        span: Span::default(),
+                    }),
                 }
             }
             Identifier | True | False | IntLiteral | StringLiteral | FloatLiteral => {
@@ -378,10 +377,10 @@ impl<'src> Parser<'src> {
             ExclamationMark => Ok(self.parse_prefix_expression(PrefixOperator::LogicalNegate)?),
             Minus => Ok(self.parse_prefix_expression(PrefixOperator::Negative)?),
             LParen => Ok(self.parse_group_expression()?),
-            kind => Err(ParserError::syntax_err(
-                &format!("Invalid primary expression: {}", kind),
-                Span::default(),
-            )),
+            kind => Err(ParserError::Syntax {
+                message: format!("Invalid primary expression: {}", kind),
+                span: Span::default(),
+            }),
         }
     }
 
@@ -394,10 +393,10 @@ impl<'src> Parser<'src> {
             Type => self.parse_type_declaration(),
             Enum => self.parse_enum(),
             Tag => self.parse_attribute(),
-            tok => Err(ParserError::invalid_attribute(
-                tok.to_string().as_str(),
+            tok => Err(ParserError::InvalidAttribute {
+                token: tok.to_string(),
                 span,
-            )),
+            }),
         }
     }
 
@@ -465,7 +464,11 @@ impl<'src> Parser<'src> {
                 let name = self.parse_identifier_as_string()?;
                 let peek = self.peek_kind();
                 if peek != &With {
-                    return Err(ParserError::expected("with", &format!("{}", *peek), span));
+                    return Err(ParserError::Expected{ 
+                        expected: "with".to_owned(), 
+                        got: format!("{}", *peek),
+                        span 
+                    });
                 }
                 DataTypeKind::Custom(name)
             }
@@ -567,10 +570,10 @@ impl<'src> Parser<'src> {
                         chars.next();
                     }
                     if chars.peek().is_none_or(|(_, ch)| *ch != ']') {
-                        return Err(ParserError::InvalidStringPattern(
-                            Span::default(),
-                            "Missing ]".to_owned(),
-                        ));
+                        return Err(ParserError::InvalidStringPattern {
+                            span: Span::default(),
+                            pattern: "Missing ]".to_owned(),
+                        });
                     }
 
                     chars.next();
@@ -585,10 +588,10 @@ impl<'src> Parser<'src> {
                     {
                         *expression = Some(count_expression);
                     } else {
-                        return Err(ParserError::InvalidStringPattern(
-                            Span::default(),
-                            "Expected a, A or # before []".to_owned(),
-                        ));
+                        return Err(ParserError::InvalidStringPattern {
+                            span: Span::default(),
+                            pattern: "Expected a, A or # before []".to_owned(),
+                        });
                     }
                 }
                 'a' | 'A' | '#' => {
@@ -613,10 +616,10 @@ impl<'src> Parser<'src> {
                     });
                 }
                 _ => {
-                    return Err(ParserError::InvalidStringPattern(
-                        Span::default(),
-                        current_char.to_string(),
-                    ));
+                    return Err(ParserError::InvalidStringPattern {
+                        span: Span::default(),
+                        pattern: current_char.to_string(),
+                    });
                 }
             }
         }
@@ -639,7 +642,7 @@ impl<'src> Parser<'src> {
                 "count" => self.parse_constraint_expression(ConstraintKind::Count),
                 _ => {
                     if self.peek_kind() == &SingleEqual {
-                        return Err(ParserError::UndefinedConstraint(span));
+                        return Err(ParserError::UndefinedConstraint { span });
                     }
                     let expression = self.parse_expression(Precedence::Lowest)?;
                     Ok(ConstraintExpression::new(
@@ -698,7 +701,7 @@ impl<'src> Parser<'src> {
                     span,
                 })
             }
-            kind => Err(ParserError::expected("literal", &kind.to_string(), span)),
+            kind => Err(ParserError::Expected { expected: "literal".to_owned(), got: kind.to_string(), span }),
         };
         self.lexer.next();
         parsed
@@ -762,10 +765,10 @@ impl<'src> Parser<'src> {
     fn expect_token(&mut self, kind: TokenKind) -> Result<(usize, usize), ParserError> {
         let token = self.next_token()?;
         if token.kind != kind {
-            Err(ParserError::syntax_err(
-                &format!("Expected {} but got {}", kind, token.kind),
-                token.span,
-            ))
+            Err(ParserError::Syntax {
+                message: format!("Expected {} but got {}", kind, token.kind),
+                span: token.span,
+            })
         } else {
             Ok((token.span.start, token.span.size))
         }
@@ -779,14 +782,14 @@ impl<'src> Parser<'src> {
     fn next_token(&mut self) -> Result<Token, ParserError> {
         self.lexer
             .next()
-            .ok_or(ParserError::UnexpectedEOF)?
+            .ok_or(ParserError::UnexpectedEof { span: Span::default() } )?
             .map_err(ParserError::from)
     }
 
     fn peek_token(&mut self) -> Result<&Token, ParserError> {
         self.lexer
             .peek()
-            .ok_or(ParserError::UnexpectedEOF)?
+            .ok_or(ParserError::UnexpectedEof { span: Span::default()  })?
             .as_ref()
             .map_err(|e| ParserError::from(e.clone()))
     }

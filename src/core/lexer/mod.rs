@@ -1,11 +1,11 @@
-pub mod lexer_error;
+pub mod error;
 pub mod token;
 
 use std::{iter::Peekable, str::CharIndices};
 
 use crate::core::{
     lexer::{
-        lexer_error::LexerError,
+        error::LexerError,
         token::{KEYWORD_REGISTRY, Token, TokenKind},
     },
     utils::span::Span,
@@ -69,10 +69,10 @@ impl<'src> Lexer<'src> {
                 {
                     self.make_attribute(current_index)
                 } else {
-                    Err(LexerError::InvalidToken(
-                        Span::new(current_index, 1, self.line, self.line_offset),
-                        '#',
-                    ))
+                    Err(LexerError::InvalidToken { 
+                        span: Span::new(current_index, 1, self.line, self.line_offset), 
+                        token: '#' 
+                    })
                 }
             }
             ';' => Ok(self.make_single_char_token(current_index, Semicolon)),
@@ -280,10 +280,10 @@ impl<'src> Lexer<'src> {
                         kind.clone(),
                         Span::new(current_index, builtin.len(), self.line, self.line_offset),
                     )),
-                    None => Err(LexerError::InvalidBuiltIn(
-                        Span::new(current_index, builtin.len(), self.line, self.line_offset),
-                        builtin.to_string(),
-                    )),
+                    None => Err(LexerError::InvalidBuiltIn {
+                        span: Span::new(current_index, builtin.len(), self.line, self.line_offset),
+                        value: builtin.to_string(),
+                    }),
                 }
             }
             '@' => {
@@ -294,10 +294,10 @@ impl<'src> Lexer<'src> {
                         kind.clone(),
                         Span::new(current_index, directive.len(), self.line, self.line_offset),
                     )),
-                    None => Err(LexerError::InvalidDirective(
-                        Span::new(current_index, directive.len(), self.line, self.line_offset),
-                        directive.to_string(),
-                    )),
+                    None => Err(LexerError::InvalidDirective {
+                        span: Span::new(current_index, directive.len(), self.line, self.line_offset),
+                        value: directive.to_string(),
+                    }),
                 }
             }
             'a'..='z' | 'A'..='Z' | '_' => {
@@ -314,10 +314,10 @@ impl<'src> Lexer<'src> {
                 }
             }
             '0'..='9' => self.make_number_token(current_index),
-            c => Err(LexerError::InvalidToken(
-                Span::new(current_index, 1, self.line, self.line_offset),
-                c,
-            )),
+            c => Err(LexerError::InvalidToken {
+                span: Span::new(current_index, 1, self.line, self.line_offset),
+                token: c,
+            }),
         }
     }
 
@@ -364,12 +364,13 @@ impl<'src> Lexer<'src> {
                 .advance()
                 .expect("Next should exist, it is checked in while.");
             if is_float && token.1 == '.' {
-                return Err(LexerError::InvalidNumberLiteral(Span::new(
+                return Err(LexerError::InvalidNumberLiteral { span: Span::new(
                     position,
                     last - position + 1,
                     self.line,
-                    self.line_offset,
-                )));
+                    self.line_offset),
+                    value: "#".to_string(),
+                });
             } else if token.1 == '.' {
                 is_float = true;
             }
@@ -378,12 +379,14 @@ impl<'src> Lexer<'src> {
 
         if let Some((_, char)) = self.peek() {
             if !matches!(char, ' ' | ';' | ',' | ']' | ')') {
-                return Err(LexerError::InvalidNumberLiteral(Span::new(
+                return Err(LexerError::InvalidNumberLiteral {
+                    span: Span::new(
                     position,
                     last - position,
                     self.line,
-                    self.line_offset,
-                )));
+                    self.line_offset),
+                    value: "#".to_string()
+                });
             }
         }
 
@@ -404,17 +407,17 @@ impl<'src> Lexer<'src> {
                 .advance()
                 .expect("Next should exist, it is checked in while.");
             if ch == '\n' {
-                return Err(LexerError::MissingChar(
-                    Span::new(position, last - position, self.line, self.line_offset),
-                    '"',
-                ));
+                return Err(LexerError::MissingChar {
+                    span: Span::new(position, last - position, self.line, self.line_offset),
+                    expected: '"',
+                });
             }
             last = current_position;
         }
-        self.advance().ok_or(LexerError::MissingChar(
-            Span::new(position, last, self.line, self.line_offset),
-            '"',
-        ))?;
+        self.advance().ok_or(LexerError::MissingChar {
+            span: Span::new(position, last, self.line, self.line_offset),
+            expected: '"',
+        })?;
         Ok(2 + last - position)
     }
 
@@ -426,10 +429,10 @@ impl<'src> Lexer<'src> {
                 .expect("This will always be Some, since it is checked in while");
             last = current_position;
         }
-        self.advance().ok_or(LexerError::MissingChar(
-            Span::new(position, last - position, self.line, self.line_offset),
-            ']',
-        ))?;
+        self.advance().ok_or(LexerError::MissingChar {
+            span: Span::new(position, last - position, self.line, self.line_offset),
+            expected: ']',
+        })?;
         Ok(Token::new(
             TokenKind::Tag,
             Span::new(position, last - position + 1, self.line, self.line_offset),

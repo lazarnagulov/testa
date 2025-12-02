@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use once_cell::sync::Lazy;
 
-use crate::core::{lexer::lexer_error::LexerError, utils::span::Span};
+use crate::core::{lexer::error::LexerError, utils::span::Span};
 
 pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
     let mut m: HashMap<&str, TokenKind> = HashMap::new();

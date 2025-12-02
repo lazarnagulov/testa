@@ -1,7 +1,7 @@
 use std::{env, fs::File, io::Read, path::Path};
 
 use testa::{
-    core::parser::{Parser, parser_error::*},
+    core::parser::{Parser, error::*},
     interpreter::{context::Context, eval_error::EvalError, evaluator},
 };
 
@@ -40,36 +40,36 @@ fn main() {
                     got
                 )
             }
-            ParserError::InvalidDirective(span) => format!(
+            ParserError::InvalidDirective{ span } => format!(
                 "{}:{}:{} ERROR: Invalid directive",
                 file_path.display(),
                 span.line,
                 span.line_offset
             ),
-            ParserError::UnexpectedEOF => {
+            ParserError::UnexpectedEof { .. }  => {
                 format!("{} ERROR: Missing enclosing \" or ;", file_path.display())
             }
-            ParserError::Syntax(span, error) => format!(
+            ParserError::Syntax { span, message: error } => format!(
                 "{}:{}:{} ERROR: {}",
                 file_path.display(),
                 span.line,
                 span.line_offset,
                 error
             ),
-            ParserError::UndefinedConstraint(span) => format!(
+            ParserError::UndefinedConstraint { span} => format!(
                 "{}:{}:{} ERROR: Undefined constraint",
                 file_path.display(),
                 span.line,
                 span.line_offset
             ),
-            ParserError::InvalidStringPattern(span, pattern) => format!(
+            ParserError::InvalidStringPattern{ span, pattern} => format!(
                 "{}:{}:{} ERROR: Invalid pattern {}",
                 file_path.display(),
                 span.line,
                 span.line_offset,
                 pattern
             ),
-            ParserError::InvalidAttribute(span, token) => format!(
+            ParserError::InvalidAttribute{ span, token} => format!(
                 "{}:{}:{} ERROR: Cannot put attribute on {}",
                 file_path.display(),
                 span.line,

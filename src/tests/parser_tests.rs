@@ -7,7 +7,8 @@ use crate::core::ast::nodes::{
     ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
     PrefixOperator, Program, Statement, Variant,
 };
-use crate::core::parser::{Parser, parser_error::ParserError};
+use crate::core::parser::Parser;
+use crate::core::parser::error::ParserError;
 use crate::core::utils::span::Span;
 
 #[test]
@@ -718,7 +719,7 @@ fn expect_missing_paren(parser: &mut Parser) {
     match parser.parse() {
         Ok(_) => panic!("Program should have returned err."),
         Err(err) => match err {
-            ParserError::UnexpectedEOF => {}
+            ParserError::UnexpectedEof { .. } => {}
             err => panic!(
                 "Program should have returned unexpected EOF instead of {:?}",
                 err
@@ -755,25 +756,25 @@ fn handle_error(error: ParserError) {
                 span.line, span.line_offset, expected, got
             )
         }
-        ParserError::InvalidDirective(span) => panic!(
+        ParserError::InvalidDirective { span} => panic!(
             "{}:{} ERROR: Invalid directive",
             span.line, span.line_offset
         ),
-        ParserError::UnexpectedEOF => {
+        ParserError::UnexpectedEof { .. } => {
             panic!("ERROR: Missing enclosing \" or ;")
         }
-        ParserError::Syntax(span, error) => {
-            panic!("{}:{} ERROR: {}", span.line, span.line_offset, error)
+        ParserError::Syntax { span, message} => {
+            panic!("{}:{} ERROR: {}", span.line, span.line_offset, message)
         }
-        ParserError::UndefinedConstraint(span) => panic!(
+        ParserError::UndefinedConstraint { span} => panic!(
             "{}:{} ERROR: Undefined constraint",
             span.line, span.line_offset
         ),
-        ParserError::InvalidStringPattern(span, pattern) => panic!(
+        ParserError::InvalidStringPattern { span, pattern} => panic!(
             "{}:{} ERROR: Invalid pattern {}",
             span.line, span.line_offset, pattern
         ),
-        ParserError::InvalidAttribute(span, token) => panic!(
+        ParserError::InvalidAttribute { span, token} => panic!(
             "{}:{} ERROR: Cannot put attribute on {}",
             span.line, span.line_offset, token
         ),
