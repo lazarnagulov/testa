@@ -1,4 +1,4 @@
-use crate::core::utils::span::Span;
+use crate::core::{lexer::token::TokenKind, parser::error::ParserError, utils::span::Span};
 use super::Parser;
 
 impl<'src> Parser<'src> {
@@ -14,21 +14,15 @@ impl<'src> Parser<'src> {
     pub(super) fn string_literal_content(&self, span: Span) -> &'src str {
         &self.source[span.inner()]
     }
-
-    pub(super) fn make_subspan(&self, parent: Span, start_offset: usize, end_offset: usize) -> Span {
-        use crate::core::utils::span::Location;
-        
-        Span {
-            start: Location {
-                offset: parent.start.offset + start_offset,
-                line: parent.start.line, 
-                column: parent.start.column + start_offset as u32,
-            },
-            end: Location {
-                offset: parent.start.offset + end_offset,
-                line: parent.start.line,
-                column: parent.start.column + end_offset as u32,
-            },
-        }
+    pub(super) fn parse_peeked_token_as_string(&mut self) -> Result<String, ParserError> {
+        let token = self.token_stream.peek_token()?;
+        let span = token.span;
+        Ok(self.source_text(span).to_string())
     }
+
+    pub(super) fn parse_identifier_as_string(&mut self) -> Result<String, ParserError> {
+        let span = self.token_stream.expect_token(TokenKind::Identifier)?;
+        Ok(self.source_text(span).to_string())
+    }
+
 }
