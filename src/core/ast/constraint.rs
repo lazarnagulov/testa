@@ -1,18 +1,20 @@
 use std::fmt;
 
-use crate::core::ast::Expression;
+use crate::core::{ast::Expression, utils::span::Span};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct ConstraintExpression {
     pub expression: Expression,
     pub kind: ConstraintKind,
+    pub span: Span,
 }
 
 impl ConstraintExpression {
-    pub fn new(expression: Expression, constraint_kind: ConstraintKind) -> Self {
+    pub fn new(expression: Expression, constraint_kind: ConstraintKind, span: Span) -> Self {
         ConstraintExpression {
             expression,
             kind: constraint_kind,
+            span,
         }
     }
 }

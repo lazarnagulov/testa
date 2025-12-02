@@ -65,10 +65,7 @@ impl<'src> Lexer<'src> {
             ',' => Ok(self.make_single_char_token(start_location, Comma)),
             '#' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '[')
-                    .is_some()
+                if self.consume_if('[')
                 {
                     self.make_attribute(start_location)
                 } else {
@@ -84,31 +81,19 @@ impl<'src> Lexer<'src> {
             ']' => Ok(self.make_single_char_token(start_location, RBracket)),
             '.' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '.')
-                    .is_some()
+                if self.consume_if('.')
                 {
-                    if self
-                        .chars
-                        .next_if(|(_, next_char)| *next_char == '=')
-                        .is_some()
+                    if self.consume_if('=')
                     {
                         Ok(Token::new(
                             DoublePeriodEqual,
                             Span::from_len(start_location, 3),
                         ))
                     } else {
-                        Ok(Token::new(
-                            DoublePeriod,
-                            Span::from_len(start_location, 2),
-                        ))
+                        Ok(Token::new(DoublePeriod, Span::from_len(start_location, 2)))
                     }
                 } else {
-                    Ok(Token::new(
-                        SinglePeriod,
-                        Span::single_char(start_location),
-                    ))
+                    Ok(Token::new(SinglePeriod, Span::single_char(start_location)))
                 }
             }
             '+' => Ok(self.make_single_char_token(start_location, Plus)),
@@ -116,10 +101,7 @@ impl<'src> Lexer<'src> {
             '*' => Ok(self.make_single_char_token(start_location, Asterisk)),
             '&' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '&')
-                    .is_some()
+                if self.consume_if('&')
                 {
                     Ok(Token::new(And, Span::from_len(start_location, 2)))
                 } else {
@@ -129,10 +111,7 @@ impl<'src> Lexer<'src> {
             '~' => Ok(self.make_single_char_token(start_location, BitNegate)),
             '|' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '|')
-                    .is_some()
+                if self.consume_if('|')
                 {
                     Ok(Token::new(Or, Span::from_len(start_location, 2)))
                 } else {
@@ -142,16 +121,10 @@ impl<'src> Lexer<'src> {
             '^' => Ok(self.make_single_char_token(start_location, BitXor)),
             '=' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                if self.consume_if('=')
                 {
                     Ok(Token::new(DoubleEqual, Span::from_len(start_location, 2)))
-                } else if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '>')
-                    .is_some()
+                } else if self.consume_if('>')
                 {
                     Ok(Token::new(Arrow, Span::from_len(start_location, 2)))
                 } else {
@@ -160,10 +133,7 @@ impl<'src> Lexer<'src> {
             }
             '!' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                if self.consume_if('=')
                 {
                     Ok(Token::new(NotEqual, Span::from_len(start_location, 2)))
                 } else {
@@ -183,19 +153,13 @@ impl<'src> Lexer<'src> {
             }
             '<' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                if self.consume_if('=')
                 {
                     Ok(Token::new(
                         LessThanOrEqual,
                         Span::from_len(start_location, 2),
                     ))
-                } else if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '<')
-                    .is_some()
+                } else if self.consume_if('<')
                 {
                     Ok(Token::new(BitLShift, Span::from_len(start_location, 2)))
                 } else {
@@ -204,19 +168,13 @@ impl<'src> Lexer<'src> {
             }
             '>' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '=')
-                    .is_some()
+                if self.consume_if('=')
                 {
                     Ok(Token::new(
                         GreaterThanOrEqual,
                         Span::from_len(start_location, 2),
                     ))
-                } else if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '>')
-                    .is_some()
+                } else if self.consume_if('>')
                 {
                     Ok(Token::new(BitRShift, Span::from_len(start_location, 2)))
                 } else {
@@ -225,10 +183,7 @@ impl<'src> Lexer<'src> {
             }
             '/' => {
                 self.advance();
-                if self
-                    .chars
-                    .next_if(|(_, next_char)| *next_char == '/')
-                    .is_some()
+                if self.consume_if('/')
                 {
                     self.skip_line();
                     self.next_token()
@@ -331,7 +286,7 @@ impl<'src> Lexer<'src> {
             let (_, ch) = self
                 .advance()
                 .expect("Next should exist, it is checked in while.");
-            
+
             if is_float && ch == '.' {
                 return Err(LexerError::InvalidNumberLiteral {
                     span: Span::new(start_location, self.current_location()),
@@ -340,19 +295,18 @@ impl<'src> Lexer<'src> {
             } else if ch == '.' {
                 is_float = true;
             }
-            
+
             end_location = self.current_location();
         }
 
-        if let Some((_, char)) = self.peek() {
-            if !matches!(char, ' ' | ';' | ',' | ']' | ')') {
+        if let Some((_, c)) = self.peek() {
+            if !matches!(c, ' ' | ';' | ',' | ']' | ')') {
                 return Err(LexerError::InvalidNumberLiteral {
                     span: Span::new(start_location, end_location),
-                    value: "#".to_string(),
+                    value: c.to_string(),
                 });
             }
         }
-
         Ok(Token::new(
             if is_float {
                 TokenKind::FloatLiteral
@@ -370,14 +324,14 @@ impl<'src> Lexer<'src> {
             let (_, ch) = self
                 .advance()
                 .expect("Next should exist, it is checked in while.");
-            
+
             if ch == '\n' {
                 return Err(LexerError::MissingChar {
                     span: Span::new(start_location, self.current_location()),
                     expected: '"',
                 });
             }
-            
+
             end_location = self.current_location();
         }
 
@@ -408,6 +362,15 @@ impl<'src> Lexer<'src> {
         ))
     }
 
+    fn consume_if(&mut self, expected: char) -> bool {
+        if self.peek().is_some_and(|(_, c)| c == expected) {
+            self.advance();
+            true
+        } else {
+            false
+        }
+    }
+
     fn make_single_char_token(&mut self, location: Location, kind: TokenKind) -> Token {
         let token = Token::new(kind, Span::single_char(location));
         self.advance();
@@ -416,10 +379,7 @@ impl<'src> Lexer<'src> {
 
     fn advance(&mut self) -> Option<(usize, char)> {
         if let Some((idx, ch)) = self.chars.next() {
-            let char_len = ch.len_utf8();
-            let new_offset = idx + char_len;
-
-            self.current_offset = new_offset;
+            self.current_offset = idx + ch.len_utf8();
 
             if ch == '\n' {
                 self.line += 1;

@@ -1,16 +1,25 @@
 use std::fmt;
 
-use crate::core::ast::constraint::ConstraintExpression;
+use crate::core::{ast::constraint::ConstraintExpression, utils::span::Span};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct DataType {
     pub kind: DataTypeKind,
     pub constraints: Option<Vec<ConstraintExpression>>,
+    pub span: Span,
 }
 
 impl DataType {
-    pub fn new(kind: DataTypeKind, constraints: Option<Vec<ConstraintExpression>>) -> Self {
-        DataType { kind, constraints }
+    pub fn new(
+        kind: DataTypeKind,
+        constraints: Option<Vec<ConstraintExpression>>,
+        span: Span,
+    ) -> Self {
+        DataType {
+            kind,
+            constraints,
+            span,
+        }
     }
 }
 

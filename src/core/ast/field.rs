@@ -1,4 +1,7 @@
-use crate::core::ast::{Attribute, Expression};
+use crate::core::{
+    ast::{Attribute, Expression},
+    utils::span::Span,
+};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Field {
@@ -6,6 +9,7 @@ pub struct Field {
     pub value: Expression,
     pub overridable: bool,
     pub attributes: Vec<Attribute>,
+    pub span: Span,
 }
 
 impl Field {
@@ -14,12 +18,14 @@ impl Field {
         value: Expression,
         overridable: bool,
         attributes: Vec<Attribute>,
+        span: Span,
     ) -> Self {
         Field {
             name,
             value,
             overridable,
             attributes,
+            span,
         }
     }
 }

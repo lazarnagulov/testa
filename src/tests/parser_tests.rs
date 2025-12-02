@@ -2,7 +2,7 @@ use core::panic;
 use std::path::Path;
 use std::{path::PathBuf, vec};
 
-use crate::core::ast::nodes::{
+use crate::core::ast::{
     Attribute, ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
     ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
     PrefixOperator, Program, Statement, Variant,

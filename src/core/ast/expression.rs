@@ -1,4 +1,7 @@
-use crate::core::{ast::{DataType, InfixOperator, PatternElement, PrefixOperator}, utils::span::Span};
+use crate::core::{
+    ast::{DataType, InfixOperator, PatternElement, PrefixOperator},
+    utils::span::Span,
+};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Expression {
@@ -40,19 +43,15 @@ pub enum ExpressionKind {
 pub struct Element {
     pub value: Expression,
     pub weight: Option<Expression>,
-    pub start: usize,
-    pub size: usize,
+    pub span: Span,
 }
 
 impl Element {
-    pub fn new(value: Expression, weight: Option<Expression>, start: usize, size: usize) -> Self {
+    pub fn new(value: Expression, weight: Option<Expression>, span: Span) -> Self {
         Element {
             value,
             weight,
-            start,
-            size,
+            span,
         }
     }
 }
-
-

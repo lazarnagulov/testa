@@ -1,16 +1,18 @@
-use crate::core::ast::Expression;
+use crate::core::{ast::Expression, utils::span::Span};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum PatternElement {
-    Literal(String),
+    Literal(String, Span),
     RepeatChar {
         ch: PatternChar,
         count: usize,
         count_expression: Option<Expression>,
+        span: Span,
     },
     RepeatGroup {
         chars: Vec<PatternChar>,
         count: Expression,
+        span: Span,
     },
 }
 

@@ -59,10 +59,12 @@ impl fmt::Display for ParserError {
 impl ParserError {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
-            Self::Expected { span, expected, got } => {
-                Diagnostic::error(*span, format!("Expected {} but got {}", expected, got))
-                    .with_code(DiagnosticCode::ExpectedToken)
-            }
+            Self::Expected {
+                span,
+                expected,
+                got,
+            } => Diagnostic::error(*span, format!("Expected {} but got {}", expected, got))
+                .with_code(DiagnosticCode::ExpectedToken),
 
             Self::UndefinedConstraint { span } => {
                 Diagnostic::error(*span, "Undefined constraint".to_string())
@@ -92,8 +94,7 @@ impl ParserError {
             }
 
             Self::Syntax { span, message } => {
-                Diagnostic::error(*span, message)
-                    .with_code(DiagnosticCode::SyntaxError)
+                Diagnostic::error(*span, message).with_code(DiagnosticCode::SyntaxError)
             }
         }
     }

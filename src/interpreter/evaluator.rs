@@ -40,6 +40,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             name,
             body,
             attributes: _,
+            span: _,
         } => {
             let parent = match parent {
                 Some(parent_name) => context.get_template(&parent_name).map(Rc::clone),
@@ -54,17 +55,21 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             template_name,
             body,
             count,
+            span: _,
         } => evaluate_generate(template_name, body, &count, context),
         Statement::Enum {
             name,
             variants,
             attributes: _,
+            span: _,
         } => {
             let enumeration = Enum::new(variants, context)?;
             context.insert_enum(&name, enumeration);
             Ok(Object::NoReturn)
         }
-        Statement::OutputDirective { argument, options } => {
+        Statement::OutputDirective {
+            argument, options, ..
+        } => {
             context.target_format = match argument.as_str() {
                 "csv" => Ok(Target::Csv),
                 value => Err(EvalError::InvalidTarget(value.to_string())),
@@ -87,6 +92,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             name,
             data_type,
             attributes: _,
+            span: _,
         } => {
             let Type(data_type) = data_type.kind else {
                 unreachable!()
@@ -97,7 +103,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             Ok(Object::NoReturn)
         }
         Statement::ConstraintDecl { .. } => todo!(),
-        Statement::OutputPathDirective { argument: path } => {
+        Statement::OutputPathDirective { argument: path, .. } => {
             context.output_path = Some(path);
             Ok(Object::NoReturn)
         }
@@ -212,11 +218,12 @@ fn evaluate_string_pattern(
 
     for element in pattern {
         match element {
-            PatternElement::Literal(literal) => result.push_str(literal),
+            PatternElement::Literal(literal, _) => result.push_str(literal),
             PatternElement::RepeatChar {
                 ch,
                 count,
                 count_expression,
+                span: _,
             } => {
                 let mut total_count = *count;
                 if let Some(expression) = count_expression {

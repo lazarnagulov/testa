@@ -62,6 +62,7 @@ fn lex_two_char_tokens() {
 fn lex_three_char_tokens() {
     let program = "..=";
     let mut lexer = Lexer::new(program);
+    
     expect_token(&mut lexer, vec![DoublePeriodEqual]);
 }
 
@@ -141,6 +142,18 @@ fn lex_multiline_spans() {
 
     assert_eq!(tokens[2].span.start.line, 3);
     assert_eq!(tokens[2].span.start.column, 1);
+}
+
+#[test]
+fn lex_range_spans() {
+    let program = "10..=250";
+    let lexer = Lexer::new(program);
+
+    let tokens: Vec<_> = lexer.map(|r| r.unwrap()).collect();
+
+    assert_eq!(tokens[0].span.start.column, 1);
+    assert_eq!(tokens[1].span.start.column, 3);
+    assert_eq!(tokens[2].span.start.column, 6);
 }
 
 #[test]

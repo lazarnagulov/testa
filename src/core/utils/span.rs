@@ -26,15 +26,20 @@ impl Span {
         Self { start, end }
     }
 
-    pub fn from_len(start: Location, len: usize) -> Self {
+    
+    pub fn from_len(location: Location, len: usize) -> Self {
         Self {
-            start,
+            start: location,
             end: Location {
-                offset: start.offset + len,
-                line: start.line,
-                column: start.column + len as u32,
+                offset: location.offset + len,
+                line: location.line,
+                column: location.column + len as u32,
             },
         }
+    }
+
+    pub fn inner(&self) -> std::ops::Range<usize> {
+        self.start.offset + 1 .. self.end.offset - 1
     }
 
     pub fn single_char(location: Location) -> Self {
