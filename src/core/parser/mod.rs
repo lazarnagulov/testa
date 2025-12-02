@@ -5,7 +5,7 @@ use std::mem;
 use std::path::Path;
 use std::{path::PathBuf, str::CharIndices};
 
-use crate::core::ast::nodes::{
+use crate::core::ast::{
     Attribute, ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
     ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
     Precedence, PrefixOperator, Program, Statement, Variant,

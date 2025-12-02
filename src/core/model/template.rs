@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    core::ast::nodes::Field,
+    core::ast::Field,
     generation::generator::Record,
     interpreter::{
         context::{Context, Visitor},

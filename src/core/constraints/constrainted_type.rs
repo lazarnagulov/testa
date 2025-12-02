@@ -4,7 +4,7 @@ use rand::{Rng, distr::Alphanumeric};
 
 use crate::{
     core::{
-        ast::nodes::{ConstraintExpression, DataType, DataTypeKind},
+        ast::{ConstraintExpression, DataType, DataTypeKind},
         constraints::{
             constraint::CONSTRAINT_REGISTRY,
             sampler::{ConstraintSet, Sampler},

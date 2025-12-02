@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::{
     core::{
-        ast::nodes::{
+        ast::{
             DataType, Expression, ExpressionKind::*, Field, InfixOperator, PatternChar,
             PatternElement, PrefixOperator, Program, Statement,
         },
