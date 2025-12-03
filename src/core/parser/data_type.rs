@@ -2,44 +2,51 @@ use crate::core::{
     ast::{DataType, DataTypeKind, Expression, ExpressionKind},
     lexer::token::TokenKind::*,
     parser::error::ParserError,
-    utils::span::Span,
 };
 
 use super::Parser;
 
 impl<'src> Parser<'src> {
     pub(super) fn parse_list_type(&mut self) -> Result<Expression, ParserError> {
-        self.token_stream.consume_token()?;
+        let start_span = self.token_stream.consume_token()?;
+
         let data_type = self.parse_type()?;
         let ExpressionKind::Type(data_type) = data_type.kind else {
             unreachable!()
         };
-        self.token_stream.expect_token(RBracket)?;
+
+        let rbracket_span = self.token_stream.expect_token(RBracket)?;
+
         if self.token_stream.peek_kind() == &LBracket {
-            let consraints = self.parse_constraints()?;
+            let constraints = self.parse_constraints()?;
+            let end_span = self.token_stream.last_span();
+            let full_span = start_span.merge(end_span);
+
             Ok(Expression::new(
                 ExpressionKind::Type(DataType::new(
                     DataTypeKind::List(Box::new(data_type)),
-                    Some(consraints),
-                    Span::default(),
+                    Some(constraints),
+                    full_span,
                 )),
-                Span::default(),
+                full_span,
             ))
         } else {
+            let full_span = start_span.merge(rbracket_span);
+
             Ok(Expression::new(
                 ExpressionKind::Type(DataType::new(
                     DataTypeKind::List(Box::new(data_type)),
                     None,
-                    Span::default(),
+                    full_span,
                 )),
-                Span::default(),
+                full_span,
             ))
         }
     }
 
     pub(super) fn parse_type(&mut self) -> Result<Expression, ParserError> {
         let token = self.token_stream.peek_token()?;
-        let span = token.span;
+        let start_span = token.span;
 
         if token.kind == LBracket {
             return self.parse_list_type();
@@ -58,7 +65,7 @@ impl<'src> Parser<'src> {
                     return Err(ParserError::Expected {
                         expected: "with".to_owned(),
                         got: format!("{}", *peek),
-                        span,
+                        span: self.token_stream.peek_token()?.span,
                     });
                 }
                 DataTypeKind::Custom(name)
@@ -68,22 +75,23 @@ impl<'src> Parser<'src> {
         };
 
         self.token_stream.next_token()?;
+        let mut end_span = self.token_stream.last_span();
+
         if self.token_stream.peek_kind() == &LBracket {
             let constraints = self.parse_constraints()?;
-            // TODO: calculate start and size
+            end_span = self.token_stream.last_span();
+            let full_span = start_span.merge(end_span);
+
             Ok(Expression::new(
-                ExpressionKind::Type(DataType::new(
-                    data_type_kind,
-                    Some(constraints),
-                    Span::default(),
-                )),
-                //TODO: add constraint size
-                span,
+                ExpressionKind::Type(DataType::new(data_type_kind, Some(constraints), full_span)),
+                full_span,
             ))
         } else {
+            let full_span = start_span.merge(end_span);
+
             Ok(Expression::new(
-                ExpressionKind::Type(DataType::new(data_type_kind, None, span)),
-                span,
+                ExpressionKind::Type(DataType::new(data_type_kind, None, full_span)),
+                full_span,
             ))
         }
     }

@@ -18,12 +18,15 @@ impl<'src> Parser<'src> {
         let start = expression.span;
         let end = self.token_stream.expect_token(Semicolon)?;
 
-        Ok(ExpressionStatemnt { expression, span: start.merge(end) })
+        Ok(ExpressionStatemnt {
+            expression,
+            span: start.merge(end),
+        })
     }
 
     pub(super) fn parse_list_expression(&mut self) -> Result<Expression, ParserError> {
         self.token_stream.consume_token()?;
-        let elements = self.parse_elements()?;
+        let elements = self.parse_list_elements()?;
         Ok(Expression::new(
             ExpressionKind::List(elements),
             Span::default(),
@@ -91,7 +94,6 @@ impl<'src> Parser<'src> {
                     obj => Err(ParserError::Expected {
                         expected: "data type or literal".to_owned(),
                         got: format!("{}", obj),
-                        // TODO: think about how to get span
                         span: Span::default(),
                     }),
                 }

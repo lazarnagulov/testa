@@ -11,15 +11,14 @@ use super::Parser;
 
 impl<'src> Parser<'src> {
     pub(super) fn parse_string_pattern(&mut self) -> Result<Expression, ParserError> {
-        let span = self.token_stream.consume_token()?;
+        let start = self.token_stream.consume_token()?;
         let literal_span = self.token_stream.expect_token(TokenKind::StringLiteral)?;
         let literal = self.string_literal_content(literal_span);
         let mut chars = literal.char_indices().peekable();
         let elements = self.parse_pattern_elements(literal, &mut chars)?;
-        // TODO: Include elements to span
         Ok(Expression::new(
             ExpressionKind::StringPattern(elements),
-            span,
+            start.merge(self.token_stream.last_span()),
         ))
     }
 

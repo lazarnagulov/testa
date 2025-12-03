@@ -37,6 +37,10 @@ impl Span {
         }
     }
 
+    pub fn outer(&self) -> std::ops::Range<usize> {
+        self.start.offset..self.end.offset
+    }
+
     pub fn inner(&self) -> std::ops::Range<usize> {
         self.start.offset + 1..self.end.offset - 1
     }

@@ -70,7 +70,7 @@ impl<'src> TokenStream<'src> {
         self.lexer
             .peek()
             .ok_or(ParserError::UnexpectedEof {
-                span: Span::default(),
+                span: self.last_span,
             })?
             .as_ref()
             .map_err(|e| ParserError::from(e.clone()))

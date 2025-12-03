@@ -3,16 +3,21 @@ use crate::core::{lexer::token::TokenKind, parser::error::ParserError, utils::sp
 
 impl<'src> Parser<'src> {
     pub(super) fn source_text(&self, span: Span) -> &'src str {
-        &self.source[span.start.offset..span.end.offset]
+        &self.source[span.outer()]
     }
 
     pub(super) fn token_text(&self, span: Span) -> &'src str {
-        &self.source[span.start.offset..span.end.offset]
+        &self.source[span.outer()]
     }
 
     pub(super) fn string_literal_content(&self, span: Span) -> &'src str {
         &self.source[span.inner()]
     }
+
+    pub(super) fn attribute_text(&self, span: Span) -> &'src str {
+        &self.source[span.start.offset + 2..span.end.offset - 1]
+    }
+
     pub(super) fn parse_peeked_token_as_string(&mut self) -> Result<String, ParserError> {
         let token = self.token_stream.peek_token()?;
         let span = token.span;

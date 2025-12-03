@@ -1,13 +1,14 @@
-use crate::core::ast::Expression;
+use crate::core::{ast::Expression, utils::span::Span};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Variant {
     pub name: String,
     pub weight: Option<Expression>,
+    pub span: Span,
 }
 
 impl Variant {
-    pub fn new(name: String, weight: Option<Expression>) -> Self {
-        Variant { name, weight }
+    pub fn new(name: String, weight: Option<Expression>, span: Span) -> Self {
+        Variant { name, weight, span }
     }
 }
