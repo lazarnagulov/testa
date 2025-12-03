@@ -1,11 +1,13 @@
-use crate::core::{ast::{DataType, DataTypeKind , Expression, ExpressionKind}, parser::error::ParserError, lexer::token::TokenKind::*,  utils::span::Span};
+use crate::core::{
+    ast::{DataType, DataTypeKind, Expression, ExpressionKind},
+    lexer::token::TokenKind::*,
+    parser::error::ParserError,
+    utils::span::Span,
+};
 
 use super::Parser;
 
-
-
 impl<'src> Parser<'src> {
-
     pub(super) fn parse_list_type(&mut self) -> Result<Expression, ParserError> {
         self.token_stream.consume_token()?;
         let data_type = self.parse_type()?;
@@ -19,13 +21,17 @@ impl<'src> Parser<'src> {
                 ExpressionKind::Type(DataType::new(
                     DataTypeKind::List(Box::new(data_type)),
                     Some(consraints),
-                    Span::default()
+                    Span::default(),
                 )),
                 Span::default(),
             ))
         } else {
             Ok(Expression::new(
-                ExpressionKind::Type(DataType::new(DataTypeKind::List(Box::new(data_type)), None, Span::default())),
+                ExpressionKind::Type(DataType::new(
+                    DataTypeKind::List(Box::new(data_type)),
+                    None,
+                    Span::default(),
+                )),
                 Span::default(),
             ))
         }
@@ -49,7 +55,11 @@ impl<'src> Parser<'src> {
                 let name = self.parse_identifier_as_string()?;
                 let peek = self.token_stream.peek_kind();
                 if peek != &With {
-                    return Err(ParserError::Expected { expected: "with".to_owned(), got: format!("{}", *peek), span });
+                    return Err(ParserError::Expected {
+                        expected: "with".to_owned(),
+                        got: format!("{}", *peek),
+                        span,
+                    });
                 }
                 DataTypeKind::Custom(name)
             }
@@ -62,7 +72,11 @@ impl<'src> Parser<'src> {
             let constraints = self.parse_constraints()?;
             // TODO: calculate start and size
             Ok(Expression::new(
-                ExpressionKind::Type(DataType::new(data_type_kind, Some(constraints), Span::default())),
+                ExpressionKind::Type(DataType::new(
+                    data_type_kind,
+                    Some(constraints),
+                    Span::default(),
+                )),
                 //TODO: add constraint size
                 span,
             ))

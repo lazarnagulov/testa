@@ -1,16 +1,15 @@
-use crate::core::{lexer::token::TokenKind, parser::error::ParserError, utils::span::Span};
 use super::Parser;
+use crate::core::{lexer::token::TokenKind, parser::error::ParserError, utils::span::Span};
 
 impl<'src> Parser<'src> {
-
     pub(super) fn source_text(&self, span: Span) -> &'src str {
         &self.source[span.start.offset..span.end.offset]
     }
-    
+
     pub(super) fn token_text(&self, span: Span) -> &'src str {
         &self.source[span.start.offset..span.end.offset]
     }
-    
+
     pub(super) fn string_literal_content(&self, span: Span) -> &'src str {
         &self.source[span.inner()]
     }
@@ -24,5 +23,4 @@ impl<'src> Parser<'src> {
         let span = self.token_stream.expect_token(TokenKind::Identifier)?;
         Ok(self.source_text(span).to_string())
     }
-
 }

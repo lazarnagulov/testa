@@ -1,4 +1,4 @@
-use std::{ env, fs::File, io::Read, path::Path};
+use std::{env, fs::File, io::Read, path::Path};
 
 use testa::{
     core::parser::Parser,

@@ -1,12 +1,15 @@
-use crate::core::ast::{Expression, ExpressionKind, ExpressionStatemnt, InfixOperator, Precedence, PrefixOperator};
+use super::Parser;
+use crate::core::ast::{
+    Expression, ExpressionKind, ExpressionStatemnt, InfixOperator, Precedence, PrefixOperator,
+};
 use crate::core::lexer::token::TokenKind::*;
 use crate::core::parser::error::ParserError;
 use crate::core::utils::span::Span;
-use super::Parser;
 
+
+// TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 
 impl<'src> Parser<'src> {
-
     pub(super) fn parse_expression_statement(&mut self) -> Result<ExpressionStatemnt, ParserError> {
         let expression = self.parse_expression(Precedence::Lowest)?;
         let span = self.token_stream.expect_token(Semicolon)?;
@@ -17,10 +20,16 @@ impl<'src> Parser<'src> {
     pub(super) fn parse_list_expression(&mut self) -> Result<Expression, ParserError> {
         self.token_stream.consume_token()?;
         let elements = self.parse_elements()?;
-        Ok(Expression::new(ExpressionKind::List(elements), Span::default()))
+        Ok(Expression::new(
+            ExpressionKind::List(elements),
+            Span::default(),
+        ))
     }
 
-    pub(super) fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
+    pub(super) fn parse_expression(
+        &mut self,
+        precedence: Precedence,
+    ) -> Result<Expression, ParserError> {
         let mut expression = self.parse_primary_expression()?;
 
         while precedence < self.current_precendence() {
@@ -181,13 +190,52 @@ impl<'src> Parser<'src> {
         }
     }
 
+    pub(super) fn parse_literal(&mut self) -> Result<Expression, ParserError> {
+        let token = self.token_stream.peek_token()?;
+        let span = token.span;
+
+        let parsed = match &token.kind {
+            StringLiteral => {
+                let literal = self.string_literal_content(span).to_string();
+                Ok(Expression::new(
+                    ExpressionKind::StringLiteral(literal),
+                    span,
+                ))
+            }
+            Identifier => {
+                let literal = self.token_text(span).to_string();
+                Ok(Expression::new(ExpressionKind::Identifier(literal), span))
+            }
+            FloatLiteral => {
+                let literal = self.token_text(span).to_string();
+                Ok(Expression::new(ExpressionKind::FloatLiteral(literal), span))
+            }
+            True => Ok(Expression::new(ExpressionKind::BooleanLiteral(true), span)),
+            False => Ok(Expression::new(ExpressionKind::BooleanLiteral(false), span)),
+            IntLiteral => {
+                let number = self.token_text(span).parse().unwrap();
+                Ok(Expression {
+                    kind: ExpressionKind::IntLiteral(number),
+                    span,
+                })
+            }
+            kind => Err(ParserError::Expected {
+                expected: "literal".to_owned(),
+                got: kind.to_string(),
+                span,
+            }),
+        };
+        self.token_stream.next_token()?;
+        parsed
+    }
+
     pub(super) fn parse_prefix_expression(
         &mut self,
         operator: PrefixOperator,
     ) -> Result<Expression, ParserError> {
-        let op_span = self.token_stream.consume_token()?;  
+        let op_span = self.token_stream.consume_token()?;
         let expression = self.parse_expression(Precedence::Prefix)?;
-        let span = op_span.merge(expression.span); 
+        let span = op_span.merge(expression.span);
         Ok(Expression::new(
             ExpressionKind::Prefix {
                 operator,
@@ -203,7 +251,7 @@ impl<'src> Parser<'src> {
         operator: InfixOperator,
         precedence: Precedence,
     ) -> Result<Expression, ParserError> {
-        self.token_stream.next_token()?;        
+        self.token_stream.next_token()?;
         let right = self.parse_expression(precedence)?;
 
         let start_span = left.span;
@@ -215,7 +263,7 @@ impl<'src> Parser<'src> {
                 operator,
                 right: Box::new(right),
             },
-            start_span.merge(end_span)
+            start_span.merge(end_span),
         ))
     }
 
@@ -233,5 +281,4 @@ impl<'src> Parser<'src> {
             _ => Precedence::Lowest,
         }
     }
-
 }

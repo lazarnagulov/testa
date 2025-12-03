@@ -1,7 +1,14 @@
 #![allow(unused)]
 use std::iter::Peekable;
 
-use crate::core::{lexer::{Lexer, token::{Token, TokenKind}}, parser::error::ParserError, utils::span::Span};
+use crate::core::{
+    lexer::{
+        Lexer,
+        token::{Token, TokenKind},
+    },
+    parser::error::ParserError,
+    utils::span::Span,
+};
 
 pub struct TokenStream<'src> {
     lexer: Peekable<Lexer<'src>>,
@@ -49,18 +56,22 @@ impl<'src> TokenStream<'src> {
         } else {
             self.lexer
                 .next()
-                .ok_or(ParserError::UnexpectedEof { span: self.last_span })?
+                .ok_or(ParserError::UnexpectedEof {
+                    span: self.last_span,
+                })?
                 .map_err(ParserError::from)?
         };
-        
-        self.last_span = token.span; 
+
+        self.last_span = token.span;
         Ok(token)
     }
 
     pub fn peek_token(&mut self) -> Result<&Token, ParserError> {
         self.lexer
             .peek()
-            .ok_or(ParserError::UnexpectedEof { span: Span::default() })?
+            .ok_or(ParserError::UnexpectedEof {
+                span: Span::default(),
+            })?
             .as_ref()
             .map_err(|e| ParserError::from(e.clone()))
     }
@@ -68,7 +79,7 @@ impl<'src> TokenStream<'src> {
     pub fn peek_kind(&mut self) -> &TokenKind {
         self.lexer
             .peek()
-            .and_then(|r| r.as_ref().ok())  
+            .and_then(|r| r.as_ref().ok())
             .map_or(&TokenKind::Eof, |t| &t.kind)
     }
 
@@ -82,18 +93,14 @@ impl<'src> TokenStream<'src> {
 
     pub fn peek_nth(&mut self, n: usize) -> Result<&Token, ParserError> {
         while self.buffer.len() < n {
-            let token = self.lexer
-                .next()
-                .ok_or(ParserError::UnexpectedEof { span: self.last_span })??;
+            let token = self.lexer.next().ok_or(ParserError::UnexpectedEof {
+                span: self.last_span,
+            })??;
             self.buffer.push(token);
         }
-        
-        self.buffer.get(n - 1)
-            .ok_or(ParserError::UnexpectedEof { span: self.last_span })
+
+        self.buffer.get(n - 1).ok_or(ParserError::UnexpectedEof {
+            span: self.last_span,
+        })
     }
-
 }
-
-
-
-

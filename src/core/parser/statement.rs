@@ -1,14 +1,13 @@
 use std::mem;
 use std::path::PathBuf;
 
+use super::Parser;
 use crate::core::ast::{Attribute, Element, Field, Precedence, Variant};
+use crate::core::lexer::token::TokenKind::*;
 use crate::core::utils::span::Span;
 use crate::core::{ast::Statement, parser::error::ParserError};
-use crate::core::lexer::token::TokenKind::*;
-use super::Parser;
 
 impl<'src> Parser<'src> {
-
     pub(super) fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.token_stream.peek_kind() {
             Output | Seed => self.parse_directive(),
@@ -32,7 +31,7 @@ impl<'src> Parser<'src> {
             name,
             variants,
             attributes: mem::take(&mut self.attributes),
-            span: Span::default()
+            span: Span::default(),
         })
     }
 
@@ -68,7 +67,7 @@ impl<'src> Parser<'src> {
                 template_name: None,
                 body: fields,
                 count,
-                span: Span::default()
+                span: Span::default(),
             })
         } else {
             self.token_stream.expect_token(Semicolon)?;
@@ -76,21 +75,20 @@ impl<'src> Parser<'src> {
                 template_name: Some(name),
                 body: Vec::new(),
                 count,
-                span: Span::default()
+                span: Span::default(),
             })
         }
     }
 
-    
     pub(super) fn parse_output_path(&mut self) -> Result<Statement, ParserError> {
         let start = self.token_stream.consume_token()?;
         let argument = self.token_stream.expect_token(StringLiteral)?;
         let path = self.string_literal_content(argument);
         let end = self.token_stream.expect_token(Semicolon)?;
-        
+
         Ok(Statement::OutputPathDirective {
             argument: PathBuf::from(path),
-            span: start.merge(end) 
+            span: start.merge(end),
         })
     }
 
@@ -105,9 +103,15 @@ impl<'src> Parser<'src> {
             self.token_stream.expect_token(Semicolon)?;
         }
         match directive.kind {
-            Output => Ok(Statement::OutputDirective { argument, options, span: Span::default() }),
+            Output => Ok(Statement::OutputDirective {
+                argument,
+                options,
+                span: Span::default(),
+            }),
             Seed => todo!(),
-            _ => Err(ParserError::InvalidDirective { span: directive.span }),
+            _ => Err(ParserError::InvalidDirective {
+                span: directive.span,
+            }),
         }
     }
 
@@ -162,7 +166,7 @@ impl<'src> Parser<'src> {
                 expression,
                 overridable,
                 mem::take(&mut field_attributes),
-                span
+                span,
             ));
         }
         self.token_stream.expect_token(RBrace)?;
@@ -185,7 +189,7 @@ impl<'src> Parser<'src> {
             name,
             attributes,
             body: fields,
-            span: Span::default()
+            span: Span::default(),
         })
     }
 
@@ -199,15 +203,15 @@ impl<'src> Parser<'src> {
             name,
             data_type,
             attributes: mem::take(&mut self.attributes),
-            span
+            span,
         })
     }
-
 
     pub(super) fn parse_attribute(&mut self) -> Result<Statement, ParserError> {
         let span = self.token_stream.consume_token()?;
         let attribute = &self.source[span.start.offset + 2..span.end.offset];
-        self.attributes.push(Attribute::Flag(attribute.to_owned(), Span::default()));
+        self.attributes
+            .push(Attribute::Flag(attribute.to_owned(), Span::default()));
         match self.token_stream.peek_kind() {
             Template => self.parse_template(),
             Type => self.parse_type_declaration(),
@@ -219,5 +223,4 @@ impl<'src> Parser<'src> {
             }),
         }
     }
-
 }
