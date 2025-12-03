@@ -15,7 +15,6 @@ use crate::core::lexer::Lexer;
 use crate::core::parser::error::ParserError;
 use crate::core::parser::token_stream::TokenStream;
 
-// TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
 pub struct Parser<'src> {
     token_stream: TokenStream<'src>,
     source: &'src str,

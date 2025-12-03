@@ -6,15 +6,19 @@ use crate::core::lexer::token::TokenKind::*;
 use crate::core::parser::error::ParserError;
 use crate::core::utils::span::Span;
 
-
-// TODO: Add lookups for prefix and infix expressions { TokenKind: fn () }
+macro_rules! parse_infix {
+    ($self:expr, $expr:expr, $op:expr, $prec:expr) => {
+        $self.parse_infix_expression($expr, $op, $prec)?
+    };
+}
 
 impl<'src> Parser<'src> {
     pub(super) fn parse_expression_statement(&mut self) -> Result<ExpressionStatemnt, ParserError> {
         let expression = self.parse_expression(Precedence::Lowest)?;
-        let span = self.token_stream.expect_token(Semicolon)?;
+        let start = expression.span;
+        let end = self.token_stream.expect_token(Semicolon)?;
 
-        Ok(ExpressionStatemnt { expression, span })
+        Ok(ExpressionStatemnt { expression, span: start.merge(end) })
     }
 
     pub(super) fn parse_list_expression(&mut self) -> Result<Expression, ParserError> {
@@ -33,110 +37,43 @@ impl<'src> Parser<'src> {
         let mut expression = self.parse_primary_expression()?;
 
         while precedence < self.current_precendence() {
-            expression = match &self.token_stream.peek_kind() {
-                Asterisk => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::Multiply,
-                    Precedence::Product,
-                )?,
-                Slash => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::Divide,
-                    Precedence::Product,
-                )?,
-                Percent => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::Mod,
-                    Precedence::Product,
-                )?,
-                Plus => {
-                    self.parse_infix_expression(expression, InfixOperator::Plus, Precedence::Sum)?
+            use InfixOperator as Op;
+            use Precedence as Prec;
+
+            expression = match self.token_stream.peek_kind() {
+                Asterisk => parse_infix!(self, expression, Op::Multiply, Prec::Product),
+                Slash => parse_infix!(self, expression, Op::Divide, Prec::Product),
+                Percent => parse_infix!(self, expression, Op::Mod, Prec::Product),
+                Plus => parse_infix!(self, expression, Op::Plus, Prec::Sum),
+                Minus => parse_infix!(self, expression, Op::Minus, Prec::Sum),
+                BitAnd => parse_infix!(self, expression, Op::BitAnd, Prec::Bitwise),
+                BitOr => parse_infix!(self, expression, Op::BitOr, Prec::Bitwise),
+                BitXor => parse_infix!(self, expression, Op::BitXor, Prec::Bitwise),
+                BitLShift => parse_infix!(self, expression, Op::BitLShift, Prec::Bitwise),
+                BitRShift => parse_infix!(self, expression, Op::BitRShift, Prec::Bitwise),
+                And => parse_infix!(self, expression, Op::And, Prec::Comparison),
+                Or => parse_infix!(self, expression, Op::Or, Prec::Comparison),
+                LessThan => parse_infix!(self, expression, Op::LessThan, Prec::Comparison),
+                LessThanOrEqual => {
+                    parse_infix!(self, expression, Op::LessThanOrEqual, Prec::Comparison)
                 }
-                Minus => {
-                    self.parse_infix_expression(expression, InfixOperator::Minus, Precedence::Sum)?
+                GreaterThan => parse_infix!(self, expression, Op::GreaterThan, Prec::Comparison),
+                GreaterThanOrEqual => {
+                    parse_infix!(self, expression, Op::GreaterThanOrEqual, Prec::Comparison)
                 }
-                BitAnd => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::BitAnd,
-                    Precedence::Bitwise,
-                )?,
-                BitOr => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::BitOr,
-                    Precedence::Bitwise,
-                )?,
-                BitXor => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::BitXor,
-                    Precedence::Bitwise,
-                )?,
-                BitLShift => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::BitLShift,
-                    Precedence::Bitwise,
-                )?,
-                BitRShift => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::BitRShift,
-                    Precedence::Bitwise,
-                )?,
-                And => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::And,
-                    Precedence::Comparison,
-                )?,
-                Or => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::Or,
-                    Precedence::Comparison,
-                )?,
-                LessThan => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::LessThan,
-                    Precedence::Comparison,
-                )?,
-                LessThanOrEqual => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::LessThanOrEqual,
-                    Precedence::Comparison,
-                )?,
-                GreaterThan => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::GreaterThan,
-                    Precedence::Comparison,
-                )?,
-                GreaterThanOrEqual => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::GreaterThanOrEqual,
-                    Precedence::Comparison,
-                )?,
-                DoubleEqual => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::Equal,
-                    Precedence::Comparison,
-                )?,
-                NotEqual => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::NotEqual,
-                    Precedence::Comparison,
-                )?,
-                DoublePeriod => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::ExclusiveRange,
-                    Precedence::Range,
-                )?,
-                DoublePeriodEqual => self.parse_infix_expression(
-                    expression,
-                    InfixOperator::InclusiveRange,
-                    Precedence::Range,
-                )?,
+                DoubleEqual => parse_infix!(self, expression, Op::Equal, Prec::Comparison),
+                NotEqual => parse_infix!(self, expression, Op::NotEqual, Prec::Comparison),
+                DoublePeriod => parse_infix!(self, expression, Op::ExclusiveRange, Prec::Range),
+                DoublePeriodEqual => {
+                    parse_infix!(self, expression, Op::InclusiveRange, Prec::Range)
+                }
                 token => {
                     return Err(ParserError::Syntax {
                         message: format!("Invalid operator: {}", token),
                         span: expression.span,
                     });
                 }
-            }
+            };
         }
         Ok(expression)
     }
