@@ -65,8 +65,7 @@ impl<'src> Lexer<'src> {
             ',' => Ok(self.make_single_char_token(start_location, Comma)),
             '#' => {
                 self.advance();
-                if self.consume_if('[')
-                {
+                if self.consume_if('[') {
                     self.make_attribute(start_location)
                 } else {
                     Err(LexerError::InvalidToken {
@@ -81,10 +80,8 @@ impl<'src> Lexer<'src> {
             ']' => Ok(self.make_single_char_token(start_location, RBracket)),
             '.' => {
                 self.advance();
-                if self.consume_if('.')
-                {
-                    if self.consume_if('=')
-                    {
+                if self.consume_if('.') {
+                    if self.consume_if('=') {
                         Ok(Token::new(
                             DoublePeriodEqual,
                             Span::from_len(start_location, 3),
@@ -101,8 +98,7 @@ impl<'src> Lexer<'src> {
             '*' => Ok(self.make_single_char_token(start_location, Asterisk)),
             '&' => {
                 self.advance();
-                if self.consume_if('&')
-                {
+                if self.consume_if('&') {
                     Ok(Token::new(And, Span::from_len(start_location, 2)))
                 } else {
                     Ok(Token::new(BitAnd, Span::single_char(start_location)))
@@ -111,8 +107,7 @@ impl<'src> Lexer<'src> {
             '~' => Ok(self.make_single_char_token(start_location, BitNegate)),
             '|' => {
                 self.advance();
-                if self.consume_if('|')
-                {
+                if self.consume_if('|') {
                     Ok(Token::new(Or, Span::from_len(start_location, 2)))
                 } else {
                     Ok(Token::new(BitOr, Span::single_char(start_location)))
@@ -121,11 +116,9 @@ impl<'src> Lexer<'src> {
             '^' => Ok(self.make_single_char_token(start_location, BitXor)),
             '=' => {
                 self.advance();
-                if self.consume_if('=')
-                {
+                if self.consume_if('=') {
                     Ok(Token::new(DoubleEqual, Span::from_len(start_location, 2)))
-                } else if self.consume_if('>')
-                {
+                } else if self.consume_if('>') {
                     Ok(Token::new(Arrow, Span::from_len(start_location, 2)))
                 } else {
                     Ok(Token::new(SingleEqual, Span::single_char(start_location)))
@@ -133,8 +126,7 @@ impl<'src> Lexer<'src> {
             }
             '!' => {
                 self.advance();
-                if self.consume_if('=')
-                {
+                if self.consume_if('=') {
                     Ok(Token::new(NotEqual, Span::from_len(start_location, 2)))
                 } else {
                     Ok(Token::new(
@@ -153,14 +145,12 @@ impl<'src> Lexer<'src> {
             }
             '<' => {
                 self.advance();
-                if self.consume_if('=')
-                {
+                if self.consume_if('=') {
                     Ok(Token::new(
                         LessThanOrEqual,
                         Span::from_len(start_location, 2),
                     ))
-                } else if self.consume_if('<')
-                {
+                } else if self.consume_if('<') {
                     Ok(Token::new(BitLShift, Span::from_len(start_location, 2)))
                 } else {
                     Ok(Token::new(LessThan, Span::single_char(start_location)))
@@ -168,14 +158,12 @@ impl<'src> Lexer<'src> {
             }
             '>' => {
                 self.advance();
-                if self.consume_if('=')
-                {
+                if self.consume_if('=') {
                     Ok(Token::new(
                         GreaterThanOrEqual,
                         Span::from_len(start_location, 2),
                     ))
-                } else if self.consume_if('>')
-                {
+                } else if self.consume_if('>') {
                     Ok(Token::new(BitRShift, Span::from_len(start_location, 2)))
                 } else {
                     Ok(Token::new(GreaterThan, Span::single_char(start_location)))
@@ -183,8 +171,7 @@ impl<'src> Lexer<'src> {
             }
             '/' => {
                 self.advance();
-                if self.consume_if('/')
-                {
+                if self.consume_if('/') {
                     self.skip_line();
                     self.next_token()
                 } else {

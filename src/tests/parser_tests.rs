@@ -1,15 +1,14 @@
 use core::panic;
 use std::path::Path;
-use std::{path::PathBuf, vec};
+use std::path::PathBuf;
 
+use crate::core::ast::ExpressionStatemnt;
 use crate::core::ast::{
-    Attribute, ConstraintExpression, ConstraintKind, DataType, DataTypeKind, Element, Expression,
-    ExpressionKind, ExpressionStatemnt, Field, InfixOperator, PatternChar, PatternElement,
-    PrefixOperator, Program, Statement, Variant,
+    Attribute, ConstraintKind, DataTypeKind, ExpressionKind, InfixOperator, PatternChar,
+    PatternElement, PrefixOperator, Statement,
 };
 use crate::core::parser::Parser;
 use crate::core::parser::error::ParserError;
-use crate::core::utils::span::Span;
 
 #[test]
 fn parse_tagged_template() {
@@ -17,15 +16,25 @@ fn parse_tagged_template() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Template {
-                    attributes: vec![Attribute::Flag("abstract".to_owned())],
-                    name: "User".to_string(),
-                    body: vec![],
-                    parent: None,
-                }]
-            );
+            assert_eq!(program.0.len(), 1);
+            let Statement::Template {
+                attributes,
+                name,
+                body,
+                parent,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Template statement");
+            };
+
+            let Attribute::Flag(attr_name, _) = &attributes[0] else {
+                panic!("expected flag attribute");
+            };
+            assert_eq!(attr_name, "abstract");
+            assert_eq!(name, "User");
+            assert!(body.is_empty());
+            assert!(parent.is_none());
         }
         Err(err) => handle_error(err),
     }
@@ -37,26 +46,27 @@ fn parse_tagged_template_field() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Template {
-                    attributes: Vec::new(),
-                    name: "User".to_string(),
-                    body: vec![Field::new(
-                        "id".to_owned(),
-                        Expression::new(
-                            ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-                            Span::new(46, 6, 1, 1)
-                        ),
-                        false,
-                        vec![
-                            Attribute::Flag("primary_key".to_owned()),
-                            Attribute::Flag("unique".to_owned())
-                        ]
-                    )],
-                    parent: None,
-                }]
-            );
+            let Statement::Template { body, .. } = &program.0[0] else {
+                panic!("Expected Template statement");
+            };
+            assert_eq!(body.len(), 1);
+            assert_eq!(body[0].name, "id");
+            let attributes = &body[0].attributes;
+            assert_eq!(attributes.len(), 2);
+            let Attribute::Flag(name, _) = &attributes[0] else {
+                panic!("expected flag attribute");
+            };
+            assert_eq!(name, "primary_key");
+            let Attribute::Flag(name, _) = &attributes[1] else {
+                panic!("expected flag attribute");
+            };
+            assert_eq!(name, "unique");
+
+            assert!(!body[0].overridable);
+            match &body[0].value.kind {
+                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Str)),
+                _ => panic!("Expected Type expression"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -68,15 +78,21 @@ fn parse_empty_template() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Template {
-                    attributes: Vec::new(),
-                    name: "User".to_string(),
-                    body: vec![],
-                    parent: None,
-                }]
-            );
+            assert_eq!(program.0.len(), 1);
+            let Statement::Template {
+                attributes,
+                name,
+                body,
+                parent,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Template statement");
+            };
+            assert!(attributes.is_empty());
+            assert_eq!(name, "User");
+            assert!(body.is_empty());
+            assert!(parent.is_none());
         }
         Err(err) => handle_error(err),
     }
@@ -86,26 +102,32 @@ fn parse_empty_template() {
 fn parse_single_field_template() {
     let program = "template User { name = string; }";
     let mut parser = Parser::new(program, Path::new(""));
-    let field = Field::new(
-        "name".to_string(),
-        Expression::new(
-            ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-            Span::new(23, 6, 1, 1),
-        ),
-        false,
-        Vec::new(),
-    );
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Template {
-                    name: "User".to_string(),
-                    attributes: Vec::new(),
-                    body: vec![field],
-                    parent: None,
-                }]
-            );
+            let Statement::Template {
+                name,
+                body,
+                attributes,
+                parent,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Template statement");
+            };
+            assert_eq!(name, "User");
+            assert!(attributes.is_empty());
+            assert!(parent.is_none());
+            assert_eq!(body.len(), 1);
+            assert_eq!(body[0].name, "name");
+            assert!(!body[0].overridable);
+            assert!(body[0].attributes.is_empty());
+            match &body[0].value.kind {
+                ExpressionKind::Type(dt) => {
+                    assert!(matches!(dt.kind, DataTypeKind::Str));
+                    assert!(dt.constraints.is_none());
+                }
+                _ => panic!("Expected Type expression"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -116,44 +138,43 @@ fn parse_template() {
     let program =
         "template Product : Consumable { override name = string; quantity = int; price = float; }";
     let mut parser = Parser::new(program, Path::new(""));
-    let name_field = Field::new(
-        "name".to_string(),
-        Expression::new(
-            ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-            Span::new(48, 6, 1, 1),
-        ),
-        true,
-        Vec::new(),
-    );
-    let quantity_field = Field::new(
-        "quantity".to_string(),
-        Expression::new(
-            ExpressionKind::Type(DataType::new(DataTypeKind::Int, None)),
-            Span::new(67, 3, 1, 1),
-        ),
-        false,
-        Vec::new(),
-    );
-    let price_field = Field::new(
-        "price".to_string(),
-        Expression::new(
-            ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
-            Span::new(80, 5, 1, 1),
-        ),
-        false,
-        Vec::new(),
-    );
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Template {
-                    name: "Product".to_string(),
-                    body: vec![name_field, quantity_field, price_field],
-                    attributes: Vec::new(),
-                    parent: Some("Consumable".to_owned()),
-                }]
-            );
+            let Statement::Template {
+                name,
+                body,
+                parent,
+                attributes,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Template statement");
+            };
+            assert_eq!(name, "Product");
+            assert_eq!(parent, &Some("Consumable".to_owned()));
+            assert!(attributes.is_empty());
+            assert_eq!(body.len(), 3);
+
+            assert_eq!(body[0].name, "name");
+            assert!(body[0].overridable);
+            match &body[0].value.kind {
+                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Str)),
+                _ => panic!("Expected Type expression"),
+            }
+
+            assert_eq!(body[1].name, "quantity");
+            assert!(!body[1].overridable);
+            match &body[1].value.kind {
+                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Int)),
+                _ => panic!("Expected Type expression"),
+            }
+
+            assert_eq!(body[2].name, "price");
+            assert!(!body[2].overridable);
+            match &body[2].value.kind {
+                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Float)),
+                _ => panic!("Expected Type expression"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -170,34 +191,36 @@ fn parse_missing_paren_template() {
 fn parse_anonymus_generate() {
     let program = "@generate _ [10] { name = string; price = float; }";
     let mut parser = Parser::new(program, Path::new(""));
-    let name_field = Field::new(
-        "name".to_string(),
-        Expression::new(
-            ExpressionKind::Type(DataType::new(DataTypeKind::Str, None)),
-            Span::new(26, 6, 1, 1),
-        ),
-        false,
-        Vec::new(),
-    );
-    let price_field = Field::new(
-        "price".to_string(),
-        Expression::new(
-            ExpressionKind::Type(DataType::new(DataTypeKind::Float, None)),
-            Span::new(42, 5, 1, 1),
-        ),
-        false,
-        Vec::new(),
-    );
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Generate {
-                    template_name: None,
-                    body: vec![name_field, price_field],
-                    count: Expression::new(ExpressionKind::IntLiteral(10), Span::new(13, 2, 1, 1))
-                }]
-            );
+            let Statement::Generate {
+                template_name,
+                body,
+                count,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Generate statement");
+            };
+            assert_eq!(template_name, &None);
+            assert_eq!(body.len(), 2);
+
+            assert_eq!(body[0].name, "name");
+            match &body[0].value.kind {
+                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Str)),
+                _ => panic!("Expected Type expression"),
+            }
+
+            assert_eq!(body[1].name, "price");
+            match &body[1].value.kind {
+                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Float)),
+                _ => panic!("Expected Type expression"),
+            }
+
+            match &count.kind {
+                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
+                _ => panic!("Expected IntLiteral"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -209,14 +232,21 @@ fn parse_generate() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Generate {
-                    template_name: Some("User".to_string()),
-                    body: vec![],
-                    count: Expression::new(ExpressionKind::IntLiteral(10), Span::new(16, 2, 1, 1))
-                }]
-            );
+            let Statement::Generate {
+                template_name,
+                body,
+                count,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Generate statement");
+            };
+            assert_eq!(template_name, &Some("User".to_string()));
+            assert!(body.is_empty());
+            match &count.kind {
+                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
+                _ => panic!("Expected IntLiteral"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -235,36 +265,49 @@ fn parse_weighted_variant_enum() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Enum {
-                    name: "Role".to_string(),
-                    variants: vec![
-                        Variant::new(
-                            "User".to_string(),
-                            Some(Expression::new(
-                                ExpressionKind::IntLiteral(50),
-                                Span::new(32, 2, 1, 1)
-                            ))
-                        ),
-                        Variant::new(
-                            "Admin".to_string(),
-                            Some(Expression::new(
-                                ExpressionKind::IntLiteral(10),
-                                Span::new(43, 2, 1, 1)
-                            ))
-                        ),
-                        Variant::new(
-                            "Developer".to_string(),
-                            Some(Expression::new(
-                                ExpressionKind::IntLiteral(30),
-                                Span::new(60, 2, 1, 1)
-                            ))
-                        ),
-                    ],
-                    attributes: vec![Attribute::Flag("public".to_owned())],
-                }]
-            );
+            let Statement::Enum {
+                name,
+                variants,
+                attributes,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Enum statement");
+            };
+            assert_eq!(name, "Role");
+            assert_eq!(attributes.len(), 1);
+            let Attribute::Flag(name, _) = &attributes[0] else {
+                panic!("expected flag attribute");
+            };
+            assert_eq!(name, "public");
+            assert_eq!(variants.len(), 3);
+
+            assert_eq!(variants[0].name, "User");
+            match &variants[0].weight {
+                Some(expr) => match &expr.kind {
+                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 50),
+                    _ => panic!("Expected IntLiteral"),
+                },
+                None => panic!("Expected weight"),
+            }
+
+            assert_eq!(variants[1].name, "Admin");
+            match &variants[1].weight {
+                Some(expr) => match &expr.kind {
+                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
+                    _ => panic!("Expected IntLiteral"),
+                },
+                None => panic!("Expected weight"),
+            }
+
+            assert_eq!(variants[2].name, "Developer");
+            match &variants[2].weight {
+                Some(expr) => match &expr.kind {
+                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 30),
+                    _ => panic!("Expected IntLiteral"),
+                },
+                None => panic!("Expected weight"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -276,14 +319,18 @@ fn parse_empty_enum() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Enum {
-                    name: "Role".to_string(),
-                    variants: vec![],
-                    attributes: Vec::new(),
-                }]
-            );
+            let Statement::Enum {
+                name,
+                variants,
+                attributes,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Enum statement");
+            };
+            assert_eq!(name, "Role");
+            assert!(variants.is_empty());
+            assert!(attributes.is_empty());
         }
         Err(err) => handle_error(err),
     }
@@ -295,14 +342,20 @@ fn parse_single_variant_enum() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Enum {
-                    name: "Role".to_string(),
-                    variants: vec![Variant::new("User".to_string(), None)],
-                    attributes: Vec::new(),
-                }]
-            );
+            let Statement::Enum {
+                name,
+                variants,
+                attributes,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Enum statement");
+            };
+            assert_eq!(name, "Role");
+            assert!(attributes.is_empty());
+            assert_eq!(variants.len(), 1);
+            assert_eq!(variants[0].name, "User");
+            assert!(variants[0].weight.is_none());
         }
         Err(err) => handle_error(err),
     }
@@ -312,73 +365,101 @@ fn parse_single_variant_enum() {
 fn parse_list_type() {
     let program = "[int][range=1..=5];";
     let mut parser = Parser::new(program, Path::new(""));
-    let expression = ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::Type(DataType::new(
-                DataTypeKind::List(Box::new(DataType::new(DataTypeKind::Int, None))),
-                Some(vec![ConstraintExpression::new(
-                    Expression::new(
+    match parser.parse() {
+        Ok(program) => {
+            let Statement::Expression(expr_stmt) = &program.0[0] else {
+                panic!("Expected Expression statement");
+            };
+            match &expr_stmt.expression.kind {
+                ExpressionKind::Type(dt) => {
+                    match &dt.kind {
+                        DataTypeKind::List(inner) => {
+                            assert!(matches!(inner.kind, DataTypeKind::Int));
+                        }
+                        _ => panic!("Expected List type"),
+                    }
+                    let constraints = dt.constraints.as_ref().expect("Expected constraints");
+                    assert_eq!(constraints.len(), 1);
+                    assert!(matches!(constraints[0].kind, ConstraintKind::Range));
+                    match &constraints[0].expression.kind {
                         ExpressionKind::Infix {
-                            left: Box::new(Expression::new(
-                                ExpressionKind::IntLiteral(1),
-                                Span::new(12, 1, 1, 1),
-                            )),
-                            operator: InfixOperator::InclusiveRange,
-                            right: Box::new(Expression::new(
-                                ExpressionKind::IntLiteral(5),
-                                Span::new(16, 1, 1, 1),
-                            )),
-                        },
-                        Span::new(12, 5, 1, 1),
-                    ),
-                    ConstraintKind::Range,
-                )]),
-            )),
-            Span::new(1, 5, 1, 1),
-        ),
-    };
-    expect_expression(&mut parser, expression);
+                            left,
+                            operator,
+                            right,
+                        } => {
+                            assert!(matches!(operator, InfixOperator::InclusiveRange));
+                            match &left.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 1),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                            match &right.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 5),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                        }
+                        _ => panic!("Expected Infix expression"),
+                    }
+                }
+                _ => panic!("Expected Type expression"),
+            }
+        }
+        Err(err) => handle_error(err),
+    }
 }
 
 #[test]
 fn parse_list_expression() {
     let program = "[1 => 5; \"John\"; true => 25];";
     let mut parser = Parser::new(program, Path::new(""));
-    let expression = ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::List(vec![
-                Element::new(
-                    Expression::new(ExpressionKind::IntLiteral(1), Span::new(1, 1, 1, 1)),
-                    Some(Expression::new(
-                        ExpressionKind::IntLiteral(5),
-                        Span::new(6, 1, 1, 1),
-                    )),
-                    1,
-                    4,
-                ),
-                Element::new(
-                    Expression::new(
-                        ExpressionKind::StringLiteral("John".to_owned()),
-                        Span::new(9, 6, 1, 1),
-                    ),
-                    None,
-                    9,
-                    6,
-                ),
-                Element::new(
-                    Expression::new(ExpressionKind::BooleanLiteral(true), Span::new(17, 4, 1, 1)),
-                    Some(Expression::new(
-                        ExpressionKind::IntLiteral(25),
-                        Span::new(25, 2, 1, 1),
-                    )),
-                    17,
-                    8,
-                ),
-            ]),
-            Span::new(0, 19, 1, 1),
-        ),
-    };
-    expect_expression(&mut parser, expression);
+    match parser.parse() {
+        Ok(program) => {
+            let Statement::Expression(expr_stmt) = &program.0[0] else {
+                panic!("Expected Expression statement");
+            };
+            match &expr_stmt.expression.kind {
+                ExpressionKind::List(elements) => {
+                    assert_eq!(elements.len(), 3);
+
+                    match elements[0].value.kind {
+                        ExpressionKind::IntLiteral(v) => assert_eq!(v, 1),
+                        _ => panic!("expected IntLiteral"),
+                    }
+
+                    match elements[0]
+                        .weight
+                        .as_ref()
+                        .expect("expected expression")
+                        .kind
+                    {
+                        ExpressionKind::IntLiteral(v) => assert_eq!(v, 5),
+                        _ => panic!("expected IntLiteral"),
+                    }
+
+                    match &elements[1].value.kind {
+                        ExpressionKind::StringLiteral(v) => assert_eq!(v, "John"),
+                        kind => panic!("expected StringLiteral, got {:?}", kind),
+                    }
+
+                    match elements[2].value.kind {
+                        ExpressionKind::BooleanLiteral(v) => assert!(v),
+                        _ => panic!("expected BoolLiteral"),
+                    }
+
+                    match elements[2]
+                        .weight
+                        .as_ref()
+                        .expect("expected expression")
+                        .kind
+                    {
+                        ExpressionKind::IntLiteral(v) => assert_eq!(v, 25),
+                        _ => panic!("expected IntLiteral"),
+                    }
+                }
+                _ => panic!("Expected List expression"),
+            }
+        }
+        Err(err) => handle_error(err),
+    }
 }
 
 #[test]
@@ -389,57 +470,82 @@ fn parse_extended_type() {
             type even_positive_int = extend positive_int with [multiple_of=2];
         "#;
     let mut parser = Parser::new(program, Path::new(""));
-    let data_type = Expression::new(
-        ExpressionKind::Type(DataType::new(
-            DataTypeKind::Int,
-            Some(vec![ConstraintExpression::new(
-                Expression::new(
-                    ExpressionKind::Infix {
-                        left: Box::new(Expression::new(
-                            ExpressionKind::IntLiteral(0),
-                            Span::new(65, 1, 1, 1),
-                        )),
-                        operator: InfixOperator::InclusiveRange,
-                        right: Box::new(Expression::new(
-                            ExpressionKind::IntLiteral(1024),
-                            Span::new(69, 4, 1, 1),
-                        )),
-                    },
-                    Span::new(65, 8, 1, 1),
-                ),
-                ConstraintKind::Range,
-            )]),
-        )),
-        Span::default(),
-    );
-    let extended_data_type = Expression::new(
-        ExpressionKind::Type(DataType::new(
-            DataTypeKind::Custom("positive_int".to_owned()),
-            Some(vec![ConstraintExpression::new(
-                Expression::new(ExpressionKind::IntLiteral(2), Span::new(151, 1, 1, 1)),
-                ConstraintKind::MultipleOf,
-            )]),
-        )),
-        Span::default(),
-    );
 
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![
-                    Statement::TypeDecl {
-                        name: "positive_int".to_owned(),
-                        data_type,
-                        attributes: vec![Attribute::Flag("public".to_owned())]
-                    },
-                    Statement::TypeDecl {
-                        name: "even_positive_int".to_owned(),
-                        data_type: extended_data_type,
-                        attributes: Vec::new()
+            assert_eq!(program.0.len(), 2);
+
+            let Statement::TypeDecl {
+                name: name1,
+                data_type: dt1,
+                attributes: attr1,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected TypeDecl statement");
+            };
+            assert_eq!(name1, "positive_int");
+            assert_eq!(attr1.len(), 1);
+            let Attribute::Flag(name, _) = &attr1[0] else {
+                panic!("expected flag attribute");
+            };
+            assert_eq!(name, "public");
+
+            match &dt1.kind {
+                ExpressionKind::Type(dt) => {
+                    assert!(matches!(dt.kind, DataTypeKind::Int));
+                    let constraints = dt.constraints.as_ref().expect("Expected constraints");
+                    assert_eq!(constraints.len(), 1);
+                    assert!(matches!(constraints[0].kind, ConstraintKind::Range));
+                    match &constraints[0].expression.kind {
+                        ExpressionKind::Infix {
+                            left,
+                            operator,
+                            right,
+                        } => {
+                            assert!(matches!(operator, InfixOperator::InclusiveRange));
+                            match &left.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 0),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                            match &right.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 1024),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                        }
+                        _ => panic!("Expected Infix expression"),
                     }
-                ]
-            );
+                }
+                _ => panic!("Expected Type expression"),
+            }
+
+            let Statement::TypeDecl {
+                name: name2,
+                data_type: dt2,
+                attributes: attr2,
+                ..
+            } = &program.0[1]
+            else {
+                panic!("Expected TypeDecl statement");
+            };
+            assert_eq!(name2, "even_positive_int");
+            assert!(attr2.is_empty());
+            match &dt2.kind {
+                ExpressionKind::Type(dt) => {
+                    match &dt.kind {
+                        DataTypeKind::Custom(s) => assert_eq!(s, "positive_int"),
+                        _ => panic!("Expected Custom type"),
+                    }
+                    let constraints = dt.constraints.as_ref().expect("Expected constraints");
+                    assert_eq!(constraints.len(), 1);
+                    assert!(matches!(constraints[0].kind, ConstraintKind::MultipleOf));
+                    match &constraints[0].expression.kind {
+                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 2),
+                        _ => panic!("Expected IntLiteral"),
+                    }
+                }
+                _ => panic!("Expected Type expression"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -451,18 +557,24 @@ fn parse_enum() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::Enum {
-                    name: "Role".to_string(),
-                    variants: vec![
-                        Variant::new("User".to_string(), None),
-                        Variant::new("Admin".to_string(), None),
-                        Variant::new("Moderator".to_string(), None),
-                    ],
-                    attributes: Vec::new(),
-                }]
-            );
+            let Statement::Enum {
+                name,
+                variants,
+                attributes,
+                ..
+            } = &program.0[0]
+            else {
+                panic!("Expected Enum statement");
+            };
+            assert_eq!(name, "Role");
+            assert!(attributes.is_empty());
+            assert_eq!(variants.len(), 3);
+            assert_eq!(variants[0].name, "User");
+            assert!(variants[0].weight.is_none());
+            assert_eq!(variants[1].name, "Admin");
+            assert!(variants[1].weight.is_none());
+            assert_eq!(variants[2].name, "Moderator");
+            assert!(variants[2].weight.is_none());
         }
         Err(err) => handle_error(err),
     }
@@ -479,66 +591,92 @@ fn parse_missing_paren_enum() {
 fn parse_infix_expression() {
     let program = "2 + 10 * 20;";
     let mut parser = Parser::new(program, Path::new(""));
-    let solution = ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::Infix {
-                left: Box::new(Expression::new(
-                    ExpressionKind::IntLiteral(2),
-                    Span::new(0, 1, 1, 1),
-                )),
-                operator: InfixOperator::Plus,
-                right: Box::new(Expression::new(
-                    ExpressionKind::Infix {
-                        left: Box::new(Expression::new(
-                            ExpressionKind::IntLiteral(10),
-                            Span::new(4, 2, 1, 1),
-                        )),
-                        operator: InfixOperator::Multiply,
-                        right: Box::new(Expression::new(
-                            ExpressionKind::IntLiteral(20),
-                            Span::new(9, 2, 1, 1),
-                        )),
-                    },
-                    Span::new(4, 7, 1, 1),
-                )),
-            },
-            Span::new(0, 11, 1, 1),
-        ),
-    };
-    expect_expression(&mut parser, solution);
+    match parser.parse() {
+        Ok(program) => {
+            let Statement::Expression(expr_stmt) = &program.0[0] else {
+                panic!("Expected Expression statement");
+            };
+            match &expr_stmt.expression.kind {
+                ExpressionKind::Infix {
+                    left,
+                    operator,
+                    right,
+                } => {
+                    assert!(matches!(operator, InfixOperator::Plus));
+                    match &left.kind {
+                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 2),
+                        _ => panic!("Expected IntLiteral"),
+                    }
+                    match &right.kind {
+                        ExpressionKind::Infix {
+                            left: l2,
+                            operator: op2,
+                            right: r2,
+                        } => {
+                            assert!(matches!(op2, InfixOperator::Multiply));
+                            match &l2.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                            match &r2.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 20),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                        }
+                        _ => panic!("Expected Infix expression"),
+                    }
+                }
+                _ => panic!("Expected Infix expression"),
+            }
+        }
+        Err(err) => handle_error(err),
+    }
 }
 
 #[test]
 fn parse_grouped_expression() {
     let program = "(2 + 3) * 5;";
     let mut parser = Parser::new(program, Path::new(""));
-    let solution = ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::Infix {
-                left: Box::new(Expression::new(
-                    ExpressionKind::Infix {
-                        left: Box::new(Expression::new(
-                            ExpressionKind::IntLiteral(2),
-                            Span::new(1, 1, 1, 3),
-                        )),
-                        operator: InfixOperator::Plus,
-                        right: Box::new(Expression::new(
-                            ExpressionKind::IntLiteral(3),
-                            Span::new(5, 1, 1, 7),
-                        )),
-                    },
-                    Span::new(0, 7, 1, 1),
-                )),
-                operator: InfixOperator::Multiply,
-                right: Box::new(Expression::new(
-                    ExpressionKind::IntLiteral(5),
-                    Span::new(10, 1, 1, 12),
-                )),
-            },
-            Span::new(0, 11, 1, 12),
-        ),
-    };
-    expect_expression(&mut parser, solution);
+    match parser.parse() {
+        Ok(program) => {
+            let Statement::Expression(expr_stmt) = &program.0[0] else {
+                panic!("Expected Expression statement");
+            };
+            match &expr_stmt.expression.kind {
+                ExpressionKind::Infix {
+                    left,
+                    operator,
+                    right,
+                } => {
+                    assert!(matches!(operator, InfixOperator::Multiply));
+                    match &left.kind {
+                        ExpressionKind::Infix {
+                            left: l2,
+                            operator: op2,
+                            right: r2,
+                        } => {
+                            assert!(matches!(op2, InfixOperator::Plus));
+                            match &l2.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 2),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                            match &r2.kind {
+                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 3),
+                                _ => panic!("Expected IntLiteral"),
+                            }
+                        }
+                        _ => panic!("Expected Infix expression"),
+                    }
+                    match &right.kind {
+                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 5),
+                        _ => panic!("Expected IntLiteral"),
+                    }
+                }
+                _ => panic!("Expected Infix expression"),
+            }
+        }
+        Err(err) => handle_error(err),
+    }
 }
 
 #[test]
@@ -556,7 +694,7 @@ fn parse_missing_paren_expression() {
                 assert_eq!(expected, ")".to_string());
                 assert_eq!(got, ";".to_string())
             }
-            _ => panic!("Program should have returned exprected error"),
+            _ => panic!("Program should have returned expected error"),
         },
     }
 }
@@ -565,32 +703,46 @@ fn parse_missing_paren_expression() {
 fn parse_prefix_expression() {
     let program = "-5; !true;";
     let mut parser = Parser::new(program, Path::new(""));
-    let negative_statement = Statement::Expression(ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::Prefix {
-                operator: PrefixOperator::Negative,
-                expression: Box::new(Expression::new(
-                    ExpressionKind::IntLiteral(5),
-                    Span::new(1, 1, 1, 3),
-                )),
-            },
-            Span::new(0, 2, 1, 1),
-        ),
-    });
-    let logical_not_statement = Statement::Expression(ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::Prefix {
-                operator: PrefixOperator::LogicalNegate,
-                expression: Box::new(Expression::new(
-                    ExpressionKind::BooleanLiteral(true),
-                    Span::new(5, 4, 1, 10),
-                )),
-            },
-            Span::new(4, 5, 1, 6),
-        ),
-    });
-    let program = Program(vec![negative_statement, logical_not_statement]);
-    expect_program(&mut parser, program);
+    match parser.parse() {
+        Ok(program) => {
+            assert_eq!(program.0.len(), 2);
+
+            let Statement::Expression(expr_stmt1) = &program.0[0] else {
+                panic!("Expected Expression statement");
+            };
+            match &expr_stmt1.expression.kind {
+                ExpressionKind::Prefix {
+                    operator,
+                    expression,
+                } => {
+                    assert!(matches!(operator, PrefixOperator::Negative));
+                    match &expression.kind {
+                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 5),
+                        _ => panic!("Expected IntLiteral"),
+                    }
+                }
+                _ => panic!("Expected Prefix expression"),
+            }
+
+            let Statement::Expression(expr_stmt2) = &program.0[1] else {
+                panic!("Expected Expression statement");
+            };
+            match &expr_stmt2.expression.kind {
+                ExpressionKind::Prefix {
+                    operator,
+                    expression,
+                } => {
+                    assert!(matches!(operator, PrefixOperator::LogicalNegate));
+                    match expression.kind {
+                        ExpressionKind::BooleanLiteral(v) => assert!(v),
+                        _ => panic!("Expected BooleanLiteral"),
+                    }
+                }
+                _ => panic!("Expected Prefix expression"),
+            }
+        }
+        Err(err) => handle_error(err),
+    }
 }
 
 #[test]
@@ -599,13 +751,14 @@ fn parse_directive() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::OutputDirective {
-                    argument: "csv".to_string(),
-                    options: vec![]
-                }]
-            );
+            let Statement::OutputDirective {
+                argument, options, ..
+            } = &program.0[0]
+            else {
+                panic!("Expected OutputDirective statement");
+            };
+            assert_eq!(argument, "csv");
+            assert!(options.is_empty());
         }
         Err(err) => handle_error(err),
     }
@@ -617,13 +770,10 @@ fn parse_output_path() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            println!("{:?}", program);
-            assert_eq!(
-                program.0,
-                vec![Statement::OutputPathDirective {
-                    argument: PathBuf::from("./example.csv"),
-                }]
-            );
+            let Statement::OutputPathDirective { argument, .. } = &program.0[0] else {
+                panic!("Expected OutputPathDirective statement");
+            };
+            assert_eq!(argument, &PathBuf::from("./example.csv"));
         }
         Err(err) => handle_error(err),
     }
@@ -633,60 +783,127 @@ fn parse_output_path() {
 fn parse_pattern_dollar_case() {
     let program = "string_pattern \"dollar$$$$$$$$$$$$$$$$${aa}\";";
     let mut parser = Parser::new(program, Path::new(""));
-    let expression = ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::StringPattern(vec![
-                PatternElement::Literal("dollar$$$$$$$$$$$$$$$$".to_owned()),
-                PatternElement::RepeatChar {
-                    ch: PatternChar::Lowercase,
-                    count: 2,
-                    count_expression: None,
-                },
-            ]),
-            Span::new(0, 14, 1, 15),
-        ),
-    };
-    expect_expression(&mut parser, expression);
+    match parser.parse() {
+        Ok(program) => {
+            let Statement::Expression(expr_stmt) = &program.0[0] else {
+                panic!("Expected Expression statement");
+            };
+            match &expr_stmt.expression.kind {
+                ExpressionKind::StringPattern(elements) => {
+                    assert_eq!(elements.len(), 2);
+                    match &elements[0] {
+                        PatternElement::Literal(s, _) => assert_eq!(s, "dollar$$$$$$$$$$$$$$$$"),
+                        _ => panic!("Expected Literal"),
+                    }
+                    match &elements[1] {
+                        PatternElement::RepeatChar {
+                            ch,
+                            count,
+                            count_expression,
+                            ..
+                        } => {
+                            assert!(matches!(ch, PatternChar::Lowercase));
+                            assert_eq!(*count, 2);
+                            assert!(count_expression.is_none());
+                        }
+                        _ => panic!("Expected RepeatChar"),
+                    }
+                }
+                _ => panic!("Expected StringPattern expression"),
+            }
+        }
+        Err(err) => handle_error(err),
+    }
 }
 
 #[test]
 fn parse_string_pattern() {
     let program = "string_pattern \"testa$}${aaa[10]}john${A[25]##[13]}\";";
     let mut parser = Parser::new(program, Path::new(""));
-    let solution = ExpressionStatemnt {
-        expression: Expression::new(
-            ExpressionKind::StringPattern(vec![
-                PatternElement::Literal("testa$}".to_owned()),
-                PatternElement::RepeatChar {
-                    ch: PatternChar::Lowercase,
-                    count: 3,
-                    count_expression: Some(Expression::new(
-                        ExpressionKind::IntLiteral(10),
-                        Span::new(0, 2, 1, 3),
-                    )),
-                },
-                PatternElement::Literal("john".to_owned()),
-                PatternElement::RepeatChar {
-                    ch: PatternChar::Uppercase,
-                    count: 1,
-                    count_expression: Some(Expression::new(
-                        ExpressionKind::IntLiteral(25),
-                        Span::new(0, 2, 1, 3),
-                    )),
-                },
-                PatternElement::RepeatChar {
-                    ch: PatternChar::Digit,
-                    count: 2,
-                    count_expression: Some(Expression::new(
-                        ExpressionKind::IntLiteral(13),
-                        Span::new(0, 2, 1, 3),
-                    )),
-                },
-            ]),
-            Span::new(0, 14, 1, 15),
-        ),
-    };
-    expect_expression(&mut parser, solution);
+    match parser.parse() {
+        Ok(program) => {
+            let Statement::Expression(ExpressionStatemnt { expression, .. }) = &program.0[0] else {
+                panic!("Expected Expression statement");
+            };
+            match &expression.kind {
+                ExpressionKind::StringPattern(elements) => {
+                    assert_eq!(elements.len(), 5);
+
+                    match &elements[0] {
+                        PatternElement::Literal(s, _) => assert_eq!(s, "testa$}"),
+                        _ => panic!("Expected Literal"),
+                    }
+
+                    match &elements[1] {
+                        PatternElement::RepeatChar {
+                            ch,
+                            count,
+                            count_expression,
+                            ..
+                        } => {
+                            assert!(matches!(ch, PatternChar::Lowercase));
+                            assert_eq!(*count, 3);
+                            match count_expression {
+                                Some(expr) => match &expr.kind {
+                                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
+                                    _ => panic!("Expected IntLiteral"),
+                                },
+                                None => panic!("Expected count expression"),
+                            }
+                        }
+                        _ => panic!("Expected RepeatChar"),
+                    }
+
+                    match &elements[2] {
+                        PatternElement::Literal(s, _) => assert_eq!(s, "john"),
+                        _ => panic!("Expected Literal"),
+                    }
+
+                    match &elements[3] {
+                        PatternElement::RepeatChar {
+                            ch,
+                            count,
+                            count_expression,
+                            ..
+                        } => {
+                            assert!(matches!(ch, PatternChar::Uppercase));
+                            assert_eq!(*count, 1);
+                            match count_expression {
+                                Some(expr) => match &expr.kind {
+                                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 25),
+                                    _ => panic!("Expected IntLiteral"),
+                                },
+                                None => panic!("Expected count expression"),
+                            }
+                        }
+                        _ => panic!("Expected RepeatChar"),
+                    }
+
+                    match &elements[4] {
+                        PatternElement::RepeatChar {
+                            ch,
+                            count,
+                            count_expression,
+                            ..
+                        } => {
+                            assert!(matches!(ch, PatternChar::Digit));
+                            assert_eq!(*count, 2);
+                            match count_expression {
+                                Some(expr) => match &expr.kind {
+                                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 13),
+                                    _ => panic!("Expected IntLiteral"),
+                                },
+                                None => panic!("Expected count expression"),
+                            }
+                        }
+                        _ => panic!("Expected RepeatChar"),
+                    }
+                }
+                _ => panic!("Expected StringPattern expression"),
+            }
+        }
+        Err(err) => handle_error(err),
+    }
 }
 
 #[test]
@@ -695,21 +912,19 @@ fn parse_directive_options() {
     let mut parser = Parser::new(program, Path::new(""));
     match parser.parse() {
         Ok(program) => {
-            assert_eq!(
-                program.0,
-                vec![Statement::OutputDirective {
-                    argument: "csv".to_string(),
-                    options: vec![Field::new(
-                        "delimiter".to_string(),
-                        Expression::new(
-                            ExpressionKind::StringLiteral(";".to_string()),
-                            Span::new(26, 3, 1, 30)
-                        ),
-                        false,
-                        Vec::new(),
-                    )]
-                }]
-            );
+            let Statement::OutputDirective {
+                argument, options, ..
+            } = &program.0[0]
+            else {
+                panic!("Expected OutputDirective statement");
+            };
+            assert_eq!(argument, "csv");
+            assert_eq!(options.len(), 1);
+            assert_eq!(options[0].name, "delimiter");
+            match &options[0].value.kind {
+                ExpressionKind::StringLiteral(s) => assert_eq!(s, ";"),
+                _ => panic!("Expected StringLiteral"),
+            }
         }
         Err(err) => handle_error(err),
     }
@@ -728,22 +943,6 @@ fn expect_missing_paren(parser: &mut Parser) {
     }
 }
 
-fn expect_program(parser: &mut Parser, program: Program) {
-    match parser.parse() {
-        Ok(p) => assert_eq!(p, program),
-        Err(err) => handle_error(err),
-    }
-}
-
-fn expect_expression(parser: &mut Parser, expression: ExpressionStatemnt) {
-    match parser.parse() {
-        Ok(program) => {
-            assert_eq!(program.0, vec![Statement::Expression(expression)]);
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
 fn handle_error(error: ParserError) {
     match error {
         ParserError::Expected {
@@ -752,32 +951,24 @@ fn handle_error(error: ParserError) {
             got,
         } => {
             panic!(
-                "{}:{} ERROR: Expected '{}' but got '{}'",
-                span.line, span.line_offset, expected, got
+                "expected '{}' got '{}' in {}",
+                expected,
+                got,
+                span.to_string()
             )
         }
-        ParserError::InvalidDirective { span} => panic!(
-            "{}:{} ERROR: Invalid directive",
-            span.line, span.line_offset
-        ),
-        ParserError::UnexpectedEof { .. } => {
-            panic!("ERROR: Missing enclosing \" or ;")
+        ParserError::InvalidDirective { span } => panic!("{}", span.to_string()),
+        ParserError::UnexpectedEof { span } => {
+            panic!("{}", span.to_string())
         }
-        ParserError::Syntax { span, message} => {
-            panic!("{}:{} ERROR: {}", span.line, span.line_offset, message)
+        ParserError::Syntax { span, message } => {
+            panic!("{}: {}", span.to_string(), message)
         }
-        ParserError::UndefinedConstraint { span} => panic!(
-            "{}:{} ERROR: Undefined constraint",
-            span.line, span.line_offset
-        ),
-        ParserError::InvalidStringPattern { span, pattern} => panic!(
-            "{}:{} ERROR: Invalid pattern {}",
-            span.line, span.line_offset, pattern
-        ),
-        ParserError::InvalidAttribute { span, token} => panic!(
-            "{}:{} ERROR: Cannot put attribute on {}",
-            span.line, span.line_offset, token
-        ),
-        ParserError::LexerError(lexer_error) => panic!("{}", lexer_error.to_string())
+        ParserError::UndefinedConstraint { span } => panic!("{}", span.to_string()),
+        ParserError::InvalidStringPattern { span, pattern } => {
+            panic!("{}: {}", span.to_string(), pattern)
+        }
+        ParserError::InvalidAttribute { span, token } => panic!("{}: {}", span.to_string(), token),
+        ParserError::LexerError(lexer_error) => panic!("{}", lexer_error.to_string()),
     }
 }

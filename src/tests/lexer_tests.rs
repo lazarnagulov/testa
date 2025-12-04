@@ -62,7 +62,7 @@ fn lex_two_char_tokens() {
 fn lex_three_char_tokens() {
     let program = "..=";
     let mut lexer = Lexer::new(program);
-    
+
     expect_token(&mut lexer, vec![DoublePeriodEqual]);
 }
 

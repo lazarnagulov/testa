@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Location {
     pub offset: usize,
@@ -15,6 +17,12 @@ impl Location {
     }
 }
 
+impl fmt::Display for Location {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {}, {})", self.line, self.column, self.offset)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Span {
     pub start: Location,
@@ -26,7 +34,6 @@ impl Span {
         Self { start, end }
     }
 
-    
     pub fn from_len(location: Location, len: usize) -> Self {
         Self {
             start: location,
@@ -38,8 +45,12 @@ impl Span {
         }
     }
 
+    pub fn outer(&self) -> std::ops::Range<usize> {
+        self.start.offset..self.end.offset
+    }
+
     pub fn inner(&self) -> std::ops::Range<usize> {
-        self.start.offset + 1 .. self.end.offset - 1
+        self.start.offset + 1..self.end.offset - 1
     }
 
     pub fn single_char(location: Location) -> Self {
@@ -77,5 +88,11 @@ impl Span {
             start: self.start,
             end,
         }
+    }
+}
+
+impl fmt::Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.start, self.end)
     }
 }

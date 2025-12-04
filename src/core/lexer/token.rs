@@ -4,32 +4,41 @@ use once_cell::sync::Lazy;
 
 use crate::core::{lexer::error::LexerError, utils::span::Span};
 
+macro_rules! keywords {
+    ($($str:expr => $kind:expr),* $(,)?) => {
+        {
+            let mut m = HashMap::new();
+            $(m.insert($str, $kind);)*
+            m
+        }
+    };
+}
+
 pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
-    let mut m: HashMap<&str, TokenKind> = HashMap::new();
-    m.insert("output", TokenKind::Output);
-    m.insert("generate", TokenKind::Generate);
-    m.insert("seed", TokenKind::Seed);
-    m.insert("output_path", TokenKind::OutputPath);
-    m.insert("pick", TokenKind::Pick);
-    m.insert("uuid", TokenKind::Uuid);
-    m.insert("template", TokenKind::Uuid);
-    m.insert("template", TokenKind::Template);
-    m.insert("resource", TokenKind::Resource);
-    m.insert("with", TokenKind::With);
-    m.insert("extend", TokenKind::Extend);
-    m.insert("true", TokenKind::True);
-    m.insert("false", TokenKind::False);
-    m.insert("enum", TokenKind::Enum);
-    m.insert("int", TokenKind::Int);
-    m.insert("float", TokenKind::Float);
-    m.insert("bool", TokenKind::Bool);
-    m.insert("string", TokenKind::Str);
-    m.insert("override", TokenKind::Override);
-    m.insert("type", TokenKind::Type);
-    m.insert("string_template", TokenKind::StringTemplate);
-    m.insert("string_pattern", TokenKind::StringPattern);
-    m.insert("constraint", TokenKind::Constraint);
-    m
+    keywords! {
+        "output" => TokenKind::Output,
+        "generate" => TokenKind::Generate,
+        "seed" => TokenKind::Seed,
+        "output_path" => TokenKind::OutputPath,
+        "pick" => TokenKind::Pick,
+        "uuid" => TokenKind::Uuid,
+        "template" => TokenKind::Template,
+        "resource" => TokenKind::Resource,
+        "with" => TokenKind::With,
+        "extend" => TokenKind::Extend,
+        "true" => TokenKind::True,
+        "false" => TokenKind::False,
+        "enum" => TokenKind::Enum,
+        "int" => TokenKind::Int,
+        "float" => TokenKind::Float,
+        "bool" => TokenKind::Bool,
+        "string" => TokenKind::Str,
+        "override" => TokenKind::Override,
+        "type" => TokenKind::Type,
+        "string_template" => TokenKind::StringTemplate,
+        "string_pattern" => TokenKind::StringPattern,
+        "constraint" => TokenKind::Constraint,
+    }
 });
 
 #[derive(Debug, Clone, Eq, PartialEq)]
