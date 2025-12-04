@@ -1,8 +1,8 @@
-[package]
-name = "testa"
-version = "0.3.0"
-edition = "2024"
-
-[dependencies]
-rand = "0.9.1"
-once_cell = "1.21.3"
+[workspace]
+members = [
+    "crates/testa-core",
+    "crates/testa-interpreter",
+    "crates/testa-generation",
+    "crates/testa-cli",
+]
+resolver = "2"
