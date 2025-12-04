@@ -247,6 +247,7 @@ name = "testa-generation"
 version = "0.1.0"
 dependencies = [
  "testa-core",
+ "testa-interpreter",
 ]
 
 [[package]]

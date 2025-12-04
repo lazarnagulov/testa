@@ -1,0 +1,9 @@
+[package]
+name = "testa-generation"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+testa-core = { path = "../testa-core" }
+testa-interpreter = { path = "../testa-interpreter" }
+
