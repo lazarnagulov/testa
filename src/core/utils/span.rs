@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Location {
     pub offset: usize,
@@ -12,6 +14,12 @@ impl Location {
             line,
             column,
         }
+    }
+}
+
+impl fmt::Display for Location {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {}, {})", self.line, self.column, self.offset)
     }
 }
 
@@ -80,5 +88,11 @@ impl Span {
             start: self.start,
             end,
         }
+    }
+}
+
+impl fmt::Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.start, self.end)
     }
 }

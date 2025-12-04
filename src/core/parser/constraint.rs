@@ -23,9 +23,7 @@ static CONSTRAINTS: Lazy<HashMap<&'static str, ConstraintKind>> = Lazy::new(|| {
     m
 });
 
-
 impl<'src> Parser<'src> {
-
     pub(super) fn parse_constraints(&mut self) -> Result<Vec<ConstraintExpression>, ParserError> {
         let start = self.token_stream.consume_token()?;
         let mut constraints = Vec::new();
@@ -57,7 +55,6 @@ impl<'src> Parser<'src> {
         self.token_stream.expect_token(RBracket)?;
         Ok(constraints)
     }
-
 
     fn parse_constraint_expression(
         &mut self,
