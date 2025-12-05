@@ -7,10 +7,11 @@ use std::{
 
 use crate::{
     constraints::constrainted_type::ConstrainedType,
-    model::{enumeration::Enum, template::Template}, object::Object,
+    model::{enumeration::Enum, template::Template},
+    object::Object,
 };
 
-use super::{error::EvalError};
+use super::error::EvalError;
 
 pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;

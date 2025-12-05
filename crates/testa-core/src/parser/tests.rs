@@ -3,8 +3,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use crate::ast::{
-    Attribute, ConstraintKind, DataTypeKind, ExpressionKind, InfixOperator, PatternChar,
-    PatternElement, PrefixOperator, Statement, ExpressionStatemnt
+    Attribute, ConstraintKind, DataTypeKind, ExpressionKind, ExpressionStatemnt, InfixOperator,
+    PatternChar, PatternElement, PrefixOperator, Statement,
 };
 use crate::parser::Parser;
 use crate::parser::error::ParserError;
