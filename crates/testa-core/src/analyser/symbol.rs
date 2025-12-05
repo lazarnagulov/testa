@@ -42,6 +42,18 @@ impl SymbolTable {
         self.global_scope
     }
 
+    pub fn contains(&self, name: &str) -> bool {
+        self.symbols.contains_key(name)
+    }
+
+    pub fn insert(&mut self, symbol: Symbol) -> Option<Symbol> {
+        self.symbols.insert(symbol.name.clone(), symbol)
+    }
+
+    pub fn lookup(&self, name: &str) -> Option<&Symbol> {
+        self.symbols.get(name)
+    }
+
     pub fn create_scope(&mut self, parent: Option<ScopeId>, kind: ScopeKind) -> ScopeId {
         let id = ScopeId(self.scopes.len());
         let scope = Scope {
@@ -64,6 +76,7 @@ pub enum SymbolKind {
     },
     Enum {
         variants: Vec<Variant>,
+        attributes: Vec<Attribute>,
     },
     Resource {
         values: Vec<String>,
@@ -114,5 +127,9 @@ impl ReferenceMap {
             definitions: HashMap::new(),
             references: HashMap::new(),
         }
+    }
+
+    pub fn add_reference(&mut self, span: Span, parent_span: &[Span]) -> Option<Vec<Span>> {
+        self.references.insert(span, parent_span.to_vec())
     }
 }

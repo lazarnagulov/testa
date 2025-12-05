@@ -3,8 +3,9 @@ use crate::{
         result::AnalysisResult,
         symbol::{ReferenceMap, ScopeId, SymbolTable},
     },
-    ast::{Program, Statement},
+    ast::Program,
     diagnostics::Diagnostic,
+    utils::Span,
 };
 
 pub mod result;
@@ -31,7 +32,17 @@ impl SemanticAnalyser {
         }
     }
 
-    pub fn analyse(&mut self, program: Program) -> AnalysisResult {
-        todo!()
+    pub fn analyse(&mut self, _program: Program) -> AnalysisResult {
+        // self.visit_program(&program);
+
+        AnalysisResult {
+            symbol_table: self.symbol_table.clone(),
+            diagnostics: self.diagnostics.clone(),
+            references: self.references.clone(),
+        }
+    }
+
+    fn _error(&mut self, message: String, span: Span) {
+        self.diagnostics.push(Diagnostic::error(span, message));
     }
 }
