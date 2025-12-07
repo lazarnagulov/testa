@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Attribute, Field, Program, Variant, visitor::{Visitor, walk_enum, walk_template}
+        Attribute, Field, Program, Variant,
+        visitor::{Visitor, walk_enum, walk_template},
     },
     symbol_table::{
         SymbolTable,
@@ -106,16 +107,13 @@ impl Visitor for SymbolTableBuilder {
         }
     }
 
-    
-    fn visit_type_decl(
-        &mut self,
-        name: &str,
-        attributes: &[Attribute],
-        span: Span,
-    ) {
+    fn visit_type_decl(&mut self, name: &str, attributes: &[Attribute], span: Span) {
         if let Err(symbol_error) = self.table.insert(
             name.to_string(),
-            SymbolKind::TypeAlias { name: name.to_string(), attributes: attributes.to_vec() },
+            SymbolKind::TypeAlias {
+                name: name.to_string(),
+                attributes: attributes.to_vec(),
+            },
             span,
         ) {
             self.insert_error(symbol_error);
@@ -172,13 +170,10 @@ impl Visitor for SymbolTableBuilder {
 
         if let Err(symbol_error) = self.table.insert(
             variant.name.clone(),
-            SymbolKind::Variant {
-                enum_name,
-            },
+            SymbolKind::Variant { enum_name },
             variant.span,
         ) {
             self.insert_error(symbol_error);
         }
     }
-    
 }

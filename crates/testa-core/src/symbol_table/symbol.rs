@@ -1,9 +1,6 @@
 use std::{collections::HashMap, hash::Hash};
 
-use crate::{
-    ast::Attribute,
-    utils::Span,
-};
+use crate::{ast::Attribute, utils::Span};
 
 #[derive(Debug, Clone)]
 pub struct Symbol {

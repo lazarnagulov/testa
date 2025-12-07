@@ -36,12 +36,7 @@ pub trait Visitor: Sized {
         // Default: do nothing
     }
 
-    fn visit_type_decl(
-        &mut self,
-        _name: &str,
-        _attributes: &[Attribute],
-        _span: Span,
-    ) {
+    fn visit_type_decl(&mut self, _name: &str, _attributes: &[Attribute], _span: Span) {
         // Default: do nothing
     }
 

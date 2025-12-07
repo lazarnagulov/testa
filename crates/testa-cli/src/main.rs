@@ -1,6 +1,9 @@
 use std::{env, fs, path::Path, process::exit};
 
-use testa_core::{parser::Parser, symbol_table::symbol_table_builder::SymbolTableBuilder};
+use testa_core::{
+    parser::Parser, reference_checker::ReferenceChecker,
+    symbol_table::symbol_table_builder::SymbolTableBuilder,
+};
 use testa_interpreter::evaluator::error::EvalError;
 
 fn main() {
@@ -27,8 +30,18 @@ fn run() -> Result<(), String> {
             exit(1);
         }
     };
+    let checker = ReferenceChecker::new(symbol_table);
+    match checker.check(&program) {
+        Ok(_) => {}
+        Err(errors) => {
+            for error in errors {
+                println!("{}", error.to_diagnostic().format_cli());
+            }
+            exit(1);
+        }
+    }
 
-    symbol_table.dump();
+    // symbol_table.dump();
 
     // let mut context = Context::default();
 

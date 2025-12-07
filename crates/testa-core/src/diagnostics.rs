@@ -44,6 +44,15 @@ pub enum DiagnosticCode {
     EmptyEnum,
     DuplicateVariant,
     InvalidContext,
+
+    UnknownType,
+    UnknownTemplate,
+    UnknownEnum,
+    UnknownEnumVariant,
+    UnknownField,
+    UnknownIdentifier,
+    UnknownParentTemplate,
+    InheritanceCycle,
 }
 
 impl Diagnostic {
