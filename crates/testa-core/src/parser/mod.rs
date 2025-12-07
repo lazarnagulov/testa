@@ -14,26 +14,45 @@ mod tests;
 use std::path::Path;
 
 use crate::ast::{Attribute, Program};
-use crate::lexer::Lexer;
+use crate::lexer::error::LexerError;
+use crate::lexer::token::Token;
 use crate::parser::error::ParserError;
 use crate::parser::token_stream::TokenStream;
 
-pub struct Parser<'src> {
-    token_stream: TokenStream<'src>,
+pub struct Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    token_stream: TokenStream<I>,
     source: &'src str,
 
     attributes: Vec<Attribute>,
     path: &'src Path,
 }
 
-impl<'src> Parser<'src> {
-    pub fn new(program: &'src str, path: &'src Path) -> Self {
-        let lexer = Lexer::new(program).peekable();
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    pub fn new(lexer: I, program: &'src str, path: &'src Path) -> Self
+    where
+        I: Iterator<Item = Result<Token, LexerError>>,
+    {
+        let lexer = lexer.peekable();
         Self {
             token_stream: TokenStream::new(lexer),
             source: program,
             attributes: Vec::new(),
             path,
+        }
+    }
+
+    pub fn from_token_stream(token_stream: TokenStream<I>, source: &'src str) -> Self {
+        Self {
+            token_stream,
+            source,
+            attributes: Vec::new(),
+            path: Path::new("")
         }
     }
 

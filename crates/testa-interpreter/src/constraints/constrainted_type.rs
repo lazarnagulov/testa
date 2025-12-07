@@ -8,9 +8,9 @@ use crate::{
         constraint::CONSTRAINT_REGISTRY,
         sampler::{ConstraintSet, Sampler},
     },
+    evaluator,
     evaluator::context::{Context, Visitor},
     evaluator::error::EvalError,
-    evaluator,
     object::Object,
 };
 

@@ -4,7 +4,10 @@ use once_cell::sync::Lazy;
 
 use crate::{
     ast::{ConstraintExpression, ConstraintKind, Precedence},
-    lexer::token::TokenKind::*,
+    lexer::{
+        error::LexerError,
+        token::{Token, TokenKind::*},
+    },
     parser::error::ParserError,
 };
 
@@ -23,7 +26,10 @@ static CONSTRAINTS: Lazy<HashMap<&'static str, ConstraintKind>> = Lazy::new(|| {
     m
 });
 
-impl<'src> Parser<'src> {
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
     pub(super) fn parse_constraints(&mut self) -> Result<Vec<ConstraintExpression>, ParserError> {
         let start = self.token_stream.consume_token()?;
         let mut constraints = Vec::new();

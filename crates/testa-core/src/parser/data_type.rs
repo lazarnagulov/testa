@@ -1,12 +1,18 @@
 use crate::{
     ast::{DataType, DataTypeKind, Expression, ExpressionKind},
-    lexer::token::TokenKind::*,
+    lexer::{
+        error::LexerError,
+        token::{Token, TokenKind::*},
+    },
     parser::error::ParserError,
 };
 
 use super::Parser;
 
-impl<'src> Parser<'src> {
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
     pub(super) fn parse_list_type(&mut self) -> Result<Expression, ParserError> {
         let start_span = self.token_stream.consume_token()?;
 

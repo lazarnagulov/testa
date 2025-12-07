@@ -2,9 +2,9 @@ use rand::Rng;
 use testa_core::ast::Variant;
 
 use crate::{
+    evaluator,
     evaluator::context::{Context, Visitor},
     evaluator::error::EvalError,
-    evaluator,
     object::Object,
 };
 

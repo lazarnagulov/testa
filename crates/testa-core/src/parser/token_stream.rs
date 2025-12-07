@@ -1,26 +1,39 @@
-#![allow(unused)]
-use std::iter::Peekable;
+use std::{collections::VecDeque, iter::Peekable};
 
 use crate::{
     lexer::{
-        Lexer,
+        error::LexerError,
         token::{Token, TokenKind},
     },
     parser::error::ParserError,
     utils::Span,
 };
 
-pub struct TokenStream<'src> {
-    lexer: Peekable<Lexer<'src>>,
-    buffer: Vec<Token>,
+pub struct TokenStream<I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    lexer: Peekable<I>,
+    buffer: VecDeque<Token>,
     last_span: Span,
 }
 
-impl<'src> TokenStream<'src> {
-    pub fn new(lexer: Peekable<Lexer<'src>>) -> Self {
+impl<I> TokenStream<I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    pub fn new(lexer: Peekable<I>) -> Self {
         Self {
             lexer,
-            buffer: Vec::new(),
+            buffer: VecDeque::new(),
+            last_span: Span::default(),
+        }
+    }
+
+    pub fn from_iterator(iter: I) -> Self {
+        Self {
+            lexer: iter.peekable(),
+            buffer: VecDeque::new(),
             last_span: Span::default(),
         }
     }
@@ -51,22 +64,26 @@ impl<'src> TokenStream<'src> {
     }
 
     pub fn next_token(&mut self) -> Result<Token, ParserError> {
-        let token = if !self.buffer.is_empty() {
-            self.buffer.remove(0)
-        } else {
-            self.lexer
+        let token = match self.buffer.pop_front() {
+            Some(token) => Ok(token),
+            None => self
+                .lexer
                 .next()
                 .ok_or(ParserError::UnexpectedEof {
                     span: self.last_span,
                 })?
-                .map_err(ParserError::from)?
-        };
+                .map_err(ParserError::from),
+        }?;
 
         self.last_span = token.span;
         Ok(token)
     }
 
     pub fn peek_token(&mut self) -> Result<&Token, ParserError> {
+        if !self.buffer.is_empty() {
+            return Ok(&self.buffer[0]);
+        }
+
         self.lexer
             .peek()
             .ok_or(ParserError::UnexpectedEof {
@@ -77,6 +94,10 @@ impl<'src> TokenStream<'src> {
     }
 
     pub fn peek_kind(&mut self) -> &TokenKind {
+        if !self.buffer.is_empty() {
+            return &self.buffer[0].kind;
+        }
+
         self.lexer
             .peek()
             .and_then(|r| r.as_ref().ok())
@@ -84,23 +105,16 @@ impl<'src> TokenStream<'src> {
     }
 
     pub fn peek_kind_n(&mut self, n: usize) -> TokenKind {
-        self.lexer
-            .clone()
-            .nth(n - 1)
-            .and_then(|r| r.ok())
-            .map_or(TokenKind::Eof, |token| token.kind)
-    }
-
-    pub fn peek_nth(&mut self, n: usize) -> Result<&Token, ParserError> {
         while self.buffer.len() < n {
-            let token = self.lexer.next().ok_or(ParserError::UnexpectedEof {
-                span: self.last_span,
-            })??;
-            self.buffer.push(token);
+            match self.lexer.next() {
+                Some(Ok(token)) => self.buffer.push_back(token),
+                Some(Err(_)) => return TokenKind::Eof,
+                None => return TokenKind::Eof,
+            }
         }
 
-        self.buffer.get(n - 1).ok_or(ParserError::UnexpectedEof {
-            span: self.last_span,
-        })
+        self.buffer
+            .get(n - 1)
+            .map_or(TokenKind::Eof, |token| token.kind.clone())
     }
 }
