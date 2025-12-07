@@ -1,15 +1,15 @@
 use crate::{
-    analyser::{
-        result::AnalysisResult,
-        symbol::{ReferenceMap, ScopeId, SymbolTable},
-    },
-    ast::Program,
+    analyser::result::AnalysisResult,
+    ast::{Attribute, ConstraintExpression, Expression, Field, Program, Variant, visitor::Visitor},
     diagnostics::Diagnostic,
+    symbol_table::{
+        SymbolTable,
+        symbol::{ReferenceMap, ScopeId},
+    },
     utils::Span,
 };
 
 pub mod result;
-pub mod symbol;
 
 #[derive(Default, Debug)]
 pub struct SemanticAnalyser {
@@ -20,8 +20,7 @@ pub struct SemanticAnalyser {
 }
 
 impl SemanticAnalyser {
-    pub fn new() -> Self {
-        let symbol_table = SymbolTable::new();
+    pub fn new(symbol_table: SymbolTable) -> Self {
         let global_scope = symbol_table.global_scope();
 
         Self {
@@ -32,8 +31,8 @@ impl SemanticAnalyser {
         }
     }
 
-    pub fn analyse(&mut self, _program: Program) -> AnalysisResult {
-        // self.visit_program(&program);
+    pub fn analyse(&mut self, program: Program) -> AnalysisResult {
+        //self.visit_program(&program);
 
         AnalysisResult {
             symbol_table: self.symbol_table.clone(),
@@ -42,7 +41,7 @@ impl SemanticAnalyser {
         }
     }
 
-    fn _error(&mut self, message: String, span: Span) {
+    fn error(&mut self, message: &str, span: Span) {
         self.diagnostics.push(Diagnostic::error(span, message));
     }
 }

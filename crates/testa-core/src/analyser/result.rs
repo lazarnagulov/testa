@@ -1,6 +1,6 @@
 use crate::{
-    analyser::symbol::{ReferenceMap, SymbolTable},
     diagnostics::{Diagnostic, Severity},
+    symbol_table::{SymbolTable, symbol::ReferenceMap},
     utils::Span,
 };
 
