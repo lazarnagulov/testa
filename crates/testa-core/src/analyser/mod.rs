@@ -1,6 +1,6 @@
 use crate::{
     analyser::result::AnalysisResult,
-    ast::{Attribute, ConstraintExpression, Expression, Field, Program, Variant, visitor::Visitor},
+    ast::Program,
     diagnostics::Diagnostic,
     symbol_table::{
         SymbolTable,
@@ -14,7 +14,7 @@ pub mod result;
 #[derive(Default, Debug)]
 pub struct SemanticAnalyser {
     symbol_table: SymbolTable,
-    scopes: Vec<ScopeId>,
+    _scopes: Vec<ScopeId>,
     diagnostics: Vec<Diagnostic>,
     references: ReferenceMap,
 }
@@ -25,14 +25,14 @@ impl SemanticAnalyser {
 
         Self {
             symbol_table,
-            scopes: vec![global_scope],
+            _scopes: vec![global_scope],
             diagnostics: Vec::new(),
             references: ReferenceMap::new(),
         }
     }
 
-    pub fn analyse(&mut self, program: Program) -> AnalysisResult {
-        //self.visit_program(&program);
+    pub fn analyse(&mut self, _program: Program) -> AnalysisResult {
+        // self.visit_program(&program);
 
         AnalysisResult {
             symbol_table: self.symbol_table.clone(),
@@ -41,7 +41,7 @@ impl SemanticAnalyser {
         }
     }
 
-    fn error(&mut self, message: &str, span: Span) {
+    fn _error(&mut self, message: &str, span: Span) {
         self.diagnostics.push(Diagnostic::error(span, message));
     }
 }

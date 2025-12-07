@@ -1,3 +1,4 @@
+pub mod error;
 pub mod symbol;
 pub mod symbol_table_builder;
 
@@ -7,7 +8,10 @@ mod tests;
 use std::collections::HashMap;
 
 use crate::{
-    symbol_table::symbol::{Scope, ScopeId, ScopeKind, Symbol, SymbolKind},
+    symbol_table::{
+        error::SymbolError,
+        symbol::{Scope, ScopeId, ScopeKind, Symbol, SymbolKind},
+    },
     utils::Span,
 };
 
@@ -76,6 +80,14 @@ impl SymbolTable {
         self.scopes.iter_mut().find(|s| s.id == id)
     }
 
+    pub fn get_current_scope(&self) -> Option<&Scope> {
+        self.get_scope(self.current_scope)
+    }
+
+    pub fn current_scope_kind(&self) -> Option<&ScopeKind> {
+        self.get_current_scope().map(|s| &s.kind)
+    }
+
     pub fn lookup_current_scope(&self, name: &str) -> Option<&Symbol> {
         self.get_scope(self.current_scope)
             .and_then(|scope| scope.symbols.get(name))
@@ -100,12 +112,20 @@ impl SymbolTable {
         }
     }
 
-    pub fn insert(&mut self, name: String, kind: SymbolKind, span: Span) -> Result<(), String> {
+    pub fn insert(
+        &mut self,
+        name: String,
+        kind: SymbolKind,
+        span: Span,
+    ) -> Result<(), SymbolError> {
         if self.lookup_current_scope(&name).is_some() {
-            return Err(format!(
-                "Symbol '{}' already declared in this scope at {}",
-                name, span
-            ));
+            return Err(SymbolError::DuplicateDeclaration {
+                span,
+                message: format!(
+                    "Symbol '{}' already declared in this scope at {}",
+                    name, span
+                ),
+            });
         }
 
         let symbol = Symbol {
@@ -119,7 +139,10 @@ impl SymbolTable {
             scope.symbols.insert(name, symbol);
             Ok(())
         } else {
-            Err("Invalid scope".to_string())
+            Err(SymbolError::InvalidContext {
+                span,
+                message: "Invalid scope".to_string(),
+            })
         }
     }
 

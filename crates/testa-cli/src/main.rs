@@ -1,7 +1,7 @@
-use std::{env, fs, path::Path};
+use std::{env, fs, path::Path, process::exit};
 
-use testa_core::parser::Parser;
-use testa_interpreter::{evaluator, evaluator::context::Context, evaluator::error::EvalError};
+use testa_core::{parser::Parser, symbol_table::symbol_table_builder::SymbolTableBuilder};
+use testa_interpreter::evaluator::error::EvalError;
 
 fn main() {
     if let Err(err) = run() {
@@ -18,10 +18,21 @@ fn run() -> Result<(), String> {
 
     let mut parser = Parser::new(&source, &file_path);
     let program = parser.parse().map_err(|e| e.to_string())?;
+    let symbol_table = match SymbolTableBuilder::new().build(&program) {
+        Ok(table) => table,
+        Err(errors) => {
+            for error in errors {
+                println!("{}", error.to_diagnostic().format_cli());
+            }
+            exit(1);
+        }
+    };
 
-    let mut context = Context::default();
+    symbol_table.dump();
 
-    evaluator::evaluate(program, &mut context).map_err(format_eval_error)?;
+    // let mut context = Context::default();
+
+    // evaluator::evaluate(program, &mut context).map_err(format_eval_error)?;
 
     Ok(())
 }
@@ -34,7 +45,7 @@ fn get_input_path() -> Result<std::path::PathBuf, String> {
     }
 }
 
-fn format_eval_error(err: EvalError) -> String {
+fn _format_eval_error(err: EvalError) -> String {
     match err {
         EvalError::UnsupportedPrefixOperator { operator, object } => {
             format!("Bad operand type for unary {}: '{}'", operator, object)

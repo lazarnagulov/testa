@@ -106,12 +106,6 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             span,
         } => {
             visitor.visit_template(parent, attributes, name, body, *span);
-            for attr in attributes {
-                visitor.visit_attribute(attr);
-            }
-            for field in body {
-                visitor.visit_field(field);
-            }
         }
         Statement::Enum {
             name,
@@ -246,4 +240,13 @@ pub fn walk_field<V: Visitor>(visitor: &mut V, field: &Field) {
         visitor.visit_attribute(attr);
     }
     visitor.visit_expression(&field.value);
+}
+
+pub fn walk_template<V: Visitor>(visitor: &mut V, attributes: &[Attribute], body: &[Field]) {
+    for attr in attributes {
+        visitor.visit_attribute(attr);
+    }
+    for field in body {
+        visitor.visit_field(field);
+    }
 }

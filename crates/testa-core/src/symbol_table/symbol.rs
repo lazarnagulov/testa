@@ -31,7 +31,7 @@ pub enum SymbolKind {
         underlying_type: DataType,
     },
     Field {
-        type_info: DataType,
+        template_name: String,
         is_override: bool,
     },
 }
@@ -50,20 +50,20 @@ pub struct ScopeId(pub usize);
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScopeKind {
     Global,
-    Template,
+    Template { name: String },
     Block,
 }
 
 #[derive(Default, Debug, Clone)]
 pub struct ReferenceMap {
-    definitions: HashMap<Span, Span>,
+    _definitions: HashMap<Span, Span>,
     references: HashMap<Span, Vec<Span>>,
 }
 
 impl ReferenceMap {
     pub fn new() -> Self {
         Self {
-            definitions: HashMap::new(),
+            _definitions: HashMap::new(),
             references: HashMap::new(),
         }
     }

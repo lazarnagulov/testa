@@ -19,7 +19,7 @@ impl Location {
 
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}, {}, {})", self.line, self.column, self.offset)
+        write!(f, "{}:{}:{}", self.line, self.column, self.offset)
     }
 }
 
@@ -93,6 +93,6 @@ impl Span {
 
 impl fmt::Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}, {})", self.start, self.end)
+        write!(f, "{}:{}", self.start, self.end)
     }
 }
