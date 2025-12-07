@@ -1,7 +1,7 @@
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
-    ast::{Attribute, DataType},
+    ast::Attribute,
     utils::Span,
 };
 
@@ -28,7 +28,8 @@ pub enum SymbolKind {
         values: Vec<String>,
     },
     TypeAlias {
-        underlying_type: DataType,
+        name: String,
+        attributes: Vec<Attribute>,
     },
     Variant {
         enum_name: String,

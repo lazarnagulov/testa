@@ -39,7 +39,6 @@ pub trait Visitor: Sized {
     fn visit_type_decl(
         &mut self,
         _name: &str,
-        _data_type: &Expression,
         _attributes: &[Attribute],
         _span: Span,
     ) {
@@ -77,8 +76,8 @@ pub trait Visitor: Sized {
         // Default: do nothing
     }
 
-    fn visit_expression(&mut self, expr: &Expression) {
-        walk_expression(self, expr);
+    fn visit_expression(&mut self, _expression: &Expression) {
+        // Default: do nothing
     }
 
     fn visit_field(&mut self, field: &Field) {
@@ -125,7 +124,7 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             attributes,
             span,
         } => {
-            visitor.visit_type_decl(name, data_type, attributes, *span);
+            visitor.visit_type_decl(name, attributes, *span);
             for attr in attributes {
                 visitor.visit_attribute(attr);
             }
