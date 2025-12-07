@@ -1,7 +1,7 @@
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
-    ast::{Attribute, DataType, Variant},
+    ast::{Attribute, DataType},
     utils::Span,
 };
 
@@ -21,7 +21,7 @@ pub enum SymbolKind {
         attributes: Vec<Attribute>,
     },
     Enum {
-        variants: Vec<Variant>,
+        variants: Vec<String>,
         attributes: Vec<Attribute>,
     },
     Resource {
@@ -29,6 +29,9 @@ pub enum SymbolKind {
     },
     TypeAlias {
         underlying_type: DataType,
+    },
+    Variant {
+        enum_name: String,
     },
     Field {
         template_name: String,
@@ -51,6 +54,7 @@ pub struct ScopeId(pub usize);
 pub enum ScopeKind {
     Global,
     Template { name: String },
+    Enum { name: String },
     Block,
 }
 

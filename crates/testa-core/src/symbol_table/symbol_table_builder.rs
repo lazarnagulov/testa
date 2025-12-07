@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Attribute, Field, Program,
-        visitor::{Visitor, walk_template},
+        Attribute, Field, Program, Variant,
+        visitor::{Visitor, walk_enum, walk_template},
     },
     symbol_table::{
         SymbolTable,
@@ -68,9 +68,7 @@ impl Visitor for SymbolTableBuilder {
         self.table.enter_scope(ScopeKind::Template {
             name: name.to_string(),
         });
-
         walk_template(self, attributes, body);
-
         self.table.exit_scope();
     }
 
@@ -104,6 +102,65 @@ impl Visitor for SymbolTableBuilder {
                 template_name: parent_name,
             },
             field.span,
+        ) {
+            self.insert_error(symbol_error);
+        }
+    }
+
+    fn visit_enum(
+        &mut self,
+        name: &str,
+        variants: &[Variant],
+        attributes: &[Attribute],
+        span: Span,
+    ) {
+        if let Err(symbol_error) = self.table.insert(
+            name.to_string(),
+            SymbolKind::Enum {
+                variants: variants.iter().map(|f| f.name.clone()).collect(),
+                attributes: attributes.to_vec(),
+            },
+            span,
+        ) {
+            self.insert_error(symbol_error);
+        }
+
+        self.table.enter_scope(ScopeKind::Enum {
+            name: name.to_string(),
+        });
+        walk_enum(self, attributes, variants);
+        self.table.exit_scope();
+    }
+
+    fn visit_variant(&mut self, variant: &Variant) {
+        let current_scope = match self.table.get_current_scope() {
+            Some(scope) => scope,
+            None => {
+                self.insert_error(SymbolError::InvalidContext {
+                    message: format!("Variant '{}' declared outside of valid scope", variant.name),
+                    span: variant.span,
+                });
+                return;
+            }
+        };
+
+        let enum_name = match &current_scope.kind {
+            ScopeKind::Enum { name } => name.clone(),
+            _ => {
+                self.insert_error(SymbolError::InvalidContext {
+                    message: format!("Variant '{}' declared in invalid scope", variant.name),
+                    span: variant.span,
+                });
+                return;
+            }
+        };
+
+        if let Err(symbol_error) = self.table.insert(
+            variant.name.clone(),
+            SymbolKind::Variant {
+                enum_name,
+            },
+            variant.span,
         ) {
             self.insert_error(symbol_error);
         }

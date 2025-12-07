@@ -85,6 +85,10 @@ pub trait Visitor: Sized {
         walk_field(self, field);
     }
 
+    fn visit_variant(&mut self, variant: &Variant) {
+        walk_variant(self, variant);
+    }
+
     fn visit_attribute(&mut self, _attribute: &Attribute) {
         // Default: do nothing
     }
@@ -114,14 +118,6 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             span,
         } => {
             visitor.visit_enum(name, variants, attributes, *span);
-            for attr in attributes {
-                visitor.visit_attribute(attr);
-            }
-            for variant in variants {
-                if let Some(weight) = &variant.weight {
-                    visitor.visit_expression(weight);
-                }
-            }
         }
         Statement::TypeDecl {
             name,
@@ -248,5 +244,20 @@ pub fn walk_template<V: Visitor>(visitor: &mut V, attributes: &[Attribute], body
     }
     for field in body {
         visitor.visit_field(field);
+    }
+}
+
+pub fn walk_variant<V: Visitor>(visitor: &mut V, variant: &Variant) {
+    if let Some(weight) = &variant.weight {
+        visitor.visit_expression(weight);
+    }
+}
+
+pub fn walk_enum<V: Visitor>(visitor: &mut V, attributes: &[Attribute], variants: &[Variant]) {
+    for attr in attributes {
+        visitor.visit_attribute(attr);
+    }
+    for variant in variants {
+        visitor.visit_variant(variant);
     }
 }
