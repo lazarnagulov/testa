@@ -30,6 +30,7 @@ fn run() -> Result<(), String> {
             exit(1);
         }
     };
+    symbol_table.dump();
     let checker = ReferenceChecker::new(symbol_table);
     match checker.check(&program) {
         Ok(_) => {}
@@ -41,7 +42,6 @@ fn run() -> Result<(), String> {
         }
     }
 
-    // symbol_table.dump();
 
     // let mut context = Context::default();
 

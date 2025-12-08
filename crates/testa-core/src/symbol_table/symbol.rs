@@ -53,6 +53,7 @@ pub enum ScopeKind {
     Global,
     Template { name: String },
     Enum { name: String },
+    Generate { name: String },
     Block,
 }
 

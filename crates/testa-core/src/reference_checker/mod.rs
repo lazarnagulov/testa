@@ -3,7 +3,7 @@ pub mod error;
 use crate::{
     ast::{
         Attribute, Expression, ExpressionKind, Field, Program,
-        visitor::{Visitor, walk_expression, walk_template},
+        visitor::{Visitor, walk_expression, walk_field, walk_template},
     },
     reference_checker::error::SemanticError,
     symbol_table::SymbolTable,
@@ -71,5 +71,28 @@ impl Visitor for ReferenceChecker {
         }
 
         walk_template(self, attributes, body);
+    }  
+
+
+    fn visit_generate(
+        &mut self,
+        template_name: &Option<String>,
+        body: &[Field],
+        count: &Expression,
+        span: Span,
+    ) {
+        if let Some(name) = template_name {
+            if self.symbol_table.lookup(name).is_none() {
+                self.errors.push(SemanticError::UnknownTemplate {
+                    name: name.clone(),
+                    span,
+                });
+            }
+        }
+        for field in body {
+            walk_field(self, field);
+        }
+        self.visit_expression(count);
     }
+
 }

@@ -138,10 +138,6 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             span,
         } => {
             visitor.visit_generate(template_name, body, count, *span);
-            for field in body {
-                visitor.visit_field(field);
-            }
-            visitor.visit_expression(count);
         }
         Statement::ConstraintDecl {
             name,

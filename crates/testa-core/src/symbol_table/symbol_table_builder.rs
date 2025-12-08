@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        Attribute, Field, Program, Variant,
-        visitor::{Visitor, walk_enum, walk_template},
+        Attribute, Expression, Field, Program, Variant, visitor::{Visitor, walk_enum, walk_template}
     },
     symbol_table::{
         SymbolTable,
@@ -85,7 +84,7 @@ impl Visitor for SymbolTableBuilder {
         };
 
         let parent_name = match &current_scope.kind {
-            ScopeKind::Template { name } => name.clone(),
+            ScopeKind::Template { name } | ScopeKind::Generate { name } => name.clone(),
             _ => {
                 self.insert_error(SymbolError::InvalidContext {
                     message: format!("Field '{}' declared in invalid scope", field.name),
@@ -118,6 +117,26 @@ impl Visitor for SymbolTableBuilder {
         ) {
             self.insert_error(symbol_error);
         }
+    }
+
+    fn visit_generate(
+            &mut self,
+            template_name: &Option<String>,
+            body: &[Field],
+            _count: &Expression,
+            _span: Span,
+        ) {
+        if template_name.is_some() {
+            return;
+        }
+
+        self.table.enter_scope(ScopeKind::Generate { name: "Generate".to_string() });
+
+        for field in body {
+            self.visit_field(field);
+        }
+
+        self.table.exit_scope();
     }
 
     fn visit_enum(
