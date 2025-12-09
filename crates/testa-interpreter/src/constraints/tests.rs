@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use testa_core::{parser::{Parser, error::ParserError}};
-use crate::{evaluator::context::Context, evaluator};
+use crate::{evaluator, evaluator::context::Context};
+use testa_core::parser::{Parser, error::ParserError};
 
 #[test]
 fn evaluate_type_declaration() {
@@ -43,12 +43,7 @@ fn handle_error(error: ParserError) {
             expected,
             got,
         } => {
-            panic!(
-                "expected '{}' got '{}' in {}",
-                expected,
-                got,
-                span
-            )
+            panic!("expected '{}' got '{}' in {}", expected, got, span)
         }
         ParserError::InvalidDirective { span } => panic!("{}", span.to_string()),
         ParserError::UnexpectedEof { span } => {

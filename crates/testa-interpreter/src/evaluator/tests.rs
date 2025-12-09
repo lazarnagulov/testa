@@ -1,7 +1,7 @@
 use std::path::Path;
 
+use crate::{evaluator, evaluator::context::Context, object::Object};
 use testa_core::parser::Parser;
-use crate::{evaluator::context::Context, evaluator, object::Object};
 
 #[test]
 fn evalute_simple_expression() {

@@ -1,5 +1,5 @@
-pub mod error;
 pub mod context;
+pub mod error;
 
 #[cfg(test)]
 mod tests;
@@ -13,7 +13,10 @@ use testa_core::ast::{
 };
 
 use crate::{
-    constraints::constrainted_type::ConstrainedType, evaluator::{context::Context, error::EvalError}, model::{enumeration::Enum, template::Template}, object::Object
+    constraints::constrainted_type::ConstrainedType,
+    evaluator::{context::Context, error::EvalError},
+    model::{enumeration::Enum, template::Template},
+    object::Object,
 };
 
 pub fn evaluate(program: Program, context: &mut Context) -> Result<Object, EvalError> {

@@ -39,6 +39,20 @@ pub enum DiagnosticCode {
 
     UnusedType,
     UnusedTemplate,
+    DuplicateDeclaration,
+    InvalidParent,
+    EmptyEnum,
+    DuplicateVariant,
+    InvalidContext,
+
+    UnknownType,
+    UnknownTemplate,
+    UnknownEnum,
+    UnknownEnumVariant,
+    UnknownField,
+    UnknownIdentifier,
+    UnknownParentTemplate,
+    InheritanceCycle,
 }
 
 impl Diagnostic {
@@ -60,6 +74,39 @@ impl Diagnostic {
     pub fn with_hint(mut self, hint: impl Into<String>) -> Self {
         self.hint = Some(hint.into());
         self
+    }
+
+    pub fn format_cli(&self) -> String {
+        let severity_label = match self.severity {
+            Severity::Error => "ERROR",
+            Severity::Warning => "WARNING",
+            Severity::Info => "INFO",
+            Severity::Hint => "HINT",
+        };
+
+        let severity_color = match self.severity {
+            Severity::Error => "\x1b[31m",
+            Severity::Warning => "\x1b[33m",
+            Severity::Info => "\x1b[34m",
+            Severity::Hint => "\x1b[32m",
+        };
+
+        let reset_color = "\x1b[0m";
+
+        format!(
+            "{}{}:{}:{}: [{}] {}{}{}",
+            severity_color,
+            self.span.start.line,
+            self.span.start.column,
+            self.span.start.offset,
+            severity_label,
+            self.message,
+            reset_color,
+            self.hint
+                .as_ref()
+                .map(|h| format!("\n  hint: {}", h))
+                .unwrap_or_default()
+        )
     }
 }
 

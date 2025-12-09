@@ -1,11 +1,7 @@
 use std::{env, fs, path::Path};
 
-use testa_core::parser::Parser;
-use testa_interpreter::{
-    evaluator,
-    evaluator::context::Context,
-    evaluator::error::EvalError,
-};
+use testa_core::analyser::SemanticAnalyser;
+use testa_interpreter::evaluator::error::EvalError;
 
 fn main() {
     if let Err(err) = run() {
@@ -17,16 +13,19 @@ fn main() {
 fn run() -> Result<(), String> {
     let file_path = get_input_path()?;
 
-    let source = fs::read_to_string(&file_path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+    let source =
+        fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
-    let mut parser = Parser::new(&source, &file_path);
-    let program = parser.parse().map_err(|e| e.to_string())?;
+    let mut parser = testa_core::parser::Parser::new(&source, &file_path);
+    let program = parser.parse().map_err(|e| e.to_diagnostic().format_cli())?;
+    let result = SemanticAnalyser::new(&program).analyse();
+    for diag in result.diagnostics {
+        println!("{}", diag.format_cli());
+    }
 
-    let mut context = Context::default();
+    // let mut context = Context::default();
 
-    evaluator::evaluate(program, &mut context)
-        .map_err(format_eval_error)?;
+    // evaluator::evaluate(program, &mut context).map_err(format_eval_error)?;
 
     Ok(())
 }
@@ -39,21 +38,34 @@ fn get_input_path() -> Result<std::path::PathBuf, String> {
     }
 }
 
-fn format_eval_error(err: EvalError) -> String {
+fn _format_eval_error(err: EvalError) -> String {
     match err {
         EvalError::UnsupportedPrefixOperator { operator, object } => {
             format!("Bad operand type for unary {}: '{}'", operator, object)
         }
-        EvalError::UnsupportedInfixOperand { left, operator, right } => {
-            format!("Unsupported operand type(s) for {}: {} and {}", operator, left, right)
+        EvalError::UnsupportedInfixOperand {
+            left,
+            operator,
+            right,
+        } => {
+            format!(
+                "Unsupported operand type(s) for {}: {} and {}",
+                operator, left, right
+            )
         }
         EvalError::TypeMismatch { expected, got } => {
             format!("Expected '{}' but got '{}'", expected, got)
         }
         EvalError::NotDefined(name) => format!("{name} is not defined"),
         EvalError::MiscellaneousError(error) => error,
-        EvalError::UncompatibleConstraint { data_type, constraint } => {
-            format!("Incompatible constraint '{}' for type '{}'", constraint, data_type)
+        EvalError::UncompatibleConstraint {
+            data_type,
+            constraint,
+        } => {
+            format!(
+                "Incompatible constraint '{}' for type '{}'",
+                constraint, data_type
+            )
         }
         EvalError::FileError(error) => error,
         EvalError::InvalidTarget(error) => format!("Invalid target {}", error),
