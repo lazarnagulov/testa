@@ -1,47 +1,75 @@
+pub mod symbol_table;
+pub mod reference_checker;
+pub mod error;
+
+use std::collections::HashSet;
+
 use crate::{
-    analyser::result::AnalysisResult,
-    ast::Program,
-    diagnostics::Diagnostic,
-    symbol_table::{
-        SymbolTable,
-        symbol::{ReferenceMap, ScopeId},
-    },
-    utils::Span,
+    analyser::{error::SemanticError, reference_checker::ReferenceChecker, result::AnalysisResult, symbol_table::{SymbolTable, symbol_table_builder::SymbolTableBuilder}}, ast::{Program, Statement}, utils::Span
 };
 
 pub mod result;
 
-#[derive(Default, Debug)]
-pub struct SemanticAnalyser {
-    symbol_table: SymbolTable,
-    _scopes: Vec<ScopeId>,
-    diagnostics: Vec<Diagnostic>,
-    references: ReferenceMap,
+#[derive(Debug)]
+pub struct SemanticAnalyser<'a> {
+    errors: Vec<SemanticError>,
+    program: &'a Program,
 }
 
-impl SemanticAnalyser {
-    pub fn new(symbol_table: SymbolTable) -> Self {
-        let global_scope = symbol_table.global_scope();
-
+impl<'a> SemanticAnalyser<'a> {
+    pub fn new(program: &'a Program) -> Self {
         Self {
+            program,
+            errors: Vec::new(),
+        }
+    }
+
+    pub fn analyse(&mut self) -> Result<AnalysisResult, Vec<SemanticError>> {
+        let symbol_table = SymbolTableBuilder::new().build(self.program)?;
+        self.check_all_inheritance_cycles(&symbol_table);
+        ReferenceChecker::new(&symbol_table).check(self.program)?;
+
+        Ok(AnalysisResult {
             symbol_table,
-            _scopes: vec![global_scope],
-            diagnostics: Vec::new(),
-            references: ReferenceMap::new(),
-        }
+            diagnostics: self.errors.iter().map(SemanticError::to_diagnostic).collect(),
+        })
     }
 
-    pub fn analyse(&mut self, _program: Program) -> AnalysisResult {
-        // self.visit_program(&program);
+    fn check_all_inheritance_cycles(&mut self, symbol_table: &SymbolTable) {
+        let mut templates: Vec<(String, Span)> = Vec::new();
 
-        AnalysisResult {
-            symbol_table: self.symbol_table.clone(),
-            diagnostics: self.diagnostics.clone(),
-            references: self.references.clone(),
+        for stmt in &self.program.0 {
+            if let Statement::Template { name, span, .. } = stmt {
+                templates.push((name.clone(), *span));
+            }
         }
-    }
 
-    fn _error(&mut self, message: &str, span: Span) {
-        self.diagnostics.push(Diagnostic::error(span, message));
+        let mut checked = HashSet::new();
+
+        for (template_name, span) in templates {
+            if checked.contains(&template_name) {
+                continue;
+            }
+
+            match symbol_table.check_inheritance_cycle(&template_name) {
+                Ok(chain) => {
+                    for t in chain {
+                        checked.insert(t);
+                    }
+                }
+                Err(cycle) => {
+                    let cycle_str = cycle.join(" -> ");
+
+                    self.errors.push(SemanticError::InheritanceCycle {
+                        template_chain: cycle_str.to_string(),
+                        span,
+                    });
+
+                    for t in cycle {
+                        checked.insert(t);
+                    }
+                }
+            }
+        }
     }
 }

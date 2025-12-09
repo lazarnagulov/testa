@@ -1,6 +1,5 @@
 use crate::{
-    symbol_table::{SymbolTable, symbol::SymbolKind},
-    utils::Span,
+    analyser::symbol_table::{SymbolTable, symbol::SymbolKind}, utils::Span
 };
 
 #[test]

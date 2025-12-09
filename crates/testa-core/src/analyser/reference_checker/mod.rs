@@ -1,22 +1,17 @@
-pub mod error;
-
 use crate::{
-    ast::{
+    analyser::{error::SemanticError, symbol_table::SymbolTable}, ast::{
         Attribute, Expression, ExpressionKind, Field, Program,
         visitor::{Visitor, walk_expression, walk_field, walk_template},
-    },
-    reference_checker::error::SemanticError,
-    symbol_table::SymbolTable,
-    utils::Span,
+    }, utils::Span
 };
 
-pub struct ReferenceChecker {
-    symbol_table: SymbolTable,
+pub struct ReferenceChecker<'a> {
+    symbol_table: &'a SymbolTable,
     errors: Vec<SemanticError>,
 }
 
-impl ReferenceChecker {
-    pub fn new(symbol_table: SymbolTable) -> Self {
+impl<'a> ReferenceChecker<'a> {
+    pub fn new(symbol_table: &'a SymbolTable) -> Self {
         Self {
             symbol_table,
             errors: Vec::new(),
@@ -33,12 +28,12 @@ impl ReferenceChecker {
         }
     }
 
-    pub fn finish(self) -> (SymbolTable, Vec<SemanticError>) {
+    pub fn finish(self) -> (&'a SymbolTable, Vec<SemanticError>) {
         (self.symbol_table, self.errors)
     }
 }
 
-impl Visitor for ReferenceChecker {
+impl<'a> Visitor for ReferenceChecker<'a> {
     fn visit_expression(&mut self, expression: &Expression) {
         match &expression.kind {
             ExpressionKind::Identifier(name) => {
@@ -71,8 +66,7 @@ impl Visitor for ReferenceChecker {
         }
 
         walk_template(self, attributes, body);
-    }  
-
+    }
 
     fn visit_generate(
         &mut self,
@@ -94,5 +88,4 @@ impl Visitor for ReferenceChecker {
         }
         self.visit_expression(count);
     }
-
 }

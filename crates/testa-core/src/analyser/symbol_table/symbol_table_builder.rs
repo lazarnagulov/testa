@@ -1,19 +1,13 @@
 use crate::{
-    ast::{
-        Attribute, Expression, Field, Program, Variant, visitor::{Visitor, walk_enum, walk_template}
-    },
-    symbol_table::{
-        SymbolTable,
-        error::SymbolError,
-        symbol::{ScopeKind, SymbolKind},
-    },
-    utils::Span,
+    analyser::{error::SemanticError, symbol_table::{SymbolTable, symbol::{ScopeKind, SymbolKind}}}, ast::{
+        Attribute, Expression, Field, Program, Variant,
+        visitor::{Visitor, walk_enum, walk_template},
+    }, utils::Span
 };
-
 #[derive(Debug, Default)]
 pub struct SymbolTableBuilder {
     table: SymbolTable,
-    errors: Vec<SymbolError>,
+    errors: Vec<SemanticError>,
 }
 
 impl SymbolTableBuilder {
@@ -24,7 +18,7 @@ impl SymbolTableBuilder {
         }
     }
 
-    pub fn build(mut self, program: &Program) -> Result<SymbolTable, Vec<SymbolError>> {
+    pub fn build(mut self, program: &Program) -> Result<SymbolTable, Vec<SemanticError>> {
         self.visit_program(program);
 
         if self.errors.is_empty() {
@@ -34,12 +28,12 @@ impl SymbolTableBuilder {
         }
     }
 
-    pub fn finish(self) -> (SymbolTable, Vec<SymbolError>) {
+    pub fn finish(self) -> (SymbolTable, Vec<SemanticError>) {
         (self.table, self.errors)
     }
 
-    pub fn insert_error(&mut self, symbol_error: SymbolError) {
-        self.errors.push(symbol_error);
+    pub fn insert_error(&mut self, error: SemanticError) {
+        self.errors.push(error);
     }
 }
 
@@ -75,7 +69,7 @@ impl Visitor for SymbolTableBuilder {
         let current_scope = match self.table.get_current_scope() {
             Some(scope) => scope,
             None => {
-                self.insert_error(SymbolError::InvalidContext {
+                self.insert_error(SemanticError::InvalidContext {
                     message: format!("Field '{}' declared outside of valid scope", field.name),
                     span: field.span,
                 });
@@ -86,7 +80,7 @@ impl Visitor for SymbolTableBuilder {
         let parent_name = match &current_scope.kind {
             ScopeKind::Template { name } | ScopeKind::Generate { name } => name.clone(),
             _ => {
-                self.insert_error(SymbolError::InvalidContext {
+                self.insert_error(SemanticError::InvalidContext {
                     message: format!("Field '{}' declared in invalid scope", field.name),
                     span: field.span,
                 });
@@ -120,17 +114,19 @@ impl Visitor for SymbolTableBuilder {
     }
 
     fn visit_generate(
-            &mut self,
-            template_name: &Option<String>,
-            body: &[Field],
-            _count: &Expression,
-            _span: Span,
-        ) {
+        &mut self,
+        template_name: &Option<String>,
+        body: &[Field],
+        _count: &Expression,
+        _span: Span,
+    ) {
         if template_name.is_some() {
             return;
         }
 
-        self.table.enter_scope(ScopeKind::Generate { name: "Generate".to_string() });
+        self.table.enter_scope(ScopeKind::Generate {
+            name: "Generate".to_string(),
+        });
 
         for field in body {
             self.visit_field(field);
@@ -168,7 +164,7 @@ impl Visitor for SymbolTableBuilder {
         let current_scope = match self.table.get_current_scope() {
             Some(scope) => scope,
             None => {
-                self.insert_error(SymbolError::InvalidContext {
+                self.insert_error(SemanticError::InvalidContext {
                     message: format!("Variant '{}' declared outside of valid scope", variant.name),
                     span: variant.span,
                 });
@@ -179,7 +175,7 @@ impl Visitor for SymbolTableBuilder {
         let enum_name = match &current_scope.kind {
             ScopeKind::Enum { name } => name.clone(),
             _ => {
-                self.insert_error(SymbolError::InvalidContext {
+                self.insert_error(SemanticError::InvalidContext {
                     message: format!("Variant '{}' declared in invalid scope", variant.name),
                     span: variant.span,
                 });

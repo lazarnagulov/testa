@@ -1,4 +1,3 @@
-pub mod error;
 pub mod symbol;
 pub mod symbol_table_builder;
 
@@ -7,13 +6,8 @@ mod tests;
 
 use std::collections::HashMap;
 
-use crate::{
-    symbol_table::{
-        error::SymbolError,
-        symbol::{Scope, ScopeId, ScopeKind, Symbol, SymbolKind},
-    },
-    utils::Span,
-};
+use crate::{analyser::{error::SemanticError, symbol_table::symbol::{Scope, ScopeId, ScopeKind, Symbol, SymbolKind}}, utils::Span};
+
 
 #[derive(Default, Debug, Clone)]
 pub struct SymbolTable {
@@ -117,9 +111,9 @@ impl SymbolTable {
         name: String,
         kind: SymbolKind,
         span: Span,
-    ) -> Result<(), SymbolError> {
+    ) -> Result<(), SemanticError> {
         if self.lookup_current_scope(&name).is_some() {
-            return Err(SymbolError::DuplicateDeclaration {
+            return Err(SemanticError::DuplicateDeclaration {
                 span,
                 message: format!(
                     "Symbol '{}' already declared in this scope at {}",
@@ -139,7 +133,7 @@ impl SymbolTable {
             scope.symbols.insert(name, symbol);
             Ok(())
         } else {
-            Err(SymbolError::InvalidContext {
+            Err(SemanticError::InvalidContext {
                 span,
                 message: "Invalid scope".to_string(),
             })
@@ -177,5 +171,49 @@ impl SymbolTable {
                 println!("  {} ({:?}) at {:?}", name, symbol.kind, symbol.span);
             }
         }
+    }
+
+    pub fn check_inheritance_cycle(&self, template_name: &str) -> Result<Vec<String>, Vec<String>> {
+        let mut visited = std::collections::HashSet::new();
+        let mut path = Vec::new();
+        let mut current = template_name.to_string();
+
+        visited.insert(current.clone());
+        path.push(current.clone());
+
+        loop {
+            let symbol = match self.lookup(&current) {
+                Some(s) => s,
+                None => {
+                    return Ok(path);
+                }
+            };
+
+            let parent = match &symbol.kind {
+                SymbolKind::Template {
+                    parent: Some(p), ..
+                } => p.clone(),
+                _ => {
+                    return Ok(path);
+                }
+            };
+
+            if visited.contains(&parent) {
+                path.push(parent.clone());
+
+                let cycle_start = path.iter().position(|t| t == &parent).unwrap();
+                let cycle = path[cycle_start..].to_vec();
+
+                return Err(cycle);
+            }
+
+            visited.insert(parent.clone());
+            path.push(parent.clone());
+            current = parent;
+        }
+    }
+
+    pub fn get_inheritance_chain(&self, template_name: &str) -> Option<Vec<String>> {
+        self.check_inheritance_cycle(template_name).ok()
     }
 }

@@ -56,22 +56,3 @@ pub enum ScopeKind {
     Generate { name: String },
     Block,
 }
-
-#[derive(Default, Debug, Clone)]
-pub struct ReferenceMap {
-    _definitions: HashMap<Span, Span>,
-    references: HashMap<Span, Vec<Span>>,
-}
-
-impl ReferenceMap {
-    pub fn new() -> Self {
-        Self {
-            _definitions: HashMap::new(),
-            references: HashMap::new(),
-        }
-    }
-
-    pub fn add_reference(&mut self, span: Span, parent_span: &[Span]) -> Option<Vec<Span>> {
-        self.references.insert(span, parent_span.to_vec())
-    }
-}

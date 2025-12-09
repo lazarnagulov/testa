@@ -1,13 +1,10 @@
 use crate::{
-    diagnostics::{Diagnostic, Severity},
-    symbol_table::{SymbolTable, symbol::ReferenceMap},
-    utils::Span,
+    analyser::symbol_table::SymbolTable, diagnostics::{Diagnostic, Severity}, utils::Span
 };
 
 #[derive(Debug, Clone)]
 pub struct AnalysisResult {
     pub symbol_table: SymbolTable,
-    pub references: ReferenceMap,
     pub diagnostics: Vec<Diagnostic>,
 }
 

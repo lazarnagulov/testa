@@ -1,9 +1,6 @@
-use std::{env, fs, path::Path, process::exit};
+use std::{env, fs, path::Path};
 
-use testa_core::{
-    parser::Parser, reference_checker::ReferenceChecker,
-    symbol_table::symbol_table_builder::SymbolTableBuilder,
-};
+use testa_core::{analyser::{SemanticAnalyser, error::SemanticError}, diagnostics::Diagnostic};
 use testa_interpreter::evaluator::error::EvalError;
 
 fn main() {
@@ -19,29 +16,21 @@ fn run() -> Result<(), String> {
     let source =
         fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
-    let mut parser = Parser::new(&source, &file_path);
+    let mut parser = testa_core::parser::Parser::new(&source, &file_path);
     let program = parser.parse().map_err(|e| e.to_string())?;
-    let symbol_table = match SymbolTableBuilder::new().build(&program) {
-        Ok(table) => table,
-        Err(errors) => {
-            for error in errors {
-                println!("{}", error.to_diagnostic().format_cli());
+    match SemanticAnalyser::new(&program).analyse() {
+        Ok(result) => {
+            for diag in result.diagnostics {
+                println!("{}", diag.format_cli());
             }
-            exit(1);
-        }
-    };
-    symbol_table.dump();
-    let checker = ReferenceChecker::new(symbol_table);
-    match checker.check(&program) {
-        Ok(_) => {}
+        },
         Err(errors) => {
-            for error in errors {
-                println!("{}", error.to_diagnostic().format_cli());
+            let diags = errors.iter().map(SemanticError::to_diagnostic).collect::<Vec<Diagnostic>>();
+            for diag in diags {
+                println!("{}", diag.format_cli());
             }
-            exit(1);
-        }
+        },
     }
-
 
     // let mut context = Context::default();
 

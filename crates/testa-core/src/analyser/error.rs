@@ -41,9 +41,15 @@ pub enum SemanticError {
     },
 
     InheritanceCycle {
-        template_chain: Vec<String>,
+        template_chain: String,
         span: Span,
     },
+
+    DuplicateDeclaration { span: Span, message: String },
+    InvalidParent { span: Span, message: String },
+    EmptyEnum { span: Span, message: String },
+    DuplicateVariant { span: Span, message: String },
+    InvalidContext { span: Span, message: String },
 }
 
 impl SemanticError {
@@ -112,16 +118,32 @@ impl SemanticError {
             Self::InheritanceCycle {
                 template_chain,
                 span,
-            } => {
-                let chain = template_chain.join(" -> ");
-
-                Diagnostic::error(
-                    *span,
-                    format!("Template inheritance cycle detected: {}", chain),
-                )
-                .with_code(DiagnosticCode::InheritanceCycle)
-                .with_hint("Remove or restructure the circular inheritance")
+            } => Diagnostic::error(
+                *span,
+                format!("Template inheritance cycle detected: {}", template_chain),
+            )
+            .with_code(DiagnosticCode::InheritanceCycle)
+            .with_hint("Remove or restructure the circular inheritance"),
+                        Self::DuplicateDeclaration { span, message } => {
+                Diagnostic::error(*span, message.clone())
+                    .with_code(DiagnosticCode::DuplicateDeclaration)
+                    .with_hint("Each symbol name must be unique within its scope")
             }
+            Self::InvalidParent { span, message } => Diagnostic::error(*span, message.clone())
+                .with_code(DiagnosticCode::InvalidParent)
+                .with_hint("Parent template must be declared before it can be extended"),
+
+            Self::EmptyEnum { span, message } => Diagnostic::error(*span, message.clone())
+                .with_code(DiagnosticCode::EmptyEnum)
+                .with_hint("Enums must have at least one variant"),
+
+            Self::DuplicateVariant { span, message } => Diagnostic::error(*span, message.clone())
+                .with_code(DiagnosticCode::DuplicateVariant)
+                .with_hint("Each variant name must be unique within the enum"),
+
+            Self::InvalidContext { span, message } => Diagnostic::error(*span, message.clone())
+                .with_code(DiagnosticCode::InvalidContext)
+                .with_hint("This declaration is not valid in the current scope"),
         }
     }
 }
