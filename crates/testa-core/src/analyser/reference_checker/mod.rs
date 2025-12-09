@@ -1,8 +1,10 @@
 use crate::{
-    analyser::{error::SemanticError, symbol_table::SymbolTable}, ast::{
+    analyser::{error::SemanticError, symbol_table::SymbolTable},
+    ast::{
         Attribute, Expression, ExpressionKind, Field, Program,
         visitor::{Visitor, walk_expression, walk_field, walk_template},
-    }, utils::Span
+    },
+    utils::Span,
 };
 
 pub struct ReferenceChecker<'a> {

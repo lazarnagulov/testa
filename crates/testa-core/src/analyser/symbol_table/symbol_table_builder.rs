@@ -1,8 +1,16 @@
 use crate::{
-    analyser::{error::SemanticError, symbol_table::{SymbolTable, symbol::{ScopeKind, SymbolKind}}}, ast::{
+    analyser::{
+        error::SemanticError,
+        symbol_table::{
+            SymbolTable,
+            symbol::{ScopeKind, SymbolKind},
+        },
+    },
+    ast::{
         Attribute, Expression, Field, Program, Variant,
         visitor::{Visitor, walk_enum, walk_template},
-    }, utils::Span
+    },
+    utils::Span,
 };
 #[derive(Debug, Default)]
 pub struct SymbolTableBuilder {

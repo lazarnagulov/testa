@@ -1,6 +1,6 @@
 use std::{env, fs, path::Path};
 
-use testa_core::{analyser::{SemanticAnalyser, error::SemanticError}, diagnostics::Diagnostic};
+use testa_core::analyser::SemanticAnalyser;
 use testa_interpreter::evaluator::error::EvalError;
 
 fn main() {
@@ -17,19 +17,10 @@ fn run() -> Result<(), String> {
         fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
     let mut parser = testa_core::parser::Parser::new(&source, &file_path);
-    let program = parser.parse().map_err(|e| e.to_string())?;
-    match SemanticAnalyser::new(&program).analyse() {
-        Ok(result) => {
-            for diag in result.diagnostics {
-                println!("{}", diag.format_cli());
-            }
-        },
-        Err(errors) => {
-            let diags = errors.iter().map(SemanticError::to_diagnostic).collect::<Vec<Diagnostic>>();
-            for diag in diags {
-                println!("{}", diag.format_cli());
-            }
-        },
+    let program = parser.parse().map_err(|e| e.to_diagnostic().format_cli())?;
+    let result = SemanticAnalyser::new(&program).analyse();
+    for diag in result.diagnostics {
+        println!("{}", diag.format_cli());
     }
 
     // let mut context = Context::default();

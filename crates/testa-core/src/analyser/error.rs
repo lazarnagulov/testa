@@ -45,11 +45,26 @@ pub enum SemanticError {
         span: Span,
     },
 
-    DuplicateDeclaration { span: Span, message: String },
-    InvalidParent { span: Span, message: String },
-    EmptyEnum { span: Span, message: String },
-    DuplicateVariant { span: Span, message: String },
-    InvalidContext { span: Span, message: String },
+    DuplicateDeclaration {
+        span: Span,
+        message: String,
+    },
+    InvalidParent {
+        span: Span,
+        message: String,
+    },
+    EmptyEnum {
+        span: Span,
+        message: String,
+    },
+    DuplicateVariant {
+        span: Span,
+        message: String,
+    },
+    InvalidContext {
+        span: Span,
+        message: String,
+    },
 }
 
 impl SemanticError {
@@ -124,7 +139,7 @@ impl SemanticError {
             )
             .with_code(DiagnosticCode::InheritanceCycle)
             .with_hint("Remove or restructure the circular inheritance"),
-                        Self::DuplicateDeclaration { span, message } => {
+            Self::DuplicateDeclaration { span, message } => {
                 Diagnostic::error(*span, message.clone())
                     .with_code(DiagnosticCode::DuplicateDeclaration)
                     .with_hint("Each symbol name must be unique within its scope")

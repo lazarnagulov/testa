@@ -1,5 +1,6 @@
 use crate::{
-    analyser::symbol_table::{SymbolTable, symbol::SymbolKind}, utils::Span
+    analyser::symbol_table::{SymbolTable, symbol::SymbolKind},
+    utils::Span,
 };
 
 #[test]
@@ -91,4 +92,47 @@ fn test_template_parents() {
 
     let parents = table.get_template_parents("Derived");
     assert_eq!(parents, vec!["Middle".to_string(), "Base".to_string()]);
+}
+
+#[test]
+fn test_template_circle_detection() {
+    let mut table = SymbolTable::new();
+    table
+        .insert(
+            "A".to_string(),
+            SymbolKind::Template {
+                parent: Some("C".to_string()),
+                fields: vec![],
+                attributes: vec![],
+            },
+            Span::default(),
+        )
+        .unwrap();
+
+    table
+        .insert(
+            "B".to_string(),
+            SymbolKind::Template {
+                parent: Some("A".to_string()),
+                fields: vec![],
+                attributes: vec![],
+            },
+            Span::default(),
+        )
+        .unwrap();
+
+    table
+        .insert(
+            "C".to_string(),
+            SymbolKind::Template {
+                parent: Some("B".to_string()),
+                fields: vec![],
+                attributes: vec![],
+            },
+            Span::default(),
+        )
+        .unwrap();
+    
+    assert!(table.check_inheritance_cycle("A").is_err());
+
 }

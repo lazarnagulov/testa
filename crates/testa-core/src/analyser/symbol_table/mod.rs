@@ -6,8 +6,13 @@ mod tests;
 
 use std::collections::HashMap;
 
-use crate::{analyser::{error::SemanticError, symbol_table::symbol::{Scope, ScopeId, ScopeKind, Symbol, SymbolKind}}, utils::Span};
-
+use crate::{
+    analyser::{
+        error::SemanticError,
+        symbol_table::symbol::{Scope, ScopeId, ScopeKind, Symbol, SymbolKind},
+    },
+    utils::Span,
+};
 
 #[derive(Default, Debug, Clone)]
 pub struct SymbolTable {

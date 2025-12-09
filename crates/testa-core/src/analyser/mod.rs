@@ -1,11 +1,18 @@
-pub mod symbol_table;
-pub mod reference_checker;
 pub mod error;
+pub mod reference_checker;
+pub mod symbol_table;
 
 use std::collections::HashSet;
 
 use crate::{
-    analyser::{error::SemanticError, reference_checker::ReferenceChecker, result::AnalysisResult, symbol_table::{SymbolTable, symbol_table_builder::SymbolTableBuilder}}, ast::{Program, Statement}, utils::Span
+    analyser::{
+        error::SemanticError,
+        reference_checker::ReferenceChecker,
+        result::AnalysisResult,
+        symbol_table::{SymbolTable, symbol_table_builder::SymbolTableBuilder},
+    },
+    ast::{Program, Statement},
+    utils::Span,
 };
 
 pub mod result;
@@ -24,15 +31,36 @@ impl<'a> SemanticAnalyser<'a> {
         }
     }
 
-    pub fn analyse(&mut self) -> Result<AnalysisResult, Vec<SemanticError>> {
-        let symbol_table = SymbolTableBuilder::new().build(self.program)?;
-        self.check_all_inheritance_cycles(&symbol_table);
-        ReferenceChecker::new(&symbol_table).check(self.program)?;
+    pub fn analyse(&mut self) -> AnalysisResult {
+        let symbol_table = match SymbolTableBuilder::new().build(self.program) {
+            Ok(table) => table,
+            Err(errors) => {
+                self.errors.extend(errors);
+                return AnalysisResult {
+                    symbol_table: SymbolTable::default(),
+                    diagnostics: self
+                        .errors
+                        .iter()
+                        .map(SemanticError::to_diagnostic)
+                        .collect(),
+                };
+            }
+        };
 
-        Ok(AnalysisResult {
+        self.check_all_inheritance_cycles(&symbol_table);
+
+        if let Err(errs) = ReferenceChecker::new(&symbol_table).check(self.program) {
+            self.errors.extend(errs);
+        }
+
+        AnalysisResult {
             symbol_table,
-            diagnostics: self.errors.iter().map(SemanticError::to_diagnostic).collect(),
-        })
+            diagnostics: self
+                .errors
+                .iter()
+                .map(SemanticError::to_diagnostic)
+                .collect(),
+        }
     }
 
     fn check_all_inheritance_cycles(&mut self, symbol_table: &SymbolTable) {

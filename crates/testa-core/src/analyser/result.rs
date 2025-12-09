@@ -1,5 +1,7 @@
 use crate::{
-    analyser::symbol_table::SymbolTable, diagnostics::{Diagnostic, Severity}, utils::Span
+    analyser::symbol_table::SymbolTable,
+    diagnostics::{Diagnostic, Severity},
+    utils::Span,
 };
 
 #[derive(Debug, Clone)]
