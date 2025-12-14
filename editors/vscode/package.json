@@ -1,0 +1,47 @@
+{
+  "name": "testa-lang",
+  "displayName": "Testa Language Support",
+  "description": "Language support for Testa DSL",
+  "version": "0.1.0",
+  "publisher": "lazarnagulov",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+
+  "main": "./out/extension.js",
+
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p ."
+  },
+
+  "categories": ["Programming Languages"],
+
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  },
+
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+
+  "contributes": {
+    "languages": [
+      {
+        "id": "testa",
+        "aliases": ["Testa", "testa"],
+        "extensions": [".testa"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "testa",
+        "scopeName": "source.testa",
+        "path": "./syntaxes/testa.tmLanguage.json"
+      }
+    ]
+  }
+}
