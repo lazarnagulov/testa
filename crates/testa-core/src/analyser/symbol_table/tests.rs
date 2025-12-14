@@ -132,7 +132,6 @@ fn test_template_circle_detection() {
             Span::default(),
         )
         .unwrap();
-    
-    assert!(table.check_inheritance_cycle("A").is_err());
 
+    assert!(table.check_inheritance_cycle("A").is_err());
 }
