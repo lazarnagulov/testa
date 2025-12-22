@@ -11,8 +11,6 @@ mod token_stream;
 #[cfg(test)]
 mod tests;
 
-use std::path::Path;
-
 use crate::ast::{Attribute, Program};
 use crate::lexer::Lexer;
 use crate::parser::error::ParserError;
@@ -23,17 +21,15 @@ pub struct Parser<'src> {
     source: &'src str,
 
     attributes: Vec<Attribute>,
-    path: &'src Path,
 }
 
 impl<'src> Parser<'src> {
-    pub fn new(program: &'src str, path: &'src Path) -> Self {
+    pub fn new(program: &'src str) -> Self {
         let lexer = Lexer::new(program).peekable();
         Self {
             token_stream: TokenStream::new(lexer),
             source: program,
             attributes: Vec::new(),
-            path,
         }
     }
 

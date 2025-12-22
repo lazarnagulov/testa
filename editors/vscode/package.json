@@ -9,7 +9,6 @@
   },
 
   "main": "./out/extension.js",
-
   "scripts": {
     "compile": "tsc -p .",
     "watch": "tsc -watch -p ."
