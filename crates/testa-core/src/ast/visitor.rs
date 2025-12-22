@@ -102,6 +102,7 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             name,
             body,
             span,
+            ..
         } => {
             visitor.visit_template(parent, attributes, name, body, *span);
         }
@@ -110,6 +111,7 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             variants,
             attributes,
             span,
+            ..
         } => {
             visitor.visit_enum(name, variants, attributes, *span);
         }
@@ -118,6 +120,7 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             data_type,
             attributes,
             span,
+            ..
         } => {
             visitor.visit_type_decl(name, attributes, *span);
             for attr in attributes {
@@ -125,7 +128,7 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             }
             visitor.visit_expression(data_type);
         }
-        Statement::Resource { name, body, span } => {
+        Statement::Resource { name, body, span , ..} => {
             visitor.visit_resource(name, body, *span);
             for field in body {
                 visitor.visit_field(field);
@@ -136,6 +139,7 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             body,
             count,
             span,
+            ..
         } => {
             visitor.visit_generate(template_name, body, count, *span);
         }
@@ -143,6 +147,7 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             name,
             constraint,
             span,
+            ..
         } => {
             visitor.visit_constraint_decl(name, constraint, *span);
             visitor.visit_expression(&constraint.expression);
@@ -151,13 +156,14 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             argument,
             options,
             span,
+            ..
         } => {
             visitor.visit_output_directive(argument, options, *span);
             for field in options {
                 visitor.visit_field(field);
             }
         }
-        Statement::OutputPathDirective { argument, span } => {
+        Statement::OutputPathDirective { argument, span, .. } => {
             visitor.visit_output_path_directive(argument, *span);
         }
         Statement::Expression(expr_stmt) => {

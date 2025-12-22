@@ -10,6 +10,7 @@ pub struct Field {
     pub overridable: bool,
     pub attributes: Vec<Attribute>,
     pub span: Span,
+    pub name_span: Option<Span>, 
 }
 
 impl Field {
@@ -26,6 +27,25 @@ impl Field {
             overridable,
             attributes,
             span,
+            name_span: None, 
+        }
+    }
+    
+    pub fn with_name_span(
+        name: String,
+        value: Expression,
+        overridable: bool,
+        attributes: Vec<Attribute>,
+        span: Span,
+        name_span: Span,
+    ) -> Self {
+        Field {
+            name,
+            value,
+            overridable,
+            attributes,
+            span,
+            name_span: Some(name_span),
         }
     }
 }
