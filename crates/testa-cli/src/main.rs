@@ -16,7 +16,7 @@ fn run() -> Result<(), String> {
     let source =
         fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
-    let mut parser = testa_core::parser::Parser::new(&source, &file_path);
+    let mut parser = testa_core::parser::Parser::new(&source);
     let program = parser.parse().map_err(|e| e.to_diagnostic().format_cli())?;
     let result = SemanticAnalyser::new(&program).analyse();
     for diag in result.diagnostics {

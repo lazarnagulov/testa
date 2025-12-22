@@ -43,7 +43,7 @@ pub enum Statement {
         variants: Vec<Variant>,
         attributes: Vec<Attribute>,
         span: Span,
-        name_span: Option<Span>, 
+        name_span: Option<Span>,
     },
     Resource {
         name: String,
@@ -52,7 +52,7 @@ pub enum Statement {
     },
     Generate {
         template_name: Option<String>,
-        template_name_span: Span,
+        template_name_span: Option<Span>,
         body: Vec<Field>,
         count: Expression,
         span: Span,

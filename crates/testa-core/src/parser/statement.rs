@@ -34,7 +34,7 @@ impl<'src> Parser<'src> {
             variants,
             attributes: mem::take(&mut self.attributes),
             span: start.merge(self.token_stream.last_span()),
-            name_span: Some(name_span)
+            name_span: Some(name_span),
         })
     }
 
@@ -54,7 +54,7 @@ impl<'src> Parser<'src> {
                 name,
                 weight,
                 start.merge(self.token_stream.last_span()),
-                name_span
+                name_span,
             ));
             if self.token_stream.peek_kind() == &RBrace {
                 break;
@@ -77,7 +77,7 @@ impl<'src> Parser<'src> {
             let fields = self.parse_template_fields()?;
             Ok(Statement::Generate {
                 template_name: None,
-                template_name_span: name_span,
+                template_name_span: None,
                 body: fields,
                 count,
                 span: start.merge(self.token_stream.last_span()),
@@ -86,7 +86,7 @@ impl<'src> Parser<'src> {
             let end = self.token_stream.expect_token(Semicolon)?;
             Ok(Statement::Generate {
                 template_name: Some(name),
-                template_name_span: name_span,
+                template_name_span: Some(name_span),
                 body: Vec::new(),
                 count,
                 span: start.merge(end),
@@ -188,7 +188,7 @@ impl<'src> Parser<'src> {
                 overridable,
                 mem::take(&mut field_attributes),
                 start_span.merge(end_span),
-                name_span
+                name_span,
             ));
         }
 
@@ -211,9 +211,9 @@ impl<'src> Parser<'src> {
         } else {
             (None, None)
         };
-        
+
         let fields = self.parse_template_fields()?;
-        
+
         Ok(Statement::Template {
             parent_name: parent_name.map(String::from),
             parent_span,
@@ -221,7 +221,7 @@ impl<'src> Parser<'src> {
             attributes,
             body: fields,
             span: start.merge(self.token_stream.last_span()),
-            name_span: Some(name_span)
+            name_span: Some(name_span),
         })
     }
 
@@ -238,7 +238,7 @@ impl<'src> Parser<'src> {
             data_type,
             attributes: mem::take(&mut self.attributes),
             span: start.merge(end),
-            name_span: Some(name_span)
+            name_span: Some(name_span),
         })
     }
 

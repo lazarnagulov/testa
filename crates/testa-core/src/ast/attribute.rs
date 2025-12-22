@@ -14,14 +14,14 @@ impl Attribute {
             Attribute::KeyValue(_, _, span) => *span,
         }
     }
-    
+
     pub fn name(&self) -> &str {
         match self {
             Attribute::Flag(name, _) => name,
             Attribute::KeyValue(name, _, _) => name,
         }
     }
-    
+
     pub fn name_span(&self) -> Span {
         // For now, estimate: #[name] or #[name=value]
         // The name starts after "#[" (2 chars) and goes until ']' or '='

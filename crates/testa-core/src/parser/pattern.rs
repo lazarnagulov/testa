@@ -94,7 +94,7 @@ impl<'src> Parser<'src> {
                     }
 
                     chars.next();
-                    let mut parser = Parser::new(&literal[current_index + 1..last], self.path);
+                    let mut parser = Parser::new(&literal[current_index + 1..last]);
                     let count_expression = parser.parse_expression(Precedence::Lowest)?;
 
                     if let Some(PatternElement::RepeatChar {

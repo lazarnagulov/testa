@@ -128,7 +128,9 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             }
             visitor.visit_expression(data_type);
         }
-        Statement::Resource { name, body, span , ..} => {
+        Statement::Resource {
+            name, body, span, ..
+        } => {
             visitor.visit_resource(name, body, *span);
             for field in body {
                 visitor.visit_field(field);

@@ -53,11 +53,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             count,
             ..
         } => evaluate_generate(template_name, body, &count, context),
-        Statement::Enum {
-            name,
-            variants,
-            ..
-        } => {
+        Statement::Enum { name, variants, .. } => {
             let enumeration = Enum::new(variants, context)?;
             context.insert_enum(&name, enumeration);
             Ok(Object::NoReturn)
@@ -83,9 +79,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         }
         Statement::Resource { .. } => todo!(),
         Statement::TypeDecl {
-            name,
-            data_type,
-            ..
+            name, data_type, ..
         } => {
             let ExpressionKind::Type(data_type) = data_type.kind else {
                 unreachable!()

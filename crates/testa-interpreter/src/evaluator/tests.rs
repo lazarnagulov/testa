@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use crate::{evaluator, evaluator::context::Context, object::Object};
 use testa_core::parser::Parser;
 
@@ -30,7 +28,6 @@ fn evaluate_enum() {
             enum Role { User; Admin; Moderator; }
             enum Seniority { Junior; Medior; Senior; }          
         "#,
-        Path::new(""),
     )
     .parse()
     .unwrap();
@@ -56,7 +53,6 @@ fn evaluate_template() {
                 price = float;
             }           
         "#,
-        Path::new(""),
     )
     .parse()
     .unwrap();
@@ -68,7 +64,7 @@ fn evaluate_template() {
 }
 
 fn expect_object(source: &str, object: Object) {
-    let program = Parser::new(source, Path::new("")).parse().unwrap();
+    let program = Parser::new(source).parse().unwrap();
     let mut context = Context::default();
     let result = evaluator::evaluate(program, &mut context).unwrap();
     assert_eq!(result, object);
