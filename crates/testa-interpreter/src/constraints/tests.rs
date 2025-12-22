@@ -1,12 +1,10 @@
-use std::path::Path;
-
-use testa_core::{parser::{Parser, error::ParserError}};
-use crate::{evaluator::context::Context, evaluator};
+use crate::{evaluator, evaluator::context::Context};
+use testa_core::parser::{Parser, error::ParserError};
 
 #[test]
 fn evaluate_type_declaration() {
     let source = "type even_positive_int = int [range=0..=1024, multiple_of=2];";
-    let mut parser = Parser::new(source, Path::new(""));
+    let mut parser = Parser::new(source);
     match parser.parse() {
         Ok(program) => {
             let mut context = Context::default();
@@ -22,7 +20,7 @@ fn evaluate_type_declaration() {
 #[test]
 fn evluate_extend_type() {
     let source = "type positive_int = int [range=0..=1024]; type even_positive_int = extend positive_int with [multiple_of=2];";
-    let mut parser = Parser::new(source, Path::new(""));
+    let mut parser = Parser::new(source);
     match parser.parse() {
         Ok(program) => {
             let mut context = Context::default();
@@ -43,12 +41,7 @@ fn handle_error(error: ParserError) {
             expected,
             got,
         } => {
-            panic!(
-                "expected '{}' got '{}' in {}",
-                expected,
-                got,
-                span
-            )
+            panic!("expected '{}' got '{}' in {}", expected, got, span)
         }
         ParserError::InvalidDirective { span } => panic!("{}", span.to_string()),
         ParserError::UnexpectedEof { span } => {

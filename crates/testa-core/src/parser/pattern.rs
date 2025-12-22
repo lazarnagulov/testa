@@ -103,7 +103,7 @@ where
                     chars.next();
                     let program = &literal[current_index + 1..last];
                     let lexer = Lexer::new(program);
-                    let mut parser = Parser::new(lexer, program, self.path);
+                    let mut parser = Parser::new(lexer, program);
                     let count_expression = parser.parse_expression(Precedence::Lowest)?;
 
                     if let Some(PatternElement::RepeatChar {

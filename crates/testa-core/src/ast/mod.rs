@@ -8,6 +8,7 @@ pub mod pattern;
 pub mod program;
 pub mod statement;
 pub mod variant;
+pub mod visitor;
 
 pub use attribute::*;
 pub use constraint::*;

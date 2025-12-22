@@ -1,3 +1,4 @@
+pub mod analyser;
 pub mod ast;
 pub mod diagnostics;
 pub mod lexer;

@@ -33,13 +33,12 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             evaluate_expression(&expression_statement.expression, context)
         }
         Statement::Template {
-            parent,
+            parent_name,
             name,
             body,
-            attributes: _,
-            span: _,
+            ..
         } => {
-            let parent = match parent {
+            let parent = match parent_name {
                 Some(parent_name) => context.get_template(&parent_name).map(Rc::clone),
                 None => None,
             };
@@ -52,14 +51,9 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             template_name,
             body,
             count,
-            span: _,
+            ..
         } => evaluate_generate(template_name, body, &count, context),
-        Statement::Enum {
-            name,
-            variants,
-            attributes: _,
-            span: _,
-        } => {
+        Statement::Enum { name, variants, .. } => {
             let enumeration = Enum::new(variants, context)?;
             context.insert_enum(&name, enumeration);
             Ok(Object::NoReturn)
@@ -85,10 +79,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         }
         Statement::Resource { .. } => todo!(),
         Statement::TypeDecl {
-            name,
-            data_type,
-            attributes: _,
-            span: _,
+            name, data_type, ..
         } => {
             let ExpressionKind::Type(data_type) = data_type.kind else {
                 unreachable!()

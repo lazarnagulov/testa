@@ -16,7 +16,7 @@ fn run() -> Result<(), String> {
         fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
     let lexer = Lexer::new(&source);
-    let mut parser = Parser::new(lexer, &source, &file_path);
+    let mut parser = Parser::new(lexer, &source);
     parser.parse().map_err(|e| e.to_string())?;
 
     Ok(())

@@ -11,8 +11,6 @@ mod token_stream;
 #[cfg(test)]
 mod tests;
 
-use std::path::Path;
-
 use crate::ast::{Attribute, Program};
 use crate::lexer::error::LexerError;
 use crate::lexer::token::Token;
@@ -27,14 +25,13 @@ where
     source: &'src str,
 
     attributes: Vec<Attribute>,
-    path: &'src Path,
 }
 
 impl<'src, I> Parser<'src, I>
 where
     I: Iterator<Item = Result<Token, LexerError>>,
 {
-    pub fn new(lexer: I, program: &'src str, path: &'src Path) -> Self
+    pub fn new(lexer: I, program: &'src str) -> Self
     where
         I: Iterator<Item = Result<Token, LexerError>>,
     {
@@ -43,7 +40,6 @@ where
             token_stream: TokenStream::new(lexer),
             source: program,
             attributes: Vec::new(),
-            path,
         }
     }
 
@@ -52,7 +48,6 @@ where
             token_stream,
             source,
             attributes: Vec::new(),
-            path: Path::new("")
         }
     }
 
