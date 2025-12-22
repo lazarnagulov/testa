@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use super::Parser;
 use crate::ast::{Attribute, Element, Field, Precedence, Variant};
-use crate::lexer::token::TokenKind::*;
+use crate::lexer::token::TokenKind::{self, *};
 use crate::{ast::Statement, parser::error::ParserError};
 
 impl<'src> Parser<'src> {
@@ -24,7 +24,9 @@ impl<'src> Parser<'src> {
     pub(super) fn parse_enum(&mut self) -> Result<Statement, ParserError> {
         let token = self.token_stream.next_token()?;
         let start = token.span;
-        let name = self.parse_identifier_as_string()?;
+        let name_span = self.token_stream.expect_token(TokenKind::Identifier)?;
+        let name = self.token_text(name_span).to_string();
+
         self.token_stream.expect_token(LBrace)?;
         let variants = self.parse_enum_variants()?;
         Ok(Statement::Enum {
@@ -32,6 +34,7 @@ impl<'src> Parser<'src> {
             variants,
             attributes: mem::take(&mut self.attributes),
             span: start.merge(self.token_stream.last_span()),
+            name_span: Some(name_span)
         })
     }
 
@@ -39,17 +42,19 @@ impl<'src> Parser<'src> {
         let mut variants = vec![];
         while self.token_stream.peek_kind() == &Identifier {
             let start = self.token_stream.peek_token()?.span;
-            let name = self.parse_identifier_as_string()?;
+            let name_span = self.token_stream.expect_token(Identifier)?;
+            let name = self.token_text(name_span);
             let weight = if self.token_stream.peek_kind() == &Arrow {
                 self.token_stream.next_token()?;
                 Some(self.parse_expression(Precedence::Lowest)?)
             } else {
                 None
             };
-            variants.push(Variant::new(
+            variants.push(Variant::with_name_span(
                 name,
                 weight,
                 start.merge(self.token_stream.last_span()),
+                name_span
             ));
             if self.token_stream.peek_kind() == &RBrace {
                 break;
@@ -185,6 +190,7 @@ impl<'src> Parser<'src> {
         self.token_stream.expect_token(RBrace)?;
         Ok(options)
     }
+
     pub(super) fn parse_template(&mut self) -> Result<Statement, ParserError> {
         let token = self.token_stream.next_token()?;
         let start = token.span;
@@ -209,7 +215,8 @@ impl<'src> Parser<'src> {
     pub(super) fn parse_type_declaration(&mut self) -> Result<Statement, ParserError> {
         let token = self.token_stream.next_token()?;
         let start = token.span;
-        let name = self.parse_identifier_as_string()?;
+        let name_span = self.token_stream.expect_token(Identifier)?;
+        let name = self.token_text(name_span).to_string();
         self.token_stream.expect_token(SingleEqual)?;
         let data_type = self.parse_type()?;
         let end = self.token_stream.expect_token(Semicolon)?;
@@ -218,6 +225,7 @@ impl<'src> Parser<'src> {
             data_type,
             attributes: mem::take(&mut self.attributes),
             span: start.merge(end),
+            name_span: Some(name_span)
         })
     }
 

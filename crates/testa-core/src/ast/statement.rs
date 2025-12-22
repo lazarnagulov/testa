@@ -29,6 +29,7 @@ pub enum Statement {
         data_type: Expression,
         attributes: Vec<Attribute>,
         span: Span,
+        name_span: Option<Span>,
     },
     ConstraintDecl {
         name: String,
@@ -40,6 +41,7 @@ pub enum Statement {
         variants: Vec<Variant>,
         attributes: Vec<Attribute>,
         span: Span,
+        name_span: Option<Span>, 
     },
     Resource {
         name: String,

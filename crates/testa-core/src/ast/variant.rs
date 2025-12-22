@@ -20,13 +20,13 @@ impl Variant {
     }
     
     pub fn with_name_span(
-        name: String, 
+        name: &str, 
         weight: Option<Expression>, 
         span: Span,
         name_span: Span,
     ) -> Self {
         Variant { 
-            name, 
+            name: name.to_string(), 
             weight, 
             span,
             name_span: Some(name_span),

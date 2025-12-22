@@ -57,8 +57,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         Statement::Enum {
             name,
             variants,
-            attributes: _,
-            span: _,
+            ..
         } => {
             let enumeration = Enum::new(variants, context)?;
             context.insert_enum(&name, enumeration);
@@ -87,8 +86,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
         Statement::TypeDecl {
             name,
             data_type,
-            attributes: _,
-            span: _,
+            ..
         } => {
             let ExpressionKind::Type(data_type) = data_type.kind else {
                 unreachable!()
