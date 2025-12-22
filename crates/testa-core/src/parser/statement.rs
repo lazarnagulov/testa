@@ -68,7 +68,8 @@ impl<'src> Parser<'src> {
     pub(super) fn parse_generate(&mut self) -> Result<Statement, ParserError> {
         let token = self.token_stream.next_token()?;
         let start = token.span;
-        let name = self.parse_identifier_as_string()?;
+        let name_span = self.token_stream.expect_token(Identifier)?;
+        let name = self.token_text(name_span).to_string();
         self.token_stream.expect_token(LBracket)?;
         let count = self.parse_expression(Precedence::Lowest)?;
         self.token_stream.expect_token(RBracket)?;
@@ -76,6 +77,7 @@ impl<'src> Parser<'src> {
             let fields = self.parse_template_fields()?;
             Ok(Statement::Generate {
                 template_name: None,
+                template_name_span: name_span,
                 body: fields,
                 count,
                 span: start.merge(self.token_stream.last_span()),
@@ -84,6 +86,7 @@ impl<'src> Parser<'src> {
             let end = self.token_stream.expect_token(Semicolon)?;
             Ok(Statement::Generate {
                 template_name: Some(name),
+                template_name_span: name_span,
                 body: Vec::new(),
                 count,
                 span: start.merge(end),
@@ -173,17 +176,19 @@ impl<'src> Parser<'src> {
                 self.token_stream.consume_token()?;
             }
 
-            let name = self.parse_identifier_as_string()?;
+            let name_span = self.token_stream.expect_token(Identifier)?;
+            let name = self.token_text(name_span);
             self.token_stream.expect_token(SingleEqual)?;
             let expression = self.parse_expression(Precedence::Lowest)?;
             let end_span = self.token_stream.expect_token(Semicolon)?;
 
-            options.push(Field::new(
+            options.push(Field::with_name_span(
                 name,
                 expression,
                 overridable,
                 mem::take(&mut field_attributes),
                 start_span.merge(end_span),
+                name_span
             ));
         }
 
@@ -195,20 +200,28 @@ impl<'src> Parser<'src> {
         let token = self.token_stream.next_token()?;
         let start = token.span;
         let attributes = mem::take(&mut self.attributes);
-        let name = self.parse_identifier_as_string()?;
-        let parent = if self.token_stream.peek_kind() == &Colon {
+        let name_span = self.token_stream.expect_token(Identifier)?;
+        let name = self.token_text(name_span).to_string();
+
+        let (parent_name, parent_span) = if self.token_stream.peek_kind() == &Colon {
             self.token_stream.consume_token()?;
-            Some(self.parse_identifier_as_string()?)
+            let parent_span = self.token_stream.expect_token(Identifier)?;
+            let parent_name = self.token_text(parent_span);
+            (Some(parent_name), Some(parent_span))
         } else {
-            None
+            (None, None)
         };
+        
         let fields = self.parse_template_fields()?;
+        
         Ok(Statement::Template {
-            parent,
+            parent_name: parent_name.map(String::from),
+            parent_span,
             name,
             attributes,
             body: fields,
             span: start.merge(self.token_stream.last_span()),
+            name_span: Some(name_span)
         })
     }
 

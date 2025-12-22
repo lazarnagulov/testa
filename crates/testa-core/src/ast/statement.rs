@@ -9,11 +9,13 @@ use crate::{
 pub enum Statement {
     Expression(ExpressionStatemnt),
     Template {
-        parent: Option<String>,
+        parent_name: Option<String>,
+        parent_span: Option<Span>,
         attributes: Vec<Attribute>,
         name: String,
         body: Vec<Field>,
         span: Span,
+        name_span: Option<Span>,
     },
     OutputDirective {
         argument: String,
@@ -50,6 +52,7 @@ pub enum Statement {
     },
     Generate {
         template_name: Option<String>,
+        template_name_span: Span,
         body: Vec<Field>,
         count: Expression,
         span: Span,

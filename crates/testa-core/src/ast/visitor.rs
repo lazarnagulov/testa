@@ -97,14 +97,14 @@ pub fn walk_program<V: Visitor>(visitor: &mut V, program: &Program) {
 pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
     match stmt {
         Statement::Template {
-            parent,
+            parent_name,
             attributes,
             name,
             body,
             span,
             ..
         } => {
-            visitor.visit_template(parent, attributes, name, body, *span);
+            visitor.visit_template(parent_name, attributes, name, body, *span);
         }
         Statement::Enum {
             name,

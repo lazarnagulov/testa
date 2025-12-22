@@ -33,13 +33,12 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             evaluate_expression(&expression_statement.expression, context)
         }
         Statement::Template {
-            parent,
+            parent_name,
             name,
             body,
-            attributes: _,
-            span: _,
+            ..
         } => {
-            let parent = match parent {
+            let parent = match parent_name {
                 Some(parent_name) => context.get_template(&parent_name).map(Rc::clone),
                 None => None,
             };
@@ -52,7 +51,7 @@ fn evaluate_statement(statment: Statement, context: &mut Context) -> Result<Obje
             template_name,
             body,
             count,
-            span: _,
+            ..
         } => evaluate_generate(template_name, body, &count, context),
         Statement::Enum {
             name,

@@ -20,7 +20,7 @@ fn parse_tagged_template() {
                 attributes,
                 name,
                 body,
-                parent,
+                parent_name,
                 ..
             } = &program.0[0]
             else {
@@ -33,7 +33,7 @@ fn parse_tagged_template() {
             assert_eq!(attr_name, "abstract");
             assert_eq!(name, "User");
             assert!(body.is_empty());
-            assert!(parent.is_none());
+            assert!(parent_name.is_none());
         }
         Err(err) => handle_error(err),
     }
@@ -82,7 +82,7 @@ fn parse_empty_template() {
                 attributes,
                 name,
                 body,
-                parent,
+                parent_name,
                 ..
             } = &program.0[0]
             else {
@@ -91,7 +91,7 @@ fn parse_empty_template() {
             assert!(attributes.is_empty());
             assert_eq!(name, "User");
             assert!(body.is_empty());
-            assert!(parent.is_none());
+            assert!(parent_name.is_none());
         }
         Err(err) => handle_error(err),
     }
@@ -107,7 +107,7 @@ fn parse_single_field_template() {
                 name,
                 body,
                 attributes,
-                parent,
+                parent_name,
                 ..
             } = &program.0[0]
             else {
@@ -115,7 +115,7 @@ fn parse_single_field_template() {
             };
             assert_eq!(name, "User");
             assert!(attributes.is_empty());
-            assert!(parent.is_none());
+            assert!(parent_name.is_none());
             assert_eq!(body.len(), 1);
             assert_eq!(body[0].name, "name");
             assert!(!body[0].overridable);
@@ -142,7 +142,7 @@ fn parse_template() {
             let Statement::Template {
                 name,
                 body,
-                parent,
+                parent_name,
                 attributes,
                 ..
             } = &program.0[0]
@@ -150,7 +150,7 @@ fn parse_template() {
                 panic!("Expected Template statement");
             };
             assert_eq!(name, "Product");
-            assert_eq!(parent, &Some("Consumable".to_owned()));
+            assert_eq!(parent_name, &Some("Consumable".to_owned()));
             assert!(attributes.is_empty());
             assert_eq!(body.len(), 3);
 

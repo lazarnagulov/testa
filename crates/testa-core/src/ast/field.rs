@@ -15,14 +15,14 @@ pub struct Field {
 
 impl Field {
     pub fn new(
-        name: String,
+        name: &str,
         value: Expression,
         overridable: bool,
         attributes: Vec<Attribute>,
         span: Span,
     ) -> Self {
         Field {
-            name,
+            name: name.to_string(),
             value,
             overridable,
             attributes,
@@ -32,7 +32,7 @@ impl Field {
     }
     
     pub fn with_name_span(
-        name: String,
+        name: &str,
         value: Expression,
         overridable: bool,
         attributes: Vec<Attribute>,
@@ -40,7 +40,7 @@ impl Field {
         name_span: Span,
     ) -> Self {
         Field {
-            name,
+            name: name.to_string(),
             value,
             overridable,
             attributes,
