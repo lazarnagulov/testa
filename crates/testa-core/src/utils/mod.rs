@@ -1,3 +1,6 @@
+#[cfg(test)]
+pub mod test_utils;
+
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Hash)]

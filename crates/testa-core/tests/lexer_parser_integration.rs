@@ -2,13 +2,12 @@ use core::panic;
 use std::path::PathBuf;
 
 use testa_core::ast::{
-    Attribute, ConstraintKind, DataTypeKind, ExpressionKind, InfixOperator, PatternChar,
-    PatternElement, PrefixOperator, Statement, ExpressionStatemnt
+    Attribute, ConstraintKind, DataTypeKind, ExpressionKind, ExpressionStatemnt, InfixOperator,
+    PatternChar, PatternElement, PrefixOperator, Statement,
 };
 use testa_core::lexer::Lexer;
 use testa_core::parser::Parser;
 use testa_core::parser::error::ParserError;
-
 
 fn create_parser(program: &str) -> Parser<Lexer> {
     let lexer = Lexer::new(program);
@@ -137,7 +136,8 @@ fn parse_single_field_template() {
 #[test]
 fn parse_template() {
     let mut parser = create_parser(
-        "template Product : Consumable { override name = string; quantity = int; price = float; }");
+        "template Product : Consumable { override name = string; quantity = int; price = float; }",
+    );
     match parser.parse() {
         Ok(program) => {
             let Statement::Template {
@@ -257,7 +257,8 @@ fn parse_missing_paren_generate() {
 
 #[test]
 fn parse_weighted_variant_enum() {
-    let mut parser = create_parser("#[public] enum Role { User => 50; Admin => 10; Developer => 30; }");
+    let mut parser =
+        create_parser("#[public] enum Role { User => 50; Admin => 10; Developer => 30; }");
     match parser.parse() {
         Ok(program) => {
             let Statement::Enum {
@@ -455,11 +456,13 @@ fn parse_list_expression() {
 
 #[test]
 fn parse_extended_type() {
-    let mut parser = create_parser(r#"
+    let mut parser = create_parser(
+        r#"
             #[public]
             type positive_int = int[range=0..=1024];
             type even_positive_int = extend positive_int with [multiple_of=2];
-        "#);
+        "#,
+    );
 
     match parser.parse() {
         Ok(program) => {

@@ -33,9 +33,10 @@ where
     pub fn expect_token(&mut self, kind: TokenKind) -> Result<Span, ParserError> {
         let token = self.next_token()?;
         if token.kind != kind {
-            Err(ParserError::Syntax {
-                message: format!("Expected {} but got {}", kind, token.kind),
+            Err(ParserError::Expected {
                 span: token.span,
+                expected: kind.to_string(),
+                got: token.kind.to_string(),
             })
         } else {
             Ok(token.span)

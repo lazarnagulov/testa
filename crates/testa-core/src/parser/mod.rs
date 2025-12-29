@@ -42,7 +42,7 @@ where
             attributes: Vec::new(),
         }
     }
-    
+
     pub fn parse(&mut self) -> Result<Program, ParserError> {
         let mut statements = vec![];
         while self.token_stream.has_next() {
