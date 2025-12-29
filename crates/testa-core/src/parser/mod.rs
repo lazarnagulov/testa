@@ -42,15 +42,7 @@ where
             attributes: Vec::new(),
         }
     }
-
-    pub fn from_token_stream(token_stream: TokenStream<I>, source: &'src str) -> Self {
-        Self {
-            token_stream,
-            source,
-            attributes: Vec::new(),
-        }
-    }
-
+    
     pub fn parse(&mut self) -> Result<Program, ParserError> {
         let mut statements = vec![];
         while self.token_stream.has_next() {

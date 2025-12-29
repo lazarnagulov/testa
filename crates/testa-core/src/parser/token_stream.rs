@@ -30,14 +30,6 @@ where
         }
     }
 
-    pub fn from_iterator(iter: I) -> Self {
-        Self {
-            lexer: iter.peekable(),
-            buffer: VecDeque::new(),
-            last_span: Span::default(),
-        }
-    }
-
     pub fn expect_token(&mut self, kind: TokenKind) -> Result<Span, ParserError> {
         let token = self.next_token()?;
         if token.kind != kind {
