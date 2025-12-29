@@ -44,6 +44,10 @@ pub fn int_literal(span: Span) -> Token {
     token_with_span(TokenKind::IntLiteral, span)
 }
 
+pub fn string_literal(span: Span) -> Token {
+    token_with_span(TokenKind::StringLiteral, span)
+}
+
 pub fn parser_from_tokens(
     tokens: Vec<Result<Token, LexerError>>,
     source: &'static str,
