@@ -1,4 +1,5 @@
 use core::fmt;
+use std::error::Error;
 
 use crate::{
     diagnostics::{Diagnostic, DiagnosticCode},
@@ -105,3 +106,5 @@ impl From<LexerError> for ParserError {
         ParserError::LexerError(err)
     }
 }
+
+impl Error for ParserError {}

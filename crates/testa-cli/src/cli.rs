@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 
-use crate::command::{check_command, generate_command, init_command, lsp_command};
+use crate::command::{check_command, generate_command, info_command, init_command, lsp_command};
 
 #[derive(Parser)]
 #[command(name = "testa")]
@@ -39,6 +39,10 @@ impl Cli {
                 name,
                 with_examples,
             } => init_command(directory, name, with_examples),
+            Command::Info { extended } => {
+                info_command(extended);
+                Ok(())
+            }
         }
     }
 }
@@ -80,5 +84,9 @@ pub enum Command {
         name: Option<String>,
         #[arg(long)]
         with_examples: bool,
+    },
+    Info {
+        #[arg(long)]
+        extended: bool,
     },
 }
