@@ -1,7 +1,7 @@
-mod semantic_token;
-mod semantic_token_builder;
 mod document;
 mod language_server;
+mod semantic_token;
+mod semantic_token_builder;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -12,7 +12,6 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LspService, Server};
 
 use crate::document::Document;
-
 
 #[derive(Debug)]
 struct Backend {
@@ -32,7 +31,7 @@ impl Backend {
         self.client
             .log_message(MessageType::INFO, format!("Parsing document: {}", uri))
             .await;
-        
+
         // self.documents.insert(uri.clone(), document);
         // self.publish_diagnostics(&uri, diagnostics).await;
     }
