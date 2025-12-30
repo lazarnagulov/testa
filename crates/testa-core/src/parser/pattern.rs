@@ -2,14 +2,21 @@ use std::{iter::Peekable, str::CharIndices};
 
 use crate::{
     ast::{Expression, ExpressionKind, PatternChar, PatternElement, Precedence},
-    lexer::token::TokenKind,
+    lexer::{
+        Lexer,
+        error::LexerError,
+        token::{Token, TokenKind},
+    },
     parser::error::ParserError,
     utils::Span,
 };
 
 use super::Parser;
 
-impl<'src> Parser<'src> {
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
     pub(super) fn parse_string_pattern(&mut self) -> Result<Expression, ParserError> {
         let start = self.token_stream.consume_token()?;
         let literal_span = self.token_stream.expect_token(TokenKind::StringLiteral)?;
@@ -94,7 +101,9 @@ impl<'src> Parser<'src> {
                     }
 
                     chars.next();
-                    let mut parser = Parser::new(&literal[current_index + 1..last]);
+                    let program = &literal[current_index + 1..last];
+                    let lexer = Lexer::new(program);
+                    let mut parser = Parser::new(lexer, program);
                     let count_expression = parser.parse_expression(Precedence::Lowest)?;
 
                     if let Some(PatternElement::RepeatChar {

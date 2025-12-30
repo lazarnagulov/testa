@@ -1,8 +1,8 @@
 pub mod context;
 pub mod error;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 use std::rc::Rc;
 

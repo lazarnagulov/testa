@@ -1,7 +1,17 @@
 use super::Parser;
-use crate::{lexer::token::TokenKind, parser::error::ParserError, utils::Span};
+use crate::{
+    lexer::{
+        error::LexerError,
+        token::{Token, TokenKind},
+    },
+    parser::error::ParserError,
+    utils::Span,
+};
 
-impl<'src> Parser<'src> {
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
     pub(super) fn source_text(&self, span: Span) -> &'src str {
         &self.source[span.outer()]
     }

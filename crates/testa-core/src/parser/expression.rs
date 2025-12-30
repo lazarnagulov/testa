@@ -2,7 +2,8 @@ use super::Parser;
 use crate::ast::{
     Expression, ExpressionKind, ExpressionStatemnt, InfixOperator, Precedence, PrefixOperator,
 };
-use crate::lexer::token::TokenKind::*;
+use crate::lexer::error::LexerError;
+use crate::lexer::token::{Token, TokenKind::*};
 use crate::parser::error::ParserError;
 use crate::utils::Span;
 
@@ -12,7 +13,10 @@ macro_rules! parse_infix {
     };
 }
 
-impl<'src> Parser<'src> {
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
     pub(super) fn parse_expression_statement(&mut self) -> Result<ExpressionStatemnt, ParserError> {
         let expression = self.parse_expression(Precedence::Lowest)?;
         let start = expression.span;

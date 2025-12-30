@@ -12,20 +12,30 @@ mod token_stream;
 mod tests;
 
 use crate::ast::{Attribute, Program};
-use crate::lexer::Lexer;
+use crate::lexer::error::LexerError;
+use crate::lexer::token::Token;
 use crate::parser::error::ParserError;
 use crate::parser::token_stream::TokenStream;
 
-pub struct Parser<'src> {
-    token_stream: TokenStream<'src>,
+pub struct Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    token_stream: TokenStream<I>,
     source: &'src str,
 
     attributes: Vec<Attribute>,
 }
 
-impl<'src> Parser<'src> {
-    pub fn new(program: &'src str) -> Self {
-        let lexer = Lexer::new(program).peekable();
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    pub fn new(lexer: I, program: &'src str) -> Self
+    where
+        I: Iterator<Item = Result<Token, LexerError>>,
+    {
+        let lexer = lexer.peekable();
         Self {
             token_stream: TokenStream::new(lexer),
             source: program,

@@ -1,972 +1,465 @@
 use core::panic;
 use std::path::PathBuf;
 
-use crate::ast::{
-    Attribute, ConstraintKind, DataTypeKind, ExpressionKind, ExpressionStatemnt, InfixOperator,
-    PatternChar, PatternElement, PrefixOperator, Statement,
+use crate::{
+    ast::{ConstraintKind, DataTypeKind, Expression, ExpressionKind, InfixOperator, Statement},
+    lexer::token::TokenKind,
+    parser::error::ParserError,
+    utils::test_utils::*,
 };
-use crate::parser::Parser;
-use crate::parser::error::ParserError;
 
 #[test]
-fn parse_tagged_template() {
-    let program = "#[abstract] template User {}";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            assert_eq!(program.0.len(), 1);
-            let Statement::Template {
-                attributes,
-                name,
-                body,
-                parent_name,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Template statement");
-            };
+fn test_parse_enum() {
+    // enum <> { <>; }
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Enum)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "",
+    );
 
-            let Attribute::Flag(attr_name, _) = &attributes[0] else {
-                panic!("expected flag attribute");
-            };
-            assert_eq!(attr_name, "abstract");
-            assert_eq!(name, "User");
-            assert!(body.is_empty());
-            assert!(parent_name.is_none());
-        }
-        Err(err) => handle_error(err),
-    }
+    let program = parser.parse().expect("parse failed");
+    let Statement::Enum { variants, .. } = &program.0[0] else {
+        panic!("expected enum");
+    };
+
+    assert_eq!(variants.len(), 1);
+    assert!(variants[0].weight.is_none());
 }
 
 #[test]
-fn parse_tagged_template_field() {
-    let program = "template User { #[primary_key] #[unique] id = string; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Template { body, .. } = &program.0[0] else {
-                panic!("Expected Template statement");
-            };
-            assert_eq!(body.len(), 1);
-            assert_eq!(body[0].name, "id");
-            let attributes = &body[0].attributes;
-            assert_eq!(attributes.len(), 2);
-            let Attribute::Flag(name, _) = &attributes[0] else {
-                panic!("expected flag attribute");
-            };
-            assert_eq!(name, "primary_key");
-            let Attribute::Flag(name, _) = &attributes[1] else {
-                panic!("expected flag attribute");
-            };
-            assert_eq!(name, "unique");
+fn test_parse_weighted_enum() {
+    let expr_span = span(0, 1, 1, 1, 1, 2);
 
-            assert!(!body[0].overridable);
-            match &body[0].value.kind {
-                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Str)),
-                _ => panic!("Expected Type expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
+    // enum <> { <> = 1; }
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Enum)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::Arrow)),
+            Ok(int_literal(expr_span)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "1",
+    );
+
+    let program = parser.parse().expect("parse failed");
+    let Statement::Enum { variants, .. } = &program.0[0] else {
+        panic!("expected enum");
+    };
+
+    assert!(matches!(
+        variants[0].weight,
+        Some(Expression {
+            kind: ExpressionKind::IntLiteral(1),
+            ..
+        })
+    ));
 }
 
 #[test]
-fn parse_empty_template() {
-    let program = "template User {}";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            assert_eq!(program.0.len(), 1);
-            let Statement::Template {
-                attributes,
-                name,
-                body,
-                parent_name,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Template statement");
-            };
-            assert!(attributes.is_empty());
-            assert_eq!(name, "User");
-            assert!(body.is_empty());
-            assert!(parent_name.is_none());
-        }
-        Err(err) => handle_error(err),
-    }
+fn test_parse_mixed_enum() {
+    let expr_span = span(0, 1, 1, 1, 1, 2);
+
+    // enum <> { <> = 1; <>; }
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Enum)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::Arrow)),
+            Ok(int_literal(expr_span)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "1",
+    );
+
+    let program = parser.parse().expect("parse failed");
+    let Statement::Enum { variants, .. } = &program.0[0] else {
+        panic!("expected enum");
+    };
+
+    assert_eq!(variants.len(), 2);
+    assert!(variants[0].weight.is_some());
+    assert!(variants[1].weight.is_none());
 }
 
 #[test]
-fn parse_single_field_template() {
-    let program = "template User { name = string; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Template {
-                name,
-                body,
-                attributes,
-                parent_name,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Template statement");
-            };
-            assert_eq!(name, "User");
-            assert!(attributes.is_empty());
-            assert!(parent_name.is_none());
-            assert_eq!(body.len(), 1);
-            assert_eq!(body[0].name, "name");
-            assert!(!body[0].overridable);
-            assert!(body[0].attributes.is_empty());
-            match &body[0].value.kind {
-                ExpressionKind::Type(dt) => {
-                    assert!(matches!(dt.kind, DataTypeKind::Str));
-                    assert!(dt.constraints.is_none());
-                }
-                _ => panic!("Expected Type expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_template() {
-    let program =
-        "template Product : Consumable { override name = string; quantity = int; price = float; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Template {
-                name,
-                body,
-                parent_name,
-                attributes,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Template statement");
-            };
-            assert_eq!(name, "Product");
-            assert_eq!(parent_name, &Some("Consumable".to_owned()));
-            assert!(attributes.is_empty());
-            assert_eq!(body.len(), 3);
-
-            assert_eq!(body[0].name, "name");
-            assert!(body[0].overridable);
-            match &body[0].value.kind {
-                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Str)),
-                _ => panic!("Expected Type expression"),
-            }
-
-            assert_eq!(body[1].name, "quantity");
-            assert!(!body[1].overridable);
-            match &body[1].value.kind {
-                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Int)),
-                _ => panic!("Expected Type expression"),
-            }
-
-            assert_eq!(body[2].name, "price");
-            assert!(!body[2].overridable);
-            match &body[2].value.kind {
-                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Float)),
-                _ => panic!("Expected Type expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_missing_paren_template() {
-    let program = "template Invalid { name = string;";
-    let mut parser = Parser::new(program);
-    expect_missing_paren(&mut parser);
-}
-
-#[test]
-fn parse_anonymus_generate() {
-    let program = "@generate _ [10] { name = string; price = float; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Generate {
-                template_name,
-                body,
-                count,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Generate statement");
-            };
-            assert_eq!(template_name, &None);
-            assert_eq!(body.len(), 2);
-
-            assert_eq!(body[0].name, "name");
-            match &body[0].value.kind {
-                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Str)),
-                _ => panic!("Expected Type expression"),
-            }
-
-            assert_eq!(body[1].name, "price");
-            match &body[1].value.kind {
-                ExpressionKind::Type(dt) => assert!(matches!(dt.kind, DataTypeKind::Float)),
-                _ => panic!("Expected Type expression"),
-            }
-
-            match &count.kind {
-                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
-                _ => panic!("Expected IntLiteral"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_generate() {
-    let program = "@generate User [10];";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Generate {
-                template_name,
-                body,
-                count,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Generate statement");
-            };
-            assert_eq!(template_name, &Some("User".to_string()));
-            assert!(body.is_empty());
-            match &count.kind {
-                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
-                _ => panic!("Expected IntLiteral"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_missing_paren_generate() {
-    let program = "@generate _ [10] { name = string; price = float;";
-    let mut parser = Parser::new(program);
-    expect_missing_paren(&mut parser);
-}
-
-#[test]
-fn parse_weighted_variant_enum() {
-    let program = "#[public] enum Role { User => 50; Admin => 10; Developer => 30; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Enum {
-                name,
-                variants,
-                attributes,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Enum statement");
-            };
-            assert_eq!(name, "Role");
-            assert_eq!(attributes.len(), 1);
-            let Attribute::Flag(name, _) = &attributes[0] else {
-                panic!("expected flag attribute");
-            };
-            assert_eq!(name, "public");
-            assert_eq!(variants.len(), 3);
-
-            assert_eq!(variants[0].name, "User");
-            match &variants[0].weight {
-                Some(expr) => match &expr.kind {
-                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 50),
-                    _ => panic!("Expected IntLiteral"),
-                },
-                None => panic!("Expected weight"),
-            }
-
-            assert_eq!(variants[1].name, "Admin");
-            match &variants[1].weight {
-                Some(expr) => match &expr.kind {
-                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
-                    _ => panic!("Expected IntLiteral"),
-                },
-                None => panic!("Expected weight"),
-            }
-
-            assert_eq!(variants[2].name, "Developer");
-            match &variants[2].weight {
-                Some(expr) => match &expr.kind {
-                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 30),
-                    _ => panic!("Expected IntLiteral"),
-                },
-                None => panic!("Expected weight"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_empty_enum() {
-    let program = "enum Role {}";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Enum {
-                name,
-                variants,
-                attributes,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Enum statement");
-            };
-            assert_eq!(name, "Role");
-            assert!(variants.is_empty());
-            assert!(attributes.is_empty());
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_single_variant_enum() {
-    let program = "enum Role { User; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Enum {
-                name,
-                variants,
-                attributes,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Enum statement");
-            };
-            assert_eq!(name, "Role");
-            assert!(attributes.is_empty());
-            assert_eq!(variants.len(), 1);
-            assert_eq!(variants[0].name, "User");
-            assert!(variants[0].weight.is_none());
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_list_type() {
-    let program = "[int][range=1..=5];";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Expression(expr_stmt) = &program.0[0] else {
-                panic!("Expected Expression statement");
-            };
-            match &expr_stmt.expression.kind {
-                ExpressionKind::Type(dt) => {
-                    match &dt.kind {
-                        DataTypeKind::List(inner) => {
-                            assert!(matches!(inner.kind, DataTypeKind::Int));
-                        }
-                        _ => panic!("Expected List type"),
-                    }
-                    let constraints = dt.constraints.as_ref().expect("Expected constraints");
-                    assert_eq!(constraints.len(), 1);
-                    assert!(matches!(constraints[0].kind, ConstraintKind::Range));
-                    match &constraints[0].expression.kind {
-                        ExpressionKind::Infix {
-                            left,
-                            operator,
-                            right,
-                        } => {
-                            assert!(matches!(operator, InfixOperator::InclusiveRange));
-                            match &left.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 1),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                            match &right.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 5),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                        }
-                        _ => panic!("Expected Infix expression"),
-                    }
-                }
-                _ => panic!("Expected Type expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_list_expression() {
-    let program = "[1 => 5; \"John\"; true => 25];";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Expression(expr_stmt) = &program.0[0] else {
-                panic!("Expected Expression statement");
-            };
-            match &expr_stmt.expression.kind {
-                ExpressionKind::List(elements) => {
-                    assert_eq!(elements.len(), 3);
-
-                    match elements[0].value.kind {
-                        ExpressionKind::IntLiteral(v) => assert_eq!(v, 1),
-                        _ => panic!("expected IntLiteral"),
-                    }
-
-                    match elements[0]
-                        .weight
-                        .as_ref()
-                        .expect("expected expression")
-                        .kind
-                    {
-                        ExpressionKind::IntLiteral(v) => assert_eq!(v, 5),
-                        _ => panic!("expected IntLiteral"),
-                    }
-
-                    match &elements[1].value.kind {
-                        ExpressionKind::StringLiteral(v) => assert_eq!(v, "John"),
-                        kind => panic!("expected StringLiteral, got {:?}", kind),
-                    }
-
-                    match elements[2].value.kind {
-                        ExpressionKind::BooleanLiteral(v) => assert!(v),
-                        _ => panic!("expected BoolLiteral"),
-                    }
-
-                    match elements[2]
-                        .weight
-                        .as_ref()
-                        .expect("expected expression")
-                        .kind
-                    {
-                        ExpressionKind::IntLiteral(v) => assert_eq!(v, 25),
-                        _ => panic!("expected IntLiteral"),
-                    }
-                }
-                _ => panic!("Expected List expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_extended_type() {
-    let program = r#"
-            #[public]
-            type positive_int = int[range=0..=1024];
-            type even_positive_int = extend positive_int with [multiple_of=2];
-        "#;
-    let mut parser = Parser::new(program);
+fn test_parse_enum_missing_identifier() {
+    // enum { ... }
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Enum)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "",
+    );
 
     match parser.parse() {
-        Ok(program) => {
-            assert_eq!(program.0.len(), 2);
-
-            let Statement::TypeDecl {
-                name: name1,
-                data_type: dt1,
-                attributes: attr1,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected TypeDecl statement");
-            };
-            assert_eq!(name1, "positive_int");
-            assert_eq!(attr1.len(), 1);
-            let Attribute::Flag(name, _) = &attr1[0] else {
-                panic!("expected flag attribute");
-            };
-            assert_eq!(name, "public");
-
-            match &dt1.kind {
-                ExpressionKind::Type(dt) => {
-                    assert!(matches!(dt.kind, DataTypeKind::Int));
-                    let constraints = dt.constraints.as_ref().expect("Expected constraints");
-                    assert_eq!(constraints.len(), 1);
-                    assert!(matches!(constraints[0].kind, ConstraintKind::Range));
-                    match &constraints[0].expression.kind {
-                        ExpressionKind::Infix {
-                            left,
-                            operator,
-                            right,
-                        } => {
-                            assert!(matches!(operator, InfixOperator::InclusiveRange));
-                            match &left.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 0),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                            match &right.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 1024),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                        }
-                        _ => panic!("Expected Infix expression"),
-                    }
-                }
-                _ => panic!("Expected Type expression"),
-            }
-
-            let Statement::TypeDecl {
-                name: name2,
-                data_type: dt2,
-                attributes: attr2,
-                ..
-            } = &program.0[1]
-            else {
-                panic!("Expected TypeDecl statement");
-            };
-            assert_eq!(name2, "even_positive_int");
-            assert!(attr2.is_empty());
-            match &dt2.kind {
-                ExpressionKind::Type(dt) => {
-                    match &dt.kind {
-                        DataTypeKind::Custom(s) => assert_eq!(s, "positive_int"),
-                        _ => panic!("Expected Custom type"),
-                    }
-                    let constraints = dt.constraints.as_ref().expect("Expected constraints");
-                    assert_eq!(constraints.len(), 1);
-                    assert!(matches!(constraints[0].kind, ConstraintKind::MultipleOf));
-                    match &constraints[0].expression.kind {
-                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 2),
-                        _ => panic!("Expected IntLiteral"),
-                    }
-                }
-                _ => panic!("Expected Type expression"),
-            }
+        Ok(program) => panic!("expected error, got {:?}", program),
+        Err(ParserError::Expected { expected, got, .. }) => {
+            assert_eq!(expected, "identifier");
+            assert_eq!(got, "{");
         }
-        Err(err) => handle_error(err),
+        Err(err) => panic!("unexpected error: {:?}", err),
     }
 }
 
 #[test]
-fn parse_enum() {
-    let program = "enum Role { User; Admin; Moderator; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Enum {
-                name,
-                variants,
-                attributes,
-                ..
-            } = &program.0[0]
-            else {
-                panic!("Expected Enum statement");
-            };
-            assert_eq!(name, "Role");
-            assert!(attributes.is_empty());
-            assert_eq!(variants.len(), 3);
-            assert_eq!(variants[0].name, "User");
-            assert!(variants[0].weight.is_none());
-            assert_eq!(variants[1].name, "Admin");
-            assert!(variants[1].weight.is_none());
-            assert_eq!(variants[2].name, "Moderator");
-            assert!(variants[2].weight.is_none());
-        }
-        Err(err) => handle_error(err),
-    }
+fn test_parse_type_declaration() {
+    let name_span = span(0, 1, 1, 5, 1, 6);
+
+    // type Testa = int;
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Type)),
+            Ok(identifier(name_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(token(TokenKind::Int)),
+            Ok(token(TokenKind::Semicolon)),
+        ],
+        "Testa",
+    );
+
+    let program = parser.parse().expect("parse failed");
+    let Statement::TypeDecl { name, .. } = &program.0[0] else {
+        panic!("expected type declaration");
+    };
+
+    assert_eq!(name, "Testa");
 }
 
 #[test]
-fn parse_missing_paren_enum() {
-    let program = "enum Role { User; Admin; Moderator;";
-    let mut parser = Parser::new(program);
-    expect_missing_paren(&mut parser);
+fn test_parse_type_with_constraints() {
+    let constraint_span = span(0, 1, 1, 5, 1, 6);
+    let lower_span = span(6, 1, 7, 7, 1, 8);
+    let upper_span = span(8, 1, 9, 9, 1, 10);
+
+    // type <> = int [range=1..=2];
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Type)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(token(TokenKind::Int)),
+            Ok(token(TokenKind::LBracket)),
+            Ok(identifier(constraint_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(int_literal(lower_span)),
+            Ok(token(TokenKind::DoublePeriodEqual)),
+            Ok(int_literal(upper_span)),
+            Ok(token(TokenKind::RBracket)),
+            Ok(token(TokenKind::Semicolon)),
+        ],
+        "range 1 2",
+    );
+
+    let program = parser.parse().expect("parse failed");
+    let Statement::TypeDecl { data_type, .. } = &program.0[0] else {
+        panic!("expected type declaration");
+    };
+
+    let ExpressionKind::Type(data_type) = &data_type.kind else {
+        panic!("expected type expression");
+    };
+
+    assert!(matches!(data_type.kind, DataTypeKind::Int));
+    let constraints = data_type.constraints.as_ref().expect("missing constraints");
+    assert_eq!(constraints.len(), 1);
+
+    assert_eq!(
+        constraints[0].expression,
+        Expression {
+            kind: ExpressionKind::Infix {
+                left: Box::new(Expression {
+                    kind: ExpressionKind::IntLiteral(1),
+                    span: lower_span,
+                }),
+                operator: InfixOperator::InclusiveRange,
+                right: Box::new(Expression {
+                    kind: ExpressionKind::IntLiteral(2),
+                    span: upper_span,
+                }),
+            },
+            span: lower_span.merge(upper_span),
+        }
+    );
 }
 
 #[test]
-fn parse_infix_expression() {
-    let program = "2 + 10 * 20;";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Expression(expr_stmt) = &program.0[0] else {
-                panic!("Expected Expression statement");
-            };
-            match &expr_stmt.expression.kind {
-                ExpressionKind::Infix {
-                    left,
-                    operator,
-                    right,
-                } => {
-                    assert!(matches!(operator, InfixOperator::Plus));
-                    match &left.kind {
-                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 2),
-                        _ => panic!("Expected IntLiteral"),
-                    }
-                    match &right.kind {
-                        ExpressionKind::Infix {
-                            left: l2,
-                            operator: op2,
-                            right: r2,
-                        } => {
-                            assert!(matches!(op2, InfixOperator::Multiply));
-                            match &l2.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                            match &r2.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 20),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                        }
-                        _ => panic!("Expected Infix expression"),
-                    }
-                }
-                _ => panic!("Expected Infix expression"),
-            }
+fn test_parse_extend_with_type() {
+    let base_span = span(0, 1, 1, 5, 1, 6);
+    let new_span = span(6, 1, 7, 9, 1, 10);
+    let constraint_span = span(10, 1, 11, 21, 1, 22);
+    let value_span = span(22, 1, 23, 23, 1, 24);
+
+    // type Testa = int;
+    // type New = extend Testa with [multiple_of=2];
+    let mut parser = parser_from_tokens(
+        vec![
+            // type Testa = int;
+            Ok(token(TokenKind::Type)),
+            Ok(identifier(base_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(token(TokenKind::Int)),
+            Ok(token(TokenKind::Semicolon)),
+            // type New = extend Testa with [multiple_of=2];
+            Ok(token(TokenKind::Type)),
+            Ok(identifier(new_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(token(TokenKind::Extend)),
+            Ok(identifier(base_span)),
+            Ok(token(TokenKind::With)),
+            Ok(token(TokenKind::LBracket)),
+            Ok(identifier(constraint_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(int_literal(value_span)),
+            Ok(token(TokenKind::RBracket)),
+            Ok(token(TokenKind::Semicolon)),
+        ],
+        "Testa New multiple_of 2",
+    );
+
+    let program = parser.parse().expect("parse failed");
+
+    assert_eq!(program.0.len(), 2);
+
+    let Statement::TypeDecl {
+        name, data_type, ..
+    } = &program.0[1]
+    else {
+        panic!("expected second statement to be type declaration");
+    };
+
+    assert_eq!(name, "New");
+
+    let ExpressionKind::Type(data_type) = &data_type.kind else {
+        panic!("expected type expression");
+    };
+
+    let constraints = data_type.constraints.as_ref().expect("missing constraints");
+    assert_eq!(constraints.len(), 1);
+
+    let constraint = &constraints[0];
+    assert!(matches!(constraint.kind, ConstraintKind::MultipleOf));
+
+    assert_eq!(
+        constraint.expression,
+        Expression {
+            kind: ExpressionKind::IntLiteral(2),
+            span: value_span,
         }
-        Err(err) => handle_error(err),
-    }
+    );
 }
 
 #[test]
-fn parse_grouped_expression() {
-    let program = "(2 + 3) * 5;";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Expression(expr_stmt) = &program.0[0] else {
-                panic!("Expected Expression statement");
-            };
-            match &expr_stmt.expression.kind {
-                ExpressionKind::Infix {
-                    left,
-                    operator,
-                    right,
-                } => {
-                    assert!(matches!(operator, InfixOperator::Multiply));
-                    match &left.kind {
-                        ExpressionKind::Infix {
-                            left: l2,
-                            operator: op2,
-                            right: r2,
-                        } => {
-                            assert!(matches!(op2, InfixOperator::Plus));
-                            match &l2.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 2),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                            match &r2.kind {
-                                ExpressionKind::IntLiteral(v) => assert_eq!(*v, 3),
-                                _ => panic!("Expected IntLiteral"),
-                            }
-                        }
-                        _ => panic!("Expected Infix expression"),
-                    }
-                    match &right.kind {
-                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 5),
-                        _ => panic!("Expected IntLiteral"),
-                    }
-                }
-                _ => panic!("Expected Infix expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
+fn test_parse_template() {
+    let name_span = span(0, 1, 1, 5, 1, 6);
+    let field_span = span(6, 1, 7, 10, 1, 11);
+    // template Testa { test = int; }
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Template)),
+            Ok(identifier(name_span)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(identifier(field_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(token(TokenKind::Int)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "Testa test ",
+    );
+    let program = parser.parse().expect("parse failed");
+    assert_eq!(program.0.len(), 1);
+    let Statement::Template {
+        name,
+        body,
+        name_span: template_name_span,
+        ..
+    } = &program.0[0]
+    else {
+        panic!("expected first statement to be template");
+    };
+
+    assert_eq!(name, "Testa");
+    assert!(template_name_span.is_some());
+    assert_eq!(template_name_span, &Some(name_span));
+    assert_eq!(body.len(), 1);
+    let ExpressionKind::Type(field_expr_type) = &body[0].value.kind else {
+        panic!("expected expression to be type");
+    };
+    assert!(matches!(field_expr_type.kind, DataTypeKind::Int));
+    assert_eq!(&body[0].name, "test");
 }
 
 #[test]
-fn parse_missing_paren_expression() {
-    let program = "(2 << 3 & 5 >> 1;";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(_) => panic!("Program should have returned err."),
-        Err(err) => match err {
-            ParserError::Expected {
-                expected,
-                got,
-                span: _,
-            } => {
-                assert_eq!(expected, ")".to_string());
-                assert_eq!(got, ";".to_string())
-            }
-            _ => panic!("Program should have returned expected error"),
-        },
-    }
+fn test_parse_multi_field_template() {
+    let field_span = span(0, 1, 1, 6, 1, 7);
+    // template Testa { <> = "test"; test = string; }
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Template)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(string_literal(field_span)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::Identifier)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(token(TokenKind::Str)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "\"test\"",
+    );
+    let program = parser.parse().expect("parse failed");
+    assert_eq!(program.0.len(), 1);
+    let Statement::Template {
+        body,
+        name_span: template_name_span,
+        ..
+    } = &program.0[0]
+    else {
+        panic!("expected first statement to be template");
+    };
+
+    assert!(template_name_span.is_some());
+    assert_eq!(body.len(), 2);
+    let ExpressionKind::StringLiteral(field_expr_type) = &body[0].value.kind else {
+        panic!("expected expression to be string_literal");
+    };
+    assert_eq!(field_expr_type, "test");
+
+    let ExpressionKind::Type(field_expr_type) = &body[1].value.kind else {
+        panic!("expected expression to be type");
+    };
+    assert!(matches!(field_expr_type.kind, DataTypeKind::Str));
 }
 
 #[test]
-fn parse_prefix_expression() {
-    let program = "-5; !true;";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            assert_eq!(program.0.len(), 2);
+fn test_parse_template_inheritance() {
+    let parent_span = span(0, 1, 1, 6, 1, 7);
+    let parent_field_span = span(7, 1, 8, 10, 1, 11);
+    let int_literal_span = span(11, 1, 12, 13, 1, 14);
+    let child_span = span(14, 1, 15, 19, 1, 20);
+    // template Parent { age = 18 + int; };
+    // template Child : Parent { override age = int; }
+    let mut parser = parser_from_tokens(
+        vec![
+            // template Parent { age = 18 + int; };
+            Ok(token(TokenKind::Template)),
+            Ok(identifier(parent_span)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(identifier(parent_field_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(int_literal(int_literal_span)),
+            Ok(token(TokenKind::Plus)),
+            Ok(token(TokenKind::Int)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+            // template Child : Parent { override age = int; }
+            Ok(token(TokenKind::Template)),
+            Ok(identifier(child_span)),
+            Ok(token(TokenKind::Colon)),
+            Ok(identifier(parent_span)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(token(TokenKind::Override)),
+            Ok(identifier(parent_field_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(token(TokenKind::Int)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "Parent age 18 Child",
+    );
 
-            let Statement::Expression(expr_stmt1) = &program.0[0] else {
-                panic!("Expected Expression statement");
-            };
-            match &expr_stmt1.expression.kind {
-                ExpressionKind::Prefix {
-                    operator,
-                    expression,
-                } => {
-                    assert!(matches!(operator, PrefixOperator::Negative));
-                    match &expression.kind {
-                        ExpressionKind::IntLiteral(v) => assert_eq!(*v, 5),
-                        _ => panic!("Expected IntLiteral"),
-                    }
-                }
-                _ => panic!("Expected Prefix expression"),
-            }
-
-            let Statement::Expression(expr_stmt2) = &program.0[1] else {
-                panic!("Expected Expression statement");
-            };
-            match &expr_stmt2.expression.kind {
-                ExpressionKind::Prefix {
-                    operator,
-                    expression,
-                } => {
-                    assert!(matches!(operator, PrefixOperator::LogicalNegate));
-                    match expression.kind {
-                        ExpressionKind::BooleanLiteral(v) => assert!(v),
-                        _ => panic!("Expected BooleanLiteral"),
-                    }
-                }
-                _ => panic!("Expected Prefix expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
+    let program = parser.parse().expect("parse failed");
+    assert_eq!(program.0.len(), 2);
+    let Statement::Template {
+        body, parent_name, ..
+    } = &program.0[1]
+    else {
+        panic!("expected first statement to be template");
+    };
+    assert_eq!(parent_name, &Some("Parent".to_string()));
+    assert_eq!(body.len(), 1);
+    assert!(body[0].overridable);
 }
 
 #[test]
-fn parse_directive() {
-    let program = "@output csv;";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::OutputDirective {
-                argument, options, ..
-            } = &program.0[0]
-            else {
-                panic!("Expected OutputDirective statement");
-            };
-            assert_eq!(argument, "csv");
-            assert!(options.is_empty());
-        }
-        Err(err) => handle_error(err),
-    }
+fn test_parse_output_directive() {
+    let csv_span = span(0, 1, 1, 3, 1, 4);
+    let config_span = span(4, 1, 5, 13, 1, 13);
+    let config_option_span = span(14, 1, 15, 17, 1, 18);
+
+    // @output csv { delimiter = ";"; }
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Output)),
+            Ok(identifier(csv_span)),
+            Ok(token(TokenKind::LBrace)),
+            Ok(identifier(config_span)),
+            Ok(token(TokenKind::SingleEqual)),
+            Ok(string_literal(config_option_span)),
+            Ok(token(TokenKind::Semicolon)),
+            Ok(token(TokenKind::RBrace)),
+        ],
+        "csv delimiter \";\"",
+    );
+    let program = parser.parse().expect("parse failed");
+    assert_eq!(program.0.len(), 1);
+    let Statement::OutputDirective {
+        argument, options, ..
+    } = &program.0[0]
+    else {
+        panic!("expected first statement to be output directive");
+    };
+    assert_eq!(argument, "csv");
+    assert_eq!(options.len(), 1);
+    assert_eq!(options[0].name, "delimiter");
+    assert!(matches!(
+        options[0].value,
+        Expression {
+            kind: ExpressionKind::StringLiteral(ref s),
+            span: s2
+        } if s == ";" && s2 == config_option_span
+    ));
 }
 
 #[test]
-fn parse_output_path() {
-    let program = "@output_path \"./example.csv\";";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::OutputPathDirective { argument, .. } = &program.0[0] else {
-                panic!("Expected OutputPathDirective statement");
-            };
-            assert_eq!(argument, &PathBuf::from("./example.csv"));
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_pattern_dollar_case() {
-    let program = "string_pattern \"dollar$$$$$$$$$$$$$$$$${aa}\";";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Expression(expr_stmt) = &program.0[0] else {
-                panic!("Expected Expression statement");
-            };
-            match &expr_stmt.expression.kind {
-                ExpressionKind::StringPattern(elements) => {
-                    assert_eq!(elements.len(), 2);
-                    match &elements[0] {
-                        PatternElement::Literal(s, _) => assert_eq!(s, "dollar$$$$$$$$$$$$$$$$"),
-                        _ => panic!("Expected Literal"),
-                    }
-                    match &elements[1] {
-                        PatternElement::RepeatChar {
-                            ch,
-                            count,
-                            count_expression,
-                            ..
-                        } => {
-                            assert!(matches!(ch, PatternChar::Lowercase));
-                            assert_eq!(*count, 2);
-                            assert!(count_expression.is_none());
-                        }
-                        _ => panic!("Expected RepeatChar"),
-                    }
-                }
-                _ => panic!("Expected StringPattern expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_string_pattern() {
-    let program = "string_pattern \"testa$}${aaa[10]}john${A[25]##[13]}\";";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::Expression(ExpressionStatemnt { expression, .. }) = &program.0[0] else {
-                panic!("Expected Expression statement");
-            };
-            match &expression.kind {
-                ExpressionKind::StringPattern(elements) => {
-                    assert_eq!(elements.len(), 5);
-
-                    match &elements[0] {
-                        PatternElement::Literal(s, _) => assert_eq!(s, "testa$}"),
-                        _ => panic!("Expected Literal"),
-                    }
-
-                    match &elements[1] {
-                        PatternElement::RepeatChar {
-                            ch,
-                            count,
-                            count_expression,
-                            ..
-                        } => {
-                            assert!(matches!(ch, PatternChar::Lowercase));
-                            assert_eq!(*count, 3);
-                            match count_expression {
-                                Some(expr) => match &expr.kind {
-                                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 10),
-                                    _ => panic!("Expected IntLiteral"),
-                                },
-                                None => panic!("Expected count expression"),
-                            }
-                        }
-                        _ => panic!("Expected RepeatChar"),
-                    }
-
-                    match &elements[2] {
-                        PatternElement::Literal(s, _) => assert_eq!(s, "john"),
-                        _ => panic!("Expected Literal"),
-                    }
-
-                    match &elements[3] {
-                        PatternElement::RepeatChar {
-                            ch,
-                            count,
-                            count_expression,
-                            ..
-                        } => {
-                            assert!(matches!(ch, PatternChar::Uppercase));
-                            assert_eq!(*count, 1);
-                            match count_expression {
-                                Some(expr) => match &expr.kind {
-                                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 25),
-                                    _ => panic!("Expected IntLiteral"),
-                                },
-                                None => panic!("Expected count expression"),
-                            }
-                        }
-                        _ => panic!("Expected RepeatChar"),
-                    }
-
-                    match &elements[4] {
-                        PatternElement::RepeatChar {
-                            ch,
-                            count,
-                            count_expression,
-                            ..
-                        } => {
-                            assert!(matches!(ch, PatternChar::Digit));
-                            assert_eq!(*count, 2);
-                            match count_expression {
-                                Some(expr) => match &expr.kind {
-                                    ExpressionKind::IntLiteral(v) => assert_eq!(*v, 13),
-                                    _ => panic!("Expected IntLiteral"),
-                                },
-                                None => panic!("Expected count expression"),
-                            }
-                        }
-                        _ => panic!("Expected RepeatChar"),
-                    }
-                }
-                _ => panic!("Expected StringPattern expression"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-#[test]
-fn parse_directive_options() {
-    let program = "@output csv { delimiter = \";\"; }";
-    let mut parser = Parser::new(program);
-    match parser.parse() {
-        Ok(program) => {
-            let Statement::OutputDirective {
-                argument, options, ..
-            } = &program.0[0]
-            else {
-                panic!("Expected OutputDirective statement");
-            };
-            assert_eq!(argument, "csv");
-            assert_eq!(options.len(), 1);
-            assert_eq!(options[0].name, "delimiter");
-            match &options[0].value.kind {
-                ExpressionKind::StringLiteral(s) => assert_eq!(s, ";"),
-                _ => panic!("Expected StringLiteral"),
-            }
-        }
-        Err(err) => handle_error(err),
-    }
-}
-
-fn expect_missing_paren(parser: &mut Parser) {
-    match parser.parse() {
-        Ok(_) => panic!("Program should have returned err."),
-        Err(err) => match err {
-            ParserError::UnexpectedEof { .. } => {}
-            err => panic!(
-                "Program should have returned unexpected EOF instead of {:?}",
-                err
-            ),
-        },
-    }
-}
-
-fn handle_error(error: ParserError) {
-    match error {
-        ParserError::Expected {
-            span,
-            expected,
-            got,
-        } => {
-            panic!(
-                "expected '{}' got '{}' in {}",
-                expected,
-                got,
-                span.to_string()
-            )
-        }
-        ParserError::InvalidDirective { span } => panic!("{}", span.to_string()),
-        ParserError::UnexpectedEof { span } => {
-            panic!("{}", span.to_string())
-        }
-        ParserError::Syntax { span, message } => {
-            panic!("{}: {}", span.to_string(), message)
-        }
-        ParserError::UndefinedConstraint { span } => panic!("{}", span.to_string()),
-        ParserError::InvalidStringPattern { span, pattern } => {
-            panic!("{}: {}", span.to_string(), pattern)
-        }
-        ParserError::InvalidAttribute { span, token } => panic!("{}: {}", span.to_string(), token),
-        ParserError::LexerError(lexer_error) => panic!("{}", lexer_error.to_string()),
-    }
+fn test_parse_output_path_directive() {
+    let output_path_span = span(0, 1, 1, 10, 1, 11);
+    // @output_path "test.csv";
+    let mut parser = parser_from_tokens(vec![
+        Ok(token(TokenKind::OutputPath)),
+        Ok(string_literal(output_path_span)),
+        Ok(token(TokenKind::Semicolon)),
+    ],"\"test.csv\"");
+    let program = parser.parse().expect("parse failed");
+    assert_eq!(program.0.len(), 1);
+        let Statement::OutputPathDirective {
+            argument,
+            ..
+        } = &program.0[0]
+    else {
+        panic!("expected first statement to be output directive");
+    };
+    assert_eq!(argument, &PathBuf::from("test.csv"));
 }

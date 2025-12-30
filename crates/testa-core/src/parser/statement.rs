@@ -3,10 +3,14 @@ use std::path::PathBuf;
 
 use super::Parser;
 use crate::ast::{Attribute, Element, Field, Precedence, Variant};
-use crate::lexer::token::TokenKind::{self, *};
+use crate::lexer::error::LexerError;
+use crate::lexer::token::{Token, TokenKind::*};
 use crate::{ast::Statement, parser::error::ParserError};
 
-impl<'src> Parser<'src> {
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
     pub(super) fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.token_stream.peek_kind() {
             Output | Seed => self.parse_directive(),
@@ -24,7 +28,7 @@ impl<'src> Parser<'src> {
     pub(super) fn parse_enum(&mut self) -> Result<Statement, ParserError> {
         let token = self.token_stream.next_token()?;
         let start = token.span;
-        let name_span = self.token_stream.expect_token(TokenKind::Identifier)?;
+        let name_span = self.token_stream.expect_token(Identifier)?;
         let name = self.token_text(name_span).to_string();
 
         self.token_stream.expect_token(LBrace)?;

@@ -33,7 +33,6 @@ impl Backend {
             .log_message(MessageType::INFO, format!("Parsing document: {}", uri))
             .await;
         
-        let mut _parser = Parser::new(&text);
         // self.documents.insert(uri.clone(), document);
         // self.publish_diagnostics(&uri, diagnostics).await;
     }
