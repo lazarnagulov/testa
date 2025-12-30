@@ -3,7 +3,7 @@ use crate::{
         error::SemanticError,
         symbol_table::{
             SymbolTable,
-            symbol::{ScopeKind, SymbolKind},
+            symbol::{ScopeKind, SymbolKind, VariantInfo},
         },
     },
     ast::{
@@ -101,6 +101,7 @@ impl Visitor for SymbolTableBuilder {
             SymbolKind::Field {
                 is_override: field.overridable,
                 template_name: parent_name,
+                expression: field.value.clone(),
             },
             field.span,
         ) {
@@ -150,10 +151,18 @@ impl Visitor for SymbolTableBuilder {
         attributes: &[Attribute],
         span: Span,
     ) {
+        let variant_infos = variants
+            .iter()
+            .map(|v| VariantInfo {
+                name: v.name.clone(),
+                weight: v.weight.clone(),
+            })
+            .collect::<Vec<VariantInfo>>();
+
         if let Err(symbol_error) = self.table.insert(
             name.to_string(),
             SymbolKind::Enum {
-                variants: variants.iter().map(|f| f.name.clone()).collect(),
+                variants: variant_infos,
                 attributes: attributes.to_vec(),
             },
             span,

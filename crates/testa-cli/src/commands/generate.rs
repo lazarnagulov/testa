@@ -1,5 +1,7 @@
 use std::{error::Error, path::PathBuf};
 
+use testa_interpreter::evaluator::{Evaluator, context::Context};
+
 use crate::compiler::compile_file;
 
 pub fn generate_command(
@@ -9,7 +11,10 @@ pub fn generate_command(
     _count: Option<usize>,
     _seed: Option<u64>,
 ) -> Result<(), Box<dyn Error>> {
-    compile_file(&input, false)?;
-    // TODO: generation
+    let (program, symbol_table) = compile_file(&input, false)?;
+    let context = Context::new(symbol_table);
+    let evaluator = Evaluator::new(context);
+    evaluator.evaluate(program)?;
+
     Ok(())
 }

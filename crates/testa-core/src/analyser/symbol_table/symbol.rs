@@ -1,6 +1,9 @@
 use std::{collections::HashMap, hash::Hash};
 
-use crate::{ast::Attribute, utils::Span};
+use crate::{
+    ast::{Attribute, Expression},
+    utils::Span,
+};
 
 #[derive(Debug, Clone)]
 pub struct Symbol {
@@ -18,7 +21,7 @@ pub enum SymbolKind {
         attributes: Vec<Attribute>,
     },
     Enum {
-        variants: Vec<String>,
+        variants: Vec<VariantInfo>,
         attributes: Vec<Attribute>,
     },
     Resource {
@@ -34,6 +37,7 @@ pub enum SymbolKind {
     Field {
         template_name: String,
         is_override: bool,
+        expression: Expression,
     },
 }
 
@@ -55,4 +59,24 @@ pub enum ScopeKind {
     Enum { name: String },
     Generate { name: String },
     Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VariantInfo {
+    pub name: String,
+    pub weight: Option<Expression>,
+}
+
+impl VariantInfo {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            weight: None,
+        }
+    }
+
+    pub fn with_weight(mut self, weight_expression: Expression) -> Self {
+        self.weight = Some(weight_expression);
+        self
+    }
 }

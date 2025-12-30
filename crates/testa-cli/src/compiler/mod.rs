@@ -1,6 +1,12 @@
 use std::{error::Error, fs, path::PathBuf};
 
-use testa_core::{analyser::{SemanticAnalyser, result::AnalysisResult}, ast::Program, diagnostics::Severity, lexer::Lexer, parser::Parser};
+use testa_core::{
+    analyser::{SemanticAnalyser, result::AnalysisResult, symbol_table::SymbolTable},
+    ast::Program,
+    diagnostics::Severity,
+    lexer::Lexer,
+    parser::Parser,
+};
 
 pub fn parse_file(path: &PathBuf) -> Result<Program, Box<dyn Error>> {
     let content = fs::read_to_string(path)?;
@@ -9,9 +15,9 @@ pub fn parse_file(path: &PathBuf) -> Result<Program, Box<dyn Error>> {
     Ok(parser.parse()?)
 }
 
-pub fn compile_file(path: &PathBuf, show_warnings: bool) -> Result<(), Box<dyn Error>> {
+pub fn compile_file(path: &PathBuf, show_warnings: bool) -> Result<(Program, SymbolTable), Box<dyn Error>> {
     let program = parse_file(path)?;
-    let AnalysisResult { diagnostics, .. } = SemanticAnalyser::new(&program).analyse();
+    let AnalysisResult { diagnostics, symbol_table } = SemanticAnalyser::new(&program).analyse();
 
     let mut has_errors = false;
 
@@ -26,6 +32,6 @@ pub fn compile_file(path: &PathBuf, show_warnings: bool) -> Result<(), Box<dyn E
     if has_errors {
         Err(format!("Failed to compile {}", path.display()).into())
     } else {
-        Ok(())
+        Ok((program, symbol_table))
     }
 }

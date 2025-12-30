@@ -1,15 +1,8 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    rc::Rc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::{collections::HashMap, path::PathBuf};
 
-use crate::{
-    constraints::constrainted_type::ConstrainedType,
-    model::{enumeration::Enum, template::Template},
-    object::Object,
-};
+use testa_core::analyser::symbol_table::SymbolTable;
+
+use crate::object::Object;
 
 use super::error::EvalError;
 
@@ -17,62 +10,39 @@ pub trait Visitor<T>: std::fmt::Debug {
     fn visit(&self, context: &Context) -> Result<T, EvalError>;
 }
 
-// TODO: Consider changing String to &str
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Context {
     pub output_path: Option<PathBuf>,
-    // pub target_format: Target,
-    pub target_config: HashMap<String, Object>,
-
-    templates: HashMap<String, Rc<Template>>,
-    enums: HashMap<String, Enum>,
-    types: HashMap<String, Rc<ConstrainedType>>,
+    pub output_options: HashMap<String, Object>,
+    pub symbol_table: SymbolTable,
+    pub output_format: OutputFormat,
 }
 
 impl Context {
-    pub fn insert_template(&mut self, key: &str, template: Template) -> Option<Rc<Template>> {
-        self.templates.insert(key.to_owned(), Rc::from(template))
-    }
-
-    pub fn get_template(&self, key: &str) -> Option<&Rc<Template>> {
-        self.templates.get(key)
-    }
-
-    pub fn insert_enum(&mut self, key: &str, enumeration: Enum) -> Option<Enum> {
-        self.enums.insert(key.to_owned(), enumeration)
-    }
-
-    pub fn get_enum(&self, key: &str) -> Option<&Enum> {
-        self.enums.get(key)
-    }
-
-    pub fn output_path(&self) -> PathBuf {
-        match &self.output_path {
-            Some(path) => path.clone(),
-            None => PathBuf::from(format!(
-                "testa_{}.{}",
-                SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .expect("Time went backwards")
-                    .as_nanos(),
-                "csv"
-            )),
+    pub fn new(symbol_table: SymbolTable) -> Self {
+        Self {
+            symbol_table,
+            output_path: None,
+            output_options: HashMap::new(),
+            output_format: OutputFormat::default(),
         }
     }
 
-    pub fn insert_type(
-        &mut self,
-        key: &str,
-        data_type: ConstrainedType,
-    ) -> Option<Rc<ConstrainedType>> {
-        self.types.insert(key.to_owned(), Rc::from(data_type))
+    pub fn with_output_path(mut self, path: PathBuf) -> Self {
+        self.output_path = Some(path);
+        self
     }
 
-    pub fn get_type(&self, key: &str) -> Option<&Rc<ConstrainedType>> {
-        self.types.get(key)
+    pub fn with_output_options(mut self, config: HashMap<String, Object>) -> Self {
+        self.output_options = config;
+        self
     }
+}
 
-    pub fn get_type_mut(&mut self, key: &str) -> Option<&mut Rc<ConstrainedType>> {
-        self.types.get_mut(key)
-    }
+#[derive(Debug, Clone, Default)]
+pub enum OutputFormat {
+    #[default]
+    Csv,
+    Json,
+    Xml,
 }
