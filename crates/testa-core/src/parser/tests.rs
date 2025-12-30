@@ -447,18 +447,17 @@ fn test_parse_output_directive() {
 fn test_parse_output_path_directive() {
     let output_path_span = span(0, 1, 1, 10, 1, 11);
     // @output_path "test.csv";
-    let mut parser = parser_from_tokens(vec![
-        Ok(token(TokenKind::OutputPath)),
-        Ok(string_literal(output_path_span)),
-        Ok(token(TokenKind::Semicolon)),
-    ],"\"test.csv\"");
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::OutputPath)),
+            Ok(string_literal(output_path_span)),
+            Ok(token(TokenKind::Semicolon)),
+        ],
+        "\"test.csv\"",
+    );
     let program = parser.parse().expect("parse failed");
     assert_eq!(program.0.len(), 1);
-        let Statement::OutputPathDirective {
-            argument,
-            ..
-        } = &program.0[0]
-    else {
+    let Statement::OutputPathDirective { argument, .. } = &program.0[0] else {
         panic!("expected first statement to be output directive");
     };
     assert_eq!(argument, &PathBuf::from("test.csv"));

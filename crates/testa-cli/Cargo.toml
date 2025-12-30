@@ -7,4 +7,5 @@ edition = "2024"
 testa-core = { path = "../testa-core" }
 testa-interpreter = { path = "../testa-interpreter" }
 testa-generation = { path = "../testa-generation" }
+testa-lsp = { path = "../testa-lsp" }
 clap = { version = "4", features = ["derive"] }
