@@ -741,7 +741,6 @@ dependencies = [
  "testa-core",
  "testa-generation",
  "testa-interpreter",
- "testa-lsp",
 ]
 
 [[package]]
