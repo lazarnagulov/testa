@@ -2,7 +2,10 @@ use std::{error::Error, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 
-use crate::command::{check_command, generate_command, info_command, init_command, lsp_command};
+use crate::commands::{
+    check::check_command, generate::generate_command, info::info_command, init::init_command,
+    lsp::lsp_command,
+};
 
 #[derive(Parser)]
 #[command(name = "testa")]

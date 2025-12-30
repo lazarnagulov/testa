@@ -1,0 +1,10 @@
+@output csv;
+@output_path "./simple.csv";
+
+template Product {
+    id = $uuid();
+    name = string;
+    price = float [range=10.0..=1000.0];
+}
+
+@generate Product [5];

@@ -1,5 +1,6 @@
 mod cli;
-mod command;
+mod commands;
+mod compiler;
 
 use crate::cli::Cli;
 
