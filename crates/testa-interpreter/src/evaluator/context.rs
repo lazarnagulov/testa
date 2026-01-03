@@ -56,7 +56,7 @@ impl OutputFormat {
 impl FromStr for OutputFormat {
     type Err = String;
 
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             s if s.eq_ignore_ascii_case("csv") => Ok(OutputFormat::Csv),
             s if s.eq_ignore_ascii_case("json") => Ok(OutputFormat::Json),

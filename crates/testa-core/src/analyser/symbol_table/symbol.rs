@@ -1,4 +1,8 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{
+    collections::HashMap,
+    fmt::{self, Display},
+    hash::Hash,
+};
 
 use crate::{
     ast::{Attribute, Expression},
@@ -39,6 +43,67 @@ pub enum SymbolKind {
         is_override: bool,
         expression: Expression,
     },
+}
+
+impl Display for SymbolKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SymbolKind::Template {
+                fields,
+                parent,
+                attributes,
+            } => {
+                write!(f, "template")?;
+                if let Some(parent) = parent {
+                    write!(f, " extends {}", parent)?;
+                }
+                write!(f, " with {} fields", fields.len())?;
+                if !attributes.is_empty() {
+                    write!(f, " [{} attributes]", attributes.len())?;
+                }
+                Ok(())
+            }
+
+            SymbolKind::Enum {
+                variants,
+                attributes,
+            } => {
+                write!(f, "enum with {} variants", variants.len())?;
+                if !attributes.is_empty() {
+                    write!(f, " [{} attributes]", attributes.len())?;
+                }
+                Ok(())
+            }
+
+            SymbolKind::Resource { values } => {
+                write!(f, "resource with {} values", values.len())
+            }
+
+            SymbolKind::TypeAlias { name, attributes } => {
+                write!(f, "type alias {}", name)?;
+                if !attributes.is_empty() {
+                    write!(f, " [{} attributes]", attributes.len())?;
+                }
+                Ok(())
+            }
+
+            SymbolKind::Variant { enum_name } => {
+                write!(f, "variant of enum {}", enum_name)
+            }
+
+            SymbolKind::Field {
+                template_name,
+                is_override,
+                expression: _,
+            } => {
+                if *is_override {
+                    write!(f, "override field of template {}", template_name)
+                } else {
+                    write!(f, "field of template {}", template_name)
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

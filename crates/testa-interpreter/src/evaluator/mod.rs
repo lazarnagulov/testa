@@ -1,12 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use testa_core::ast::Program;
-
 use crate::{
-    evaluator::{
-        context::{Context, OutputFormat},
-        error::EvalError,
-    },
+    evaluator::context::{Context, OutputFormat},
     object::Object,
 };
 
@@ -19,7 +14,6 @@ mod directive;
 mod expression;
 
 pub struct EvaluationResult {
-    pub records: Vec<Record>,
     pub output_format: OutputFormat,
     pub output_config: HashMap<String, Object>,
     pub output_path: Option<PathBuf>,
@@ -29,7 +23,7 @@ pub type Record = HashMap<String, Object>;
 
 #[derive(Debug)]
 pub struct Evaluator {
-    context: Context,
+    pub context: Context,
 }
 
 impl Evaluator {
@@ -37,13 +31,11 @@ impl Evaluator {
         Self { context }
     }
 
-    pub fn evaluate(mut self, program: Program) -> Result<EvaluationResult, EvalError> {
-        self.evaluate_directives(&program)?;
-        Ok(EvaluationResult {
-            records: Vec::new(),
-            output_format: self.context.output_format,
-            output_config: self.context.output_options,
-            output_path: self.context.output_path,
-        })
+    pub fn output_config(&self) -> (&OutputFormat, &HashMap<String, Object>, &Option<PathBuf>) {
+        (
+            &self.context.output_format,
+            &self.context.output_options,
+            &self.context.output_path,
+        )
     }
 }

@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl Evaluator {
-    pub(super) fn evaluate_directives(&mut self, program: &Program) -> Result<(), EvalError> {
+    pub fn evaluate_directives(&mut self, program: &Program) -> Result<(), EvalError> {
         for statement in &program.0 {
             match statement {
                 Statement::OutputDirective {
