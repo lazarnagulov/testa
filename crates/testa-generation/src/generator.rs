@@ -1,12 +1,18 @@
 use core::fmt;
 
-use testa_interpreter::object::Object;
+use testa_interpreter::evaluator::Record;
 
 pub trait FileGenerator: fmt::Debug {
     fn generate(&self, record: &Record) -> Result<String, GenerationError>;
     fn extension(&self) -> &'static str;
-    fn generate_header(&self) -> Option<String>;
+    fn generate_header(&self, fields: &[String]) -> Option<String>;
     fn generate_footer(&self) -> Option<String>;
+    fn needs_separator(&self) -> bool {
+        false
+    }
+    fn separator(&self) -> &str {
+        ""
+    }
 }
 
 // TODO: Add plugin system?
@@ -21,18 +27,6 @@ impl fmt::Display for Target {
         match self {
             Target::Csv => write!(f, ".csv"),
         }
-    }
-}
-
-// TODO: Should save names, hashmap is not ordered!
-#[derive(Debug)]
-pub struct Record {
-    pub fields: Vec<Object>,
-}
-
-impl Record {
-    pub fn new(fields: Vec<Object>) -> Self {
-        Record { fields }
     }
 }
 

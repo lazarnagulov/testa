@@ -1,14 +1,8 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use testa_core::analyser::symbol_table::SymbolTable;
 
 use crate::object::Object;
-
-use super::error::EvalError;
-
-pub trait Visitor<T>: std::fmt::Debug {
-    fn visit(&self, context: &Context) -> Result<T, EvalError>;
-}
 
 #[derive(Debug)]
 pub struct Context {
@@ -44,5 +38,31 @@ pub enum OutputFormat {
     #[default]
     Csv,
     Json,
+    Sql,
     Xml,
+}
+
+impl OutputFormat {
+    pub fn extension(&self) -> &'static str {
+        match self {
+            OutputFormat::Csv => "csv",
+            OutputFormat::Json => "json",
+            OutputFormat::Sql => "sql",
+            OutputFormat::Xml => "xml",
+        }
+    }
+}
+
+impl FromStr for OutputFormat {
+    type Err = String;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            s if s.eq_ignore_ascii_case("csv") => Ok(OutputFormat::Csv),
+            s if s.eq_ignore_ascii_case("json") => Ok(OutputFormat::Json),
+            s if s.eq_ignore_ascii_case("sql") => Ok(OutputFormat::Sql),
+            s if s.eq_ignore_ascii_case("xml") => Ok(OutputFormat::Xml),
+            other => Err(format!("Unknown output format: {}", other)),
+        }
+    }
 }

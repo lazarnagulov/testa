@@ -156,33 +156,26 @@ macro_rules! infix_error_test {
     ) => {
         #[test]
         fn $name() {
-            let context =
-                $crate::evaluator::context::Context::new(
-                    ::testa_core::analyser::symbol_table::SymbolTable::new()
-                );
+            let context = $crate::evaluator::context::Context::new(
+                ::testa_core::analyser::symbol_table::SymbolTable::new(),
+            );
 
-            let evaluator =
-                $crate::evaluator::Evaluator::new(context);
+            let evaluator = $crate::evaluator::Evaluator::new(context);
 
-            let expression =
-                ::testa_core::ast::Expression::new(
-                    ::testa_core::ast::ExpressionKind::Infix {
-                        left: Box::new(
-                            ::testa_core::ast::Expression {
-                                kind: $left_kind,
-                                span: ::testa_core::utils::Span::default(),
-                            }
-                        ),
-                        operator: $op,
-                        right: Box::new(
-                            ::testa_core::ast::Expression {
-                                kind: $right_kind,
-                                span: ::testa_core::utils::Span::default(),
-                            }
-                        ),
-                    },
-                    ::testa_core::utils::Span::default(),
-                );
+            let expression = ::testa_core::ast::Expression::new(
+                ::testa_core::ast::ExpressionKind::Infix {
+                    left: Box::new(::testa_core::ast::Expression {
+                        kind: $left_kind,
+                        span: ::testa_core::utils::Span::default(),
+                    }),
+                    operator: $op,
+                    right: Box::new(::testa_core::ast::Expression {
+                        kind: $right_kind,
+                        span: ::testa_core::utils::Span::default(),
+                    }),
+                },
+                ::testa_core::utils::Span::default(),
+            );
 
             assert!(evaluator.evaluate_expression(&expression).is_err());
         }

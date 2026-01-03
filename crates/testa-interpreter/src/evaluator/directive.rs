@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl Evaluator {
-    pub(super) fn evaluate_directive(&mut self, program: &Program) -> Result<(), EvalError> {
+    pub(super) fn evaluate_directives(&mut self, program: &Program) -> Result<(), EvalError> {
         for statement in &program.0 {
             match statement {
                 Statement::OutputDirective {
@@ -16,10 +16,9 @@ impl Evaluator {
                     options,
                     span,
                 } => {
-                    match argument.as_str() {
-                        "csv" => self.context.output_format = OutputFormat::Csv,
-                        _ => return Err(EvalError::InvalidTarget(argument.clone(), *span)),
-                    }
+                    self.context.output_format = argument
+                        .parse::<OutputFormat>()
+                        .map_err(|_| EvalError::InvalidTarget(argument.clone(), *span))?;
                     self.context.output_options = self.evaluate_output_options(options)?;
                 }
                 Statement::OutputPathDirective { argument, .. } => {

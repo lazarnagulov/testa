@@ -17,7 +17,6 @@ mod tests;
 
 mod directive;
 mod expression;
-mod generate;
 
 pub struct EvaluationResult {
     pub records: Vec<Record>,
@@ -28,6 +27,7 @@ pub struct EvaluationResult {
 
 pub type Record = HashMap<String, Object>;
 
+#[derive(Debug)]
 pub struct Evaluator {
     context: Context,
 }
@@ -38,8 +38,7 @@ impl Evaluator {
     }
 
     pub fn evaluate(mut self, program: Program) -> Result<EvaluationResult, EvalError> {
-        self.evaluate_directive(&program)?;
-
+        self.evaluate_directives(&program)?;
         Ok(EvaluationResult {
             records: Vec::new(),
             output_format: self.context.output_format,
