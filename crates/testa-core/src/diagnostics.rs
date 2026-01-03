@@ -28,6 +28,15 @@ pub enum DiagnosticCode {
     InvalidNumberLiteral,
     UnexpectedEof,
 
+    UnsupportedPrefixOperator,
+    UnsupportedInfixOperand,
+    DivisionByZero,
+    NotDefined,
+    UncompatibleConstraint,
+    InvalidTarget,
+    FileError,
+    MiscellaneousError,
+
     InvalidStringPattern,
     UndefinedType,
     SyntaxError,

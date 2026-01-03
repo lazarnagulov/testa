@@ -39,6 +39,13 @@ impl Evaluator {
             } => {
                 let left = self.evaluate_expression(left)?;
                 let right = self.evaluate_expression(right)?;
+                
+                if matches!(operator, InfixOperator::Divide) && matches!(right, Object::Int(0) | Object::Float(0.0)) {
+                    return Err(EvalError::DivisionByZero {
+                        span: expression.span, 
+                    });
+                }
+
                 self.evaluate_infix_expression(&left, *operator, &right)
             }
             FuncCall { .. } => todo!(),

@@ -39,7 +39,7 @@ impl Context {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub enum OutputFormat {
     #[default]
     Csv,

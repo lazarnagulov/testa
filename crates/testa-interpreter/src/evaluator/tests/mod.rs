@@ -7,3 +7,6 @@ mod infix;
 
 #[cfg(test)]
 mod prefix;
+
+#[cfg(test)]
+mod directive;
