@@ -1,7 +1,12 @@
 use core::fmt;
-use std::error::Error;
+use std::collections::HashMap;
 
-use testa_interpreter::evaluator::Record;
+use testa_interpreter::{
+    evaluator::{Record, context::OutputFormat},
+    object::Object,
+};
+
+use crate::{csv::CsvGenerator, error::GenerationError};
 
 pub trait FileGenerator: fmt::Debug {
     fn generate(&self, record: &Record) -> Result<String, GenerationError>;
@@ -16,32 +21,14 @@ pub trait FileGenerator: fmt::Debug {
     }
 }
 
-// TODO: Add plugin system?
-#[derive(Debug, Default)]
-pub enum Target {
-    #[default]
-    Csv,
-}
-
-impl fmt::Display for Target {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Target::Csv => write!(f, ".csv"),
-        }
+pub fn create_file_generator(
+    format: &OutputFormat,
+    config: &HashMap<String, Object>,
+) -> Box<dyn FileGenerator> {
+    match format {
+        OutputFormat::Csv => Box::new(CsvGenerator::from_config(config)),
+        OutputFormat::Json => todo!("implement json generator"),
+        OutputFormat::Xml => todo!("implement xml generator"),
+        OutputFormat::Sql => todo!("implement sql generator"),
     }
 }
-
-#[derive(Debug)]
-pub enum GenerationError {
-    NotSupported(&'static str),
-}
-
-impl fmt::Display for GenerationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            GenerationError::NotSupported(message) => write!(f, "{}", message),
-        }
-    }
-}
-
-impl Error for GenerationError {}

@@ -1,11 +1,9 @@
 use std::io::Write;
 use std::{error::Error, fs::File, path::PathBuf};
-use testa_generation::{csv::CsvGenerator, generator::FileGenerator};
+use testa_generation::generator::FileGenerator;
+use testa_generation::generator::create_file_generator;
 use testa_interpreter::{
-    evaluator::{
-        Evaluator,
-        context::{Context, OutputFormat},
-    },
+    evaluator::{Evaluator, context::Context},
     generator::RecordGenerator,
 };
 
@@ -25,12 +23,7 @@ pub fn generate_command(
     evaluator.evaluate_directives(&program)?;
     let (format, config, path) = evaluator.output_config();
 
-    let file_generator: Box<dyn FileGenerator> = match format {
-        OutputFormat::Csv => Box::new(CsvGenerator::from_config(config)),
-        OutputFormat::Json => todo!("implement json generator"),
-        OutputFormat::Xml => todo!("implement xml generator"),
-        OutputFormat::Sql => todo!("implement sql generator"),
-    };
+    let file_generator = create_file_generator(format, config);
     let output_path = path
         .clone()
         .unwrap_or_else(|| PathBuf::from(format!("output.{}", format.extension())));
@@ -48,11 +41,11 @@ fn write_records_streaming(
     path: PathBuf,
 ) -> Result<(), Box<dyn Error>> {
     let mut file = File::create(&path)?;
-    // let field_names = get_field_names_from_generator(&mut generator)?;
+    let field_names = generator.get_field_names_from_generator()?;
 
-    // if let Some(header) = file_generator.generate_header(&field_names) {
-    //     writeln!(file, "{}", header)?;
-    // }
+    if let Some(header) = file_generator.generate_header(&field_names) {
+        writeln!(file, "{}", header)?;
+    }
 
     let total = generator.len();
     let mut count = 0;

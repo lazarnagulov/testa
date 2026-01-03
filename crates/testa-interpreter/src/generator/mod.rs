@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use testa_core::{
     analyser::symbol_table::symbol::{Scope, ScopeKind, SymbolKind},
@@ -51,10 +51,61 @@ impl<'a> RecordGenerator<'a> {
         self.take(limit).collect()
     }
 
-    pub fn generate_infos(
-        &mut self,
-        program: &Program,
+    pub fn get_field_names_from_generator(&self) -> Result<Vec<String>, EvalError> {
+        let mut names = HashSet::new();
+
+        for info in &self.generate_infos {
+            match &info.template_name {
+                Some(template_name) => {
+                    self.collect_template_field_names(template_name, info.span, &mut names)?;
+                }
+                None => {
+                    for field in &info.body {
+                        names.insert(field.name.clone());
+                    }
+                }
+            }
+        }
+
+        Ok(names.into_iter().collect())
+    }
+
+    fn collect_template_field_names(
+        &self,
+        template_name: &str,
+        span: Span,
+        out: &mut HashSet<String>,
     ) -> Result<(), EvalError> {
+        let symbol = self
+            .evaluator
+            .context
+            .symbol_table
+            .lookup(template_name)
+            .ok_or_else(|| EvalError::NotDefined(template_name.to_string(), span))?;
+
+        let (parent, fields) = match &symbol.kind {
+            SymbolKind::Template { parent, fields, .. } => (parent, fields),
+            kind => {
+                return Err(EvalError::TypeMismatch {
+                    expected: "template".to_string(),
+                    got: kind.to_string(),
+                    span: symbol.span,
+                });
+            }
+        };
+
+        if let Some(parent_name) = parent {
+            self.collect_template_field_names(parent_name, span, out)?;
+        }
+
+        for field_name in fields {
+            out.insert(field_name.clone());
+        }
+
+        Ok(())
+    }
+
+    pub fn generate_infos(&mut self, program: &Program) -> Result<(), EvalError> {
         for stmt in &program.0 {
             if let Statement::Generate {
                 template_name,
@@ -145,17 +196,14 @@ impl<'a> RecordGenerator<'a> {
         Ok(record)
     }
 
-    fn generate_anonymous(
-        &self,
-        body: &[Field],
-    ) -> Result<Record, EvalError> {
+    fn generate_anonymous(&self, body: &[Field]) -> Result<Record, EvalError> {
         let mut record = HashMap::new();
-        
+
         for field in body {
             let value = self.evaluator.evaluate_expression(&field.value)?;
             record.insert(field.name.clone(), value);
         }
-        
+
         Ok(record)
     }
 

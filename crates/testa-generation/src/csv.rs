@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use testa_interpreter::{evaluator::Record, object::Object};
 
-use crate::generator::{FileGenerator, GenerationError};
+use crate::{error::GenerationError, generator::FileGenerator};
 
 #[derive(Debug, Clone)]
 pub struct CsvGenerator {
