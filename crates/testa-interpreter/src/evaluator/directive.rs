@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use testa_core::ast::{Field, Program, Statement};
 
-use crate::{evaluator::{Evaluator, context::OutputFormat, error::EvalError}, object::Object};
+use crate::{
+    evaluator::{Evaluator, context::OutputFormat, error::EvalError},
+    object::Object,
+};
 
 impl Evaluator {
     pub(super) fn evaluate_directive(&mut self, program: &Program) -> Result<(), EvalError> {
@@ -18,15 +21,20 @@ impl Evaluator {
                         _ => return Err(EvalError::InvalidTarget(argument.clone(), *span)),
                     }
                     self.context.output_options = self.evaluate_output_options(options)?;
-                },
-                Statement::OutputPathDirective { .. } => todo!(),
+                }
+                Statement::OutputPathDirective { argument, .. } => {
+                    self.context.output_path = Some(argument.clone());
+                }
                 _ => {}
             }
         }
         Ok(())
     }
 
-    fn evaluate_output_options(&mut self, fields: &[Field]) -> Result<HashMap<String, Object>, EvalError> {
+    fn evaluate_output_options(
+        &mut self,
+        fields: &[Field],
+    ) -> Result<HashMap<String, Object>, EvalError> {
         let mut result = HashMap::new();
         for field in fields {
             let name = field.name.clone();

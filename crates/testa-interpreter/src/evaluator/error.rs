@@ -1,7 +1,10 @@
 use core::fmt;
 use std::error::Error;
 
-use testa_core::{ast::{InfixOperator, PrefixOperator}, utils::Span};
+use testa_core::{
+    ast::{InfixOperator, PrefixOperator},
+    utils::Span,
+};
 
 use crate::object::Object;
 
@@ -10,24 +13,24 @@ pub enum EvalError {
     UnsupportedPrefixOperator {
         operator: PrefixOperator,
         object: Object,
-        span: Span
+        span: Span,
     },
     UnsupportedInfixOperand {
         left: Object,
         operator: InfixOperator,
         right: Object,
-        span: Span
+        span: Span,
     },
     TypeMismatch {
         expected: String,
         got: String,
-        span: Span
+        span: Span,
     },
     NotDefined(String, Span),
     UncompatibleConstraint {
         data_type: String,
         constraint: String,
-        span: Span
+        span: Span,
     },
     InvalidTarget(String, Span),
     FileError(String, Span),
@@ -43,7 +46,7 @@ impl EvalError {
         EvalError::UnsupportedPrefixOperator {
             operator,
             object: object.into(),
-            span: Span::default()
+            span: Span::default(),
         }
     }
 
@@ -51,7 +54,7 @@ impl EvalError {
         EvalError::UncompatibleConstraint {
             constraint: constraint.to_owned(),
             data_type: data_type.to_owned(),
-            span: Span::default()
+            span: Span::default(),
         }
     }
 
@@ -64,12 +67,16 @@ impl EvalError {
             left: left.into(),
             operator,
             right: right.into(),
-            span: Span::default()
+            span: Span::default(),
         }
     }
 
     pub fn type_mismatch(expected: String, got: String) -> Self {
-        EvalError::TypeMismatch { expected, got, span: Span::default() }
+        EvalError::TypeMismatch {
+            expected,
+            got,
+            span: Span::default(),
+        }
     }
 }
 
@@ -77,19 +84,48 @@ impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EvalError::UnsupportedPrefixOperator { operator, span, .. } => {
-                write!(f, "Unsupported prefix operator '{}' on object at {:?}", operator, span)
+                write!(
+                    f,
+                    "Unsupported prefix operator '{}' on object at {:?}",
+                    operator, span
+                )
             }
-            EvalError::UnsupportedInfixOperand { left, operator, right, span } => {
-                write!(f, "Unsupported infix operation: '{}' between {:?} and {:?} at {:?}", operator, left, right, span)
+            EvalError::UnsupportedInfixOperand {
+                left,
+                operator,
+                right,
+                span,
+            } => {
+                write!(
+                    f,
+                    "Unsupported infix operation: '{}' between {:?} and {:?} at {:?}",
+                    operator, left, right, span
+                )
             }
-            EvalError::TypeMismatch { expected, got, span } => {
-                write!(f, "Type mismatch: expected '{}' but got '{}' at {:?}", expected, got, span)
+            EvalError::TypeMismatch {
+                expected,
+                got,
+                span,
+            } => {
+                write!(
+                    f,
+                    "Type mismatch: expected '{}' but got '{}' at {:?}",
+                    expected, got, span
+                )
             }
             EvalError::NotDefined(name, span) => {
                 write!(f, "Variable '{}' not defined at {:?}", name, span)
             }
-            EvalError::UncompatibleConstraint { data_type, constraint, span } => {
-                write!(f, "Incompatible constraint '{}' for type '{}' at {:?}", constraint, data_type, span)
+            EvalError::UncompatibleConstraint {
+                data_type,
+                constraint,
+                span,
+            } => {
+                write!(
+                    f,
+                    "Incompatible constraint '{}' for type '{}' at {:?}",
+                    constraint, data_type, span
+                )
             }
             EvalError::InvalidTarget(target, span) => {
                 write!(f, "Invalid target '{}' at {:?}", target, span)
@@ -103,7 +139,5 @@ impl fmt::Display for EvalError {
         }
     }
 }
-
-
 
 impl Error for EvalError {}

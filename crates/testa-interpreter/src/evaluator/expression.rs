@@ -6,16 +6,16 @@ use crate::{
 };
 
 impl Evaluator {
-    pub(super) fn evaluate_expression(
-        &mut self,
-        expression: &Expression,
-    ) -> Result<Object, EvalError> {
+    pub(super) fn evaluate_expression(&self, expression: &Expression) -> Result<Object, EvalError> {
         use testa_core::ast::ExpressionKind::*;
         match &expression.kind {
             IntLiteral(value) => Ok(Object::new(*value)),
             FloatLiteral(value) => {
                 let parsed = value.parse::<f32>().map_err(|error| {
-                    EvalError::MiscellaneousError(format!("Error parsing float literal: {}", error), expression.span)
+                    EvalError::MiscellaneousError(
+                        format!("Error parsing float literal: {}", error),
+                        expression.span,
+                    )
                 })?;
                 Ok(Object::new(parsed))
             }
@@ -66,6 +66,9 @@ impl Evaluator {
         match (left, right) {
             (Object::Int(left), Object::Int(right)) => {
                 self.evaluate_integer_infix(*left, operator, *right)
+            }
+            (Object::Boolean(left), Object::Boolean(right)) => {
+                self.evaluate_boolean_infix(*left, operator, *right)
             }
             (Object::Float(left), Object::Float(right)) => {
                 self.evaluate_float_infix(*left, operator, *right)
@@ -145,6 +148,21 @@ impl Evaluator {
             InfixOperator::GreaterThanOrEqual => Ok(Object::new(left >= right)),
             InfixOperator::ExclusiveRange => Ok(Object::new((left, right - 1))),
             InfixOperator::InclusiveRange => Ok(Object::new((left, right))),
+            _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
+        }
+    }
+
+    fn evaluate_boolean_infix(
+        &self,
+        left: bool,
+        operator: InfixOperator,
+        right: bool,
+    ) -> Result<Object, EvalError> {
+        match operator {
+            InfixOperator::Equal => Ok(Object::new(left == right)),
+            InfixOperator::And => Ok(Object::new(left && right)),
+            InfixOperator::Or => Ok(Object::new(left || right)),
+            InfixOperator::NotEqual => Ok(Object::new(left != right)),
             _ => Err(EvalError::unsupported_infix_operator(left, operator, right)),
         }
     }

@@ -15,9 +15,15 @@ pub fn parse_file(path: &PathBuf) -> Result<Program, Box<dyn Error>> {
     Ok(parser.parse()?)
 }
 
-pub fn compile_file(path: &PathBuf, show_warnings: bool) -> Result<(Program, SymbolTable), Box<dyn Error>> {
+pub fn compile_file(
+    path: &PathBuf,
+    show_warnings: bool,
+) -> Result<(Program, SymbolTable), Box<dyn Error>> {
     let program = parse_file(path)?;
-    let AnalysisResult { diagnostics, symbol_table } = SemanticAnalyser::new(&program).analyse();
+    let AnalysisResult {
+        diagnostics,
+        symbol_table,
+    } = SemanticAnalyser::new(&program).analyse();
 
     let mut has_errors = false;
 

@@ -13,8 +13,11 @@ use crate::{
 pub mod context;
 pub mod error;
 
+mod tests;
+
 mod directive;
 mod expression;
+mod generate;
 
 pub struct EvaluationResult {
     pub records: Vec<Record>,
@@ -31,9 +34,7 @@ pub struct Evaluator {
 
 impl Evaluator {
     pub fn new(context: Context) -> Self {
-        Self {
-            context
-        }
+        Self { context }
     }
 
     pub fn evaluate(mut self, program: Program) -> Result<EvaluationResult, EvalError> {
