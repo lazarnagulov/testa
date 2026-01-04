@@ -14,7 +14,7 @@ macro_rules! infix_test {
                 ::testa_core::analyser::symbol_table::SymbolTable::new(),
             );
 
-            let evaluator = $crate::evaluator::Evaluator::new(context);
+            let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
 
             let expression = ::testa_core::ast::Expression::new(
                 ::testa_core::ast::ExpressionKind::Infix {
@@ -75,7 +75,7 @@ macro_rules! prefix_test {
                 ::testa_core::analyser::symbol_table::SymbolTable::new(),
             );
 
-            let evaluator = $crate::evaluator::Evaluator::new(context);
+            let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
 
             let expression = ::testa_core::ast::Expression::new(
                 ::testa_core::ast::ExpressionKind::Prefix {
@@ -129,7 +129,7 @@ macro_rules! prefix_error_test {
                 ::testa_core::analyser::symbol_table::SymbolTable::new(),
             );
 
-            let evaluator = $crate::evaluator::Evaluator::new(context);
+            let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
 
             let expression = ::testa_core::ast::Expression::new(
                 ::testa_core::ast::ExpressionKind::Prefix {
@@ -160,7 +160,7 @@ macro_rules! infix_error_test {
                 ::testa_core::analyser::symbol_table::SymbolTable::new(),
             );
 
-            let evaluator = $crate::evaluator::Evaluator::new(context);
+            let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
 
             let expression = ::testa_core::ast::Expression::new(
                 ::testa_core::ast::ExpressionKind::Infix {

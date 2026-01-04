@@ -1,17 +1,22 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use testa_core::ast::Expression;
+
 use crate::{
-    evaluator::context::{Context, OutputFormat},
+    evaluator::{
+        context::{Context, OutputFormat, State},
+        error::EvalError,
+        expression::evaluate_expression,
+    },
     object::Object,
 };
 
 pub mod context;
 pub mod error;
-
-mod tests;
+pub mod expression;
 
 mod directive;
-mod expression;
+mod tests;
 
 pub struct EvaluationResult {
     pub output_format: OutputFormat,
@@ -21,14 +26,21 @@ pub struct EvaluationResult {
 
 pub type Record = HashMap<String, Object>;
 
-#[derive(Debug)]
 pub struct Evaluator {
     pub context: Context,
+    pub state: State,
 }
 
 impl Evaluator {
-    pub fn new(context: Context) -> Self {
-        Self { context }
+    pub fn new(context: Context, seed: Option<u64>) -> Self {
+        Self {
+            context,
+            state: State::new(seed),
+        }
+    }
+
+    pub fn evaluate_expression(&mut self, expression: &Expression) -> Result<Object, EvalError> {
+        evaluate_expression(&self.context, &mut self.state, expression)
     }
 
     pub fn output_config(&self) -> (&OutputFormat, &HashMap<String, Object>, &Option<PathBuf>) {

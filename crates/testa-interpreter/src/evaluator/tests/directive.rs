@@ -13,7 +13,7 @@ use crate::evaluator::{
 fn test_output_directive() {
     let context = Context::new(SymbolTable::new());
 
-    let mut evaluator = Evaluator::new(context);
+    let mut evaluator = Evaluator::new(context, None);
     let program = Program(vec![Statement::OutputDirective {
         argument: "csv".into(),
         options: vec![],
@@ -29,7 +29,7 @@ fn test_output_directive() {
 fn test_invalid_output_directive() {
     let context = Context::new(SymbolTable::new());
 
-    let mut evaluator = Evaluator::new(context);
+    let mut evaluator = Evaluator::new(context, None);
     let program = Program(vec![Statement::OutputDirective {
         argument: "invalid".into(),
         options: vec![],

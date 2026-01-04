@@ -1,3 +1,5 @@
+use rand::Rng;
+
 pub struct ProgressReporter<I> {
     inner: I,
     total: usize,
@@ -37,4 +39,17 @@ impl<I: Iterator> Iterator for ProgressReporter<I> {
             None => None,
         }
     }
+}
+
+pub fn generate_random_string(rng: &mut impl Rng, length: usize) -> String {
+    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz\
+                            ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                            0123456789";
+
+    (0..length)
+        .map(|_| {
+            let idx = rng.random_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
 }

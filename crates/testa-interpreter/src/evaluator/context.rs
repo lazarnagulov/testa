@@ -1,8 +1,21 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
-use testa_core::analyser::symbol_table::SymbolTable;
+use rand::{SeedableRng, rngs::StdRng};
+use testa_core::analyser::symbol_table::{
+    SymbolTable,
+    symbol::{Scope, ScopeKind},
+};
 
 use crate::object::Object;
+
+#[derive(Debug, Clone)]
+pub struct GenerateOptions {
+    pub input: PathBuf,
+    pub output_path: Option<PathBuf>,
+    pub format: Option<OutputFormat>,
+    pub count: Option<usize>,
+    pub seed: Option<u64>,
+}
 
 #[derive(Debug)]
 pub struct Context {
@@ -10,6 +23,19 @@ pub struct Context {
     pub output_options: HashMap<String, Object>,
     pub symbol_table: SymbolTable,
     pub output_format: OutputFormat,
+}
+
+pub struct State {
+    pub rng: StdRng,
+}
+
+impl State {
+    pub fn new(seed: Option<u64>) -> Self {
+        let rng = seed
+            .map(StdRng::seed_from_u64)
+            .unwrap_or_else(|| StdRng::from_rng(&mut rand::rng()));
+        Self { rng }
+    }
 }
 
 impl Context {
@@ -22,14 +48,18 @@ impl Context {
         }
     }
 
-    pub fn with_output_path(mut self, path: PathBuf) -> Self {
-        self.output_path = Some(path);
+    pub fn with_options(mut self, options: GenerateOptions) -> Self {
+        self.output_path = options.output_path;
+        if let Some(format) = options.format {
+            self.output_format = format;
+        }
         self
     }
 
-    pub fn with_output_options(mut self, config: HashMap<String, Object>) -> Self {
-        self.output_options = config;
-        self
+    pub fn find_template_scope(&self, template_name: &str) -> Option<&Scope> {
+        self.symbol_table.scopes().iter().find(
+            |scope| matches!(&scope.kind, ScopeKind::Template { name } if name == template_name),
+        )
     }
 }
 

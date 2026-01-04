@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use testa_core::ast::{Field, Program, Statement};
 
 use crate::{
-    evaluator::{Evaluator, context::OutputFormat, error::EvalError},
+    evaluator::{
+        Evaluator, context::OutputFormat, error::EvalError, expression::evaluate_expression,
+    },
     object::Object,
 };
 
@@ -37,7 +39,10 @@ impl Evaluator {
         let mut result = HashMap::new();
         for field in fields {
             let name = field.name.clone();
-            result.insert(name, self.evaluate_expression(&field.value)?);
+            result.insert(
+                name,
+                evaluate_expression(&self.context, &mut self.state, &field.value)?,
+            );
         }
 
         Ok(result)

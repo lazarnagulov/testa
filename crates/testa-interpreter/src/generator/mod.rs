@@ -1,13 +1,18 @@
 use std::collections::{HashMap, HashSet};
 
 use testa_core::{
-    analyser::symbol_table::symbol::{Scope, ScopeKind, SymbolKind},
+    analyser::symbol_table::symbol::SymbolKind,
     ast::{Field, Program, Statement},
     utils::Span,
 };
 
 use crate::{
-    evaluator::{Evaluator, Record, error::EvalError},
+    evaluator::{
+        Evaluator, Record,
+        context::{Context, State},
+        error::EvalError,
+        expression::evaluate_expression,
+    },
     object::Object,
 };
 
@@ -21,16 +26,15 @@ pub struct GenerateInfo {
     span: Span,
 }
 
-#[derive(Debug)]
 pub struct RecordGenerator<'a> {
-    pub evaluator: &'a Evaluator,
+    pub evaluator: &'a mut Evaluator,
     generate_infos: Vec<GenerateInfo>,
     current_statement: usize,
     current_count: usize,
 }
 
 impl<'a> RecordGenerator<'a> {
-    pub fn new(evaluator: &'a Evaluator) -> Self {
+    pub fn new(evaluator: &'a mut Evaluator) -> Self {
         Self {
             evaluator,
             generate_infos: Vec::new(),
@@ -51,7 +55,7 @@ impl<'a> RecordGenerator<'a> {
         self.take(limit).collect()
     }
 
-    pub fn get_field_names_from_generator(&self) -> Result<Vec<String>, EvalError> {
+    pub fn get_field_names(&self) -> Result<Vec<String>, EvalError> {
         let mut names = HashSet::new();
 
         for info in &self.generate_infos {
@@ -147,13 +151,12 @@ impl<'a> RecordGenerator<'a> {
     }
 
     fn generate_from_template(
-        &self,
+        ctx: &Context,
+        state: &mut State,
         name: &str,
         span: Span,
     ) -> Result<HashMap<String, Object>, EvalError> {
-        let symbol = self
-            .evaluator
-            .context
+        let symbol = ctx
             .symbol_table
             .lookup(name)
             .ok_or_else(|| EvalError::NotDefined(name.to_string(), span))?;
@@ -172,11 +175,13 @@ impl<'a> RecordGenerator<'a> {
         let mut record = HashMap::new();
 
         if let Some(parent_name) = parent {
-            let parent_record = self.generate_from_template(parent_name, span)?;
+            let parent_record = Self::generate_from_template(ctx, state, parent_name, span)?;
             record.extend(parent_record);
         }
 
-        let template_scope = self.find_template_scope(name, span)?;
+        let template_scope = ctx
+            .find_template_scope(name)
+            .ok_or_else(|| EvalError::MiscellaneousError("Invalid scope".into(), span))?;
 
         for field_name in field_names {
             let field_symbol = template_scope
@@ -189,30 +194,25 @@ impl<'a> RecordGenerator<'a> {
                 _ => return Err(EvalError::NotDefined(field_name.to_string(), span)),
             };
 
-            let value = self.evaluator.evaluate_expression(expression)?;
+            let value = evaluate_expression(ctx, state, expression)?;
             record.insert(field_name.clone(), value);
         }
 
         Ok(record)
     }
 
-    fn generate_anonymous(&self, body: &[Field]) -> Result<Record, EvalError> {
+    fn generate_anonymous(
+        ctx: &Context,
+        state: &mut State,
+        body: &[Field],
+    ) -> Result<Record, EvalError> {
         let mut record = HashMap::new();
 
         for field in body {
-            let value = self.evaluator.evaluate_expression(&field.value)?;
+            let value = evaluate_expression(ctx, state, &field.value)?;
             record.insert(field.name.clone(), value);
         }
 
         Ok(record)
-    }
-
-    fn find_template_scope(&self, template_name: &str, span: Span) -> Result<&'a Scope, EvalError> {
-        self.evaluator.context.symbol_table.scopes()
-            .iter()
-            .find(|scope| {
-                matches!(&scope.kind, ScopeKind::Template { name } if name == template_name)
-            })
-            .ok_or_else(|| EvalError::NotDefined(template_name.to_string(), span))
     }
 }

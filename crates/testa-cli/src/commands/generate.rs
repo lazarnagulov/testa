@@ -2,23 +2,40 @@ use std::io::Write;
 use std::{error::Error, fs::File, path::PathBuf};
 use testa_generation::generator::FileGenerator;
 use testa_generation::generator::create_file_generator;
-use testa_interpreter::{
-    evaluator::{Evaluator, context::Context},
-    generator::RecordGenerator,
-};
+use testa_interpreter::evaluator::context::GenerateOptions;
+use testa_interpreter::evaluator::{Evaluator, context::Context};
+use testa_interpreter::generator::RecordGenerator;
 
+use crate::cli::Command;
 use crate::compiler::compile_file;
 
-pub fn generate_command(
-    input: PathBuf,
-    _output: Option<PathBuf>,
-    _format: Option<String>,
-    _count: Option<usize>,
-    _seed: Option<u64>,
-) -> Result<(), Box<dyn Error>> {
-    let (program, symbol_table) = compile_file(&input, false)?;
+impl TryFrom<Command> for GenerateOptions {
+    type Error = &'static str;
+
+    fn try_from(cmd: Command) -> Result<Self, Self::Error> {
+        match cmd {
+            Command::Generate {
+                input,
+                output,
+                format,
+                count,
+                seed,
+            } => Ok(Self {
+                input,
+                output_path: output,
+                format,
+                count,
+                seed,
+            }),
+            _ => Err("Not a generate command"),
+        }
+    }
+}
+
+pub fn generate_command(options: GenerateOptions) -> Result<(), Box<dyn Error>> {
+    let (program, symbol_table) = compile_file(&options.input, false)?;
     let context = Context::new(symbol_table);
-    let mut evaluator = Evaluator::new(context);
+    let mut evaluator = Evaluator::new(context, options.seed);
 
     evaluator.evaluate_directives(&program)?;
     let (format, config, path) = evaluator.output_config();
@@ -28,7 +45,7 @@ pub fn generate_command(
         .clone()
         .unwrap_or_else(|| PathBuf::from(format!("output.{}", format.extension())));
 
-    let mut record_generator = RecordGenerator::new(&evaluator);
+    let mut record_generator = RecordGenerator::new(&mut evaluator);
     record_generator.generate_infos(&program)?;
     write_records_streaming(record_generator, file_generator, output_path)?;
 
@@ -41,7 +58,7 @@ fn write_records_streaming(
     path: PathBuf,
 ) -> Result<(), Box<dyn Error>> {
     let mut file = File::create(&path)?;
-    let field_names = generator.get_field_names_from_generator()?;
+    let field_names = generator.get_field_names()?;
 
     if let Some(header) = file_generator.generate_header(&field_names) {
         writeln!(file, "{}", header)?;
