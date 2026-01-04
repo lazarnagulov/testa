@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 
 use testa_core::{
     analyser::symbol_table::symbol::SymbolKind,
@@ -20,7 +19,6 @@ use crate::{
 pub mod record_iterator;
 
 pub type Record = IndexMap<String, Object>;
-
 
 #[derive(Debug, Default)]
 pub struct GenerateInfo {
@@ -60,7 +58,7 @@ impl<'a> RecordGenerator<'a> {
     }
 
     pub fn get_field_names(&self) -> Result<Vec<String>, EvalError> {
-        let mut names = HashSet::new();
+        let mut names = IndexSet::new();
 
         for info in &self.generate_infos {
             match &info.template_name {
@@ -82,7 +80,7 @@ impl<'a> RecordGenerator<'a> {
         &self,
         template_name: &str,
         span: Span,
-        out: &mut HashSet<String>,
+        out: &mut IndexSet<String>,
     ) -> Result<(), EvalError> {
         let symbol = self
             .evaluator

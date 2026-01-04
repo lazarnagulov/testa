@@ -1,20 +1,15 @@
 use crate::{
     evaluator::{
-        context::{Context, State},
-        error::EvalError,
+        context::{Context, State}, data_type::{evaluate_data_type, evaluate_identifier}, error::EvalError
     },
     object::Object,
-    util::generate_random_string,
 };
-use rand::Rng;
-use testa_core::{
-    analyser::symbol_table::symbol::SymbolKind,
+use testa_core::
     ast::{
-        DataType, DataTypeKind, Expression, InfixOperator, PrefixOperator,
+        Expression, InfixOperator, PrefixOperator,
         expression::ExpressionKind,
-    },
-    utils::Span,
-};
+    }
+;
 
 pub fn evaluate_expression(
     ctx: &Context,
@@ -23,7 +18,6 @@ pub fn evaluate_expression(
 ) -> Result<Object, EvalError> {
     match &expression.kind {
         ExpressionKind::IntLiteral(value) => Ok(Object::new(*value)),
-
         ExpressionKind::FloatLiteral(value) => {
             let parsed = value.parse::<f32>().map_err(|error| {
                 EvalError::MiscellaneousError(
@@ -33,12 +27,9 @@ pub fn evaluate_expression(
             })?;
             Ok(Object::new(parsed))
         }
-
         ExpressionKind::StringLiteral(value) => Ok(Object::new(value.clone())),
         ExpressionKind::BooleanLiteral(value) => Ok(Object::new(*value)),
-
-        ExpressionKind::Identifier(name) => evaluate_identifier(ctx, name, expression.span),
-
+        ExpressionKind::Identifier(name) => evaluate_identifier(ctx, state, name, expression.span),
         ExpressionKind::Prefix {
             operator,
             expression,
@@ -46,7 +37,6 @@ pub fn evaluate_expression(
             let right = evaluate_expression(ctx, state, expression)?;
             evaluate_prefix_expression(*operator, &right)
         }
-
         ExpressionKind::Infix {
             left,
             operator,
@@ -62,12 +52,9 @@ pub fn evaluate_expression(
                     span: expression.span,
                 });
             }
-
             evaluate_infix_expression(&left, *operator, &right)
         }
-
         ExpressionKind::Type(data_type) => evaluate_data_type(ctx, state, data_type),
-
         ExpressionKind::List(_) => todo!("implement list expression evaluation"),
         ExpressionKind::StringPattern(..) => todo!(),
         ExpressionKind::FuncCall { .. } => todo!(),
@@ -92,13 +79,9 @@ fn evaluate_infix_expression(
 ) -> Result<Object, EvalError> {
     match (left, right) {
         (Object::Int(l), Object::Int(r)) => evaluate_integer_infix(*l, operator, *r),
-
         (Object::Boolean(l), Object::Boolean(r)) => evaluate_boolean_infix(*l, operator, *r),
-
         (Object::Float(l), Object::Float(r)) => evaluate_float_infix(*l, operator, *r),
-
         (Object::String(l), Object::String(r)) => evaluate_string_infix(l, operator, r),
-
         _ => Err(EvalError::unsupported_infix_operator(
             format!("{}", left),
             operator,
@@ -215,49 +198,4 @@ fn evaluate_bit_negate(right: &Object) -> Result<Object, EvalError> {
             format!("{}", right),
         )),
     }
-}
-
-fn evaluate_identifier(ctx: &Context, name: &str, span: Span) -> Result<Object, EvalError> {
-    let symbol = ctx
-        .symbol_table
-        .lookup(name)
-        .ok_or_else(|| EvalError::NotDefined(name.to_string(), span))?;
-
-    match &symbol.kind {
-        SymbolKind::Enum { variants, .. } => {
-            let idx = rand::random_range(0..variants.len());
-            Ok(Object::new(variants[idx].name.clone()))
-        }
-        _ => Err(EvalError::NotDefined(name.to_string(), span)),
-    }
-}
-
-fn evaluate_data_type(
-    ctx: &Context,
-    state: &mut State,
-    data_type: &DataType,
-) -> Result<Object, EvalError> {
-    match &data_type.kind {
-        DataTypeKind::Int => Ok(Object::new(state.rng.random::<i32>() as isize)),
-        DataTypeKind::Float => Ok(Object::new(state.rng.random::<f32>())),
-        DataTypeKind::Boolean => Ok(Object::new(state.rng.random_bool(0.5))),
-        DataTypeKind::Str => {
-            let size = state.rng.random_range(6..=20);
-            Ok(Object::new(generate_random_string(&mut state.rng, size)))
-        }
-        DataTypeKind::List(inner) => evaluate_list(ctx, state, inner),
-        DataTypeKind::Custom(name) => evaluate_identifier(ctx, name, data_type.span),
-    }
-}
-
-fn evaluate_list(
-    ctx: &Context,
-    state: &mut State,
-    data_type: &DataType,
-) -> Result<Object, EvalError> {
-    let count = state.rng.random_range(0..=16);
-    let values = (0..count)
-        .map(|_| evaluate_data_type(ctx, state, data_type))
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(Object::new(values))
 }

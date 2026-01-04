@@ -16,6 +16,8 @@ pub mod error;
 pub mod expression;
 
 mod directive;
+mod data_type;
+mod enumeration;
 mod tests;
 
 pub struct EvaluationResult {

@@ -1,9 +1,7 @@
 use core::fmt;
 use std::collections::HashMap;
 
-use testa_interpreter::{
-    evaluator::context::OutputFormat, generator::Record, object::Object
-};
+use testa_interpreter::{evaluator::context::OutputFormat, generator::Record, object::Object};
 
 use crate::{csv::CsvGenerator, error::GenerationError};
 
