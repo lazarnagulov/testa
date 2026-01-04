@@ -15,8 +15,9 @@ pub mod context;
 pub mod error;
 pub mod expression;
 
-mod directive;
+mod constrained_type;
 mod data_type;
+mod directive;
 mod enumeration;
 mod tests;
 

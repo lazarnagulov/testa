@@ -1,15 +1,29 @@
 use rand::Rng;
-use testa_core::{analyser::symbol_table::symbol::SymbolKind, ast::{DataType, DataTypeKind}, utils::Span};
+use testa_core::{
+    analyser::symbol_table::symbol::SymbolKind,
+    ast::{DataType, DataTypeKind},
+    utils::Span,
+};
 
-use crate::{evaluator::{context::{Context, State}, enumeration::evaluate_enum, error::EvalError}, object::Object, util::generate_random_string};
-
-
+use crate::{
+    evaluator::{
+        constrained_type::evaluate_constrained_type,
+        context::{Context, State},
+        enumeration::evaluate_enum,
+        error::EvalError,
+    },
+    object::Object,
+    util::generate_random_string,
+};
 
 pub(crate) fn evaluate_data_type(
     ctx: &Context,
     state: &mut State,
     data_type: &DataType,
 ) -> Result<Object, EvalError> {
+    if let Some(constraints) = &data_type.constraints {
+        return evaluate_constrained_type(ctx, state, &data_type.kind, constraints, data_type.span);
+    }
     match &data_type.kind {
         DataTypeKind::Int => Ok(Object::new(state.rng.random::<i32>() as isize)),
         DataTypeKind::Float => Ok(Object::new(state.rng.random::<f32>())),
@@ -35,7 +49,12 @@ pub(crate) fn evaluate_list(
     Ok(Object::new(values))
 }
 
-pub(crate) fn evaluate_identifier(ctx: &Context, state: &mut State, name: &str, span: Span) -> Result<Object, EvalError> {
+pub(crate) fn evaluate_identifier(
+    ctx: &Context,
+    state: &mut State,
+    name: &str,
+    span: Span,
+) -> Result<Object, EvalError> {
     let symbol = ctx
         .symbol_table
         .lookup(name)

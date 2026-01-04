@@ -1,15 +1,12 @@
 use crate::{
     evaluator::{
-        context::{Context, State}, data_type::{evaluate_data_type, evaluate_identifier}, error::EvalError
+        context::{Context, State},
+        data_type::{evaluate_data_type, evaluate_identifier},
+        error::EvalError,
     },
     object::Object,
 };
-use testa_core::
-    ast::{
-        Expression, InfixOperator, PrefixOperator,
-        expression::ExpressionKind,
-    }
-;
+use testa_core::ast::{Expression, InfixOperator, PrefixOperator, expression::ExpressionKind};
 
 pub fn evaluate_expression(
     ctx: &Context,

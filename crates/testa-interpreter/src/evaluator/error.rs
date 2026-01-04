@@ -154,9 +154,17 @@ impl fmt::Display for EvalError {
             EvalError::InvalidCount { value, span } => {
                 write!(f, "Invalid count type {} at {:?}", value, span)
             }
-            EvalError::InvalidWeight { variant, value, span } => {
-                write!(f, "Invalid weight type in {} ({}) at {}", variant, value, span)
-            },
+            EvalError::InvalidWeight {
+                variant,
+                value,
+                span,
+            } => {
+                write!(
+                    f,
+                    "Invalid weight type in {} ({}) at {}",
+                    variant, value, span
+                )
+            }
         }
     }
 }
@@ -237,17 +245,16 @@ impl EvalError {
                     .with_code(DiagnosticCode::TypeMismatch)
                     .with_hint("Count values must be non-negative integers")
             }
-            EvalError::InvalidWeight { variant, value, span } => {
-                Diagnostic::error(
-                    *span,
-                    format!(
-                        "Invalid weight type in '{}' ({})",
-                        variant, value
-                    ),
-                )
-                .with_code(DiagnosticCode::TypeMismatch)
-                .with_hint("Ensure the weight is a valid type or value")
-            },
+            EvalError::InvalidWeight {
+                variant,
+                value,
+                span,
+            } => Diagnostic::error(
+                *span,
+                format!("Invalid weight type in '{}' ({})", variant, value),
+            )
+            .with_code(DiagnosticCode::TypeMismatch)
+            .with_hint("Ensure the weight is a valid type or value"),
         }
     }
 }
