@@ -1,7 +1,7 @@
 use rand::Rng;
 use testa_core::{
     analyser::symbol_table::symbol::SymbolKind,
-    ast::{DataType, DataTypeKind},
+    ast::{Attribute, DataType, DataTypeKind, Expression, ExpressionKind},
     utils::Span,
 };
 
@@ -62,6 +62,27 @@ pub(crate) fn evaluate_identifier(
 
     match &symbol.kind {
         SymbolKind::Enum { variants, .. } => evaluate_enum(ctx, state, variants),
+        SymbolKind::TypeAlias {
+            name,
+            data_type,
+            attributes,
+        } => evaluate_type_alias(ctx, state, data_type, name, attributes),
         _ => Err(EvalError::NotDefined(name.to_string(), span)),
     }
+}
+
+fn evaluate_type_alias(
+    ctx: &Context,
+    state: &mut State,
+    data_type: &Expression,
+    _name: &str,
+    _attributes: &[Attribute],
+) -> Result<Object, EvalError> {
+    let ExpressionKind::Type(data_type) = &data_type.kind else {
+        return Err(EvalError::MiscellaneousError(
+            "Expected DataType".to_string(),
+            data_type.span,
+        ));
+    };
+    evaluate_data_type(ctx, state, data_type)
 }

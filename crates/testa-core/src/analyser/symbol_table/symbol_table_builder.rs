@@ -109,11 +109,19 @@ impl Visitor for SymbolTableBuilder {
         }
     }
 
-    fn visit_type_decl(&mut self, name: &str, attributes: &[Attribute], span: Span) {
+    fn visit_type_decl(
+        &mut self,
+        name: &str,
+        data_type: &Expression,
+        attributes: &[Attribute],
+        span: Span,
+    ) {
+        // TODO: it is not a good idea to clone ast node, think about doing it better
         if let Err(symbol_error) = self.table.insert(
             name.to_string(),
             SymbolKind::TypeAlias {
                 name: name.to_string(),
+                data_type: data_type.clone(),
                 attributes: attributes.to_vec(),
             },
             span,

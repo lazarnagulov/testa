@@ -10,3 +10,6 @@ mod prefix;
 
 #[cfg(test)]
 mod directive;
+
+#[cfg(test)]
+mod data_type;

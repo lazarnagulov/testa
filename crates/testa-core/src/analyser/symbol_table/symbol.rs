@@ -33,6 +33,7 @@ pub enum SymbolKind {
     },
     TypeAlias {
         name: String,
+        data_type: Expression,
         attributes: Vec<Attribute>,
     },
     Variant {
@@ -79,7 +80,9 @@ impl Display for SymbolKind {
                 write!(f, "resource with {} values", values.len())
             }
 
-            SymbolKind::TypeAlias { name, attributes } => {
+            SymbolKind::TypeAlias {
+                name, attributes, ..
+            } => {
                 write!(f, "type alias {}", name)?;
                 if !attributes.is_empty() {
                     write!(f, " [{} attributes]", attributes.len())?;
