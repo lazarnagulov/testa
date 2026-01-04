@@ -1,6 +1,6 @@
 use crate::{
-    evaluator::{Record, error::EvalError},
-    generator::RecordGenerator,
+    evaluator::error::EvalError,
+    generator::{Record, RecordGenerator},
 };
 
 impl<'a> Iterator for RecordGenerator<'a> {

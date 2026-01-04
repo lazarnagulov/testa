@@ -24,8 +24,6 @@ pub struct EvaluationResult {
     pub output_path: Option<PathBuf>,
 }
 
-pub type Record = HashMap<String, Object>;
-
 pub struct Evaluator {
     pub context: Context,
     pub state: State,

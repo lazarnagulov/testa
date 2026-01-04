@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use testa_interpreter::{evaluator::Record, object::Object};
+use testa_interpreter::{generator::Record, object::Object};
 
 use crate::{error::GenerationError, generator::FileGenerator};
 

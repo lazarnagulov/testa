@@ -2,8 +2,7 @@ use core::fmt;
 use std::collections::HashMap;
 
 use testa_interpreter::{
-    evaluator::{Record, context::OutputFormat},
-    object::Object,
+    evaluator::context::OutputFormat, generator::Record, object::Object
 };
 
 use crate::{csv::CsvGenerator, error::GenerationError};

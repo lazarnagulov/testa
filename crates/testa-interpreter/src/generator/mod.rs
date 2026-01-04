@@ -1,4 +1,5 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+use indexmap::IndexMap;
 
 use testa_core::{
     analyser::symbol_table::symbol::SymbolKind,
@@ -8,7 +9,7 @@ use testa_core::{
 
 use crate::{
     evaluator::{
-        Evaluator, Record,
+        Evaluator,
         context::{Context, State},
         error::EvalError,
         expression::evaluate_expression,
@@ -17,6 +18,9 @@ use crate::{
 };
 
 pub mod record_iterator;
+
+pub type Record = IndexMap<String, Object>;
+
 
 #[derive(Debug, Default)]
 pub struct GenerateInfo {
@@ -155,7 +159,7 @@ impl<'a> RecordGenerator<'a> {
         state: &mut State,
         name: &str,
         span: Span,
-    ) -> Result<HashMap<String, Object>, EvalError> {
+    ) -> Result<Record, EvalError> {
         let symbol = ctx
             .symbol_table
             .lookup(name)
@@ -172,7 +176,7 @@ impl<'a> RecordGenerator<'a> {
             }
         };
 
-        let mut record = HashMap::new();
+        let mut record = IndexMap::new();
 
         if let Some(parent_name) = parent {
             let parent_record = Self::generate_from_template(ctx, state, parent_name, span)?;
@@ -206,7 +210,7 @@ impl<'a> RecordGenerator<'a> {
         state: &mut State,
         body: &[Field],
     ) -> Result<Record, EvalError> {
-        let mut record = HashMap::new();
+        let mut record = IndexMap::new();
 
         for field in body {
             let value = evaluate_expression(ctx, state, &field.value)?;
