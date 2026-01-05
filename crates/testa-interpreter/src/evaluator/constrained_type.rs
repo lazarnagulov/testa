@@ -1,7 +1,6 @@
 use rand::Rng;
 use testa_core::{
-    ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind},
-    utils::Span,
+    analyser::symbol_table::symbol::SymbolKind, ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind, ExpressionKind}, utils::Span
 };
 
 use crate::{
@@ -9,7 +8,7 @@ use crate::{
         context::{Context, State},
         error::EvalError,
         expression::evaluate_expression,
-        identifier::{evaluate_data_type, evaluate_identifier},
+        identifier::evaluate_data_type,
     },
     object::Object,
     util::generate_random_string,
@@ -30,7 +29,41 @@ pub(crate) fn evaluate_constrained_type(
         DataTypeKind::List(inner) => {
             evaluate_list_with_constraints(ctx, state, inner, constraints, span)
         }
-        DataTypeKind::Custom(name) => evaluate_identifier(ctx, state, name, span),
+        DataTypeKind::Custom(name) => {
+            let symbol = ctx
+                .symbol_table
+                .lookup(name)
+                .ok_or_else(|| EvalError::NotDefined(name.clone(), span))?;
+            
+            match &symbol.kind {
+                SymbolKind::TypeAlias { data_type, .. } => {
+                    let ExpressionKind::Type(base_data_type) = &data_type.kind else {
+                        return Err(EvalError::MiscellaneousError(
+                            "Expected DataType in type alias".to_string(),
+                            data_type.span,
+                        ));
+                    };
+                    
+                    let merged_constraints = merge_constraints(
+                        base_data_type.constraints.as_deref().unwrap_or(&[]),
+                        constraints,
+                    );
+                    
+                    evaluate_constrained_type(
+                        ctx,
+                        state,
+                        &base_data_type.kind,
+                        &merged_constraints,
+                        span,
+                    )
+                }
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "type alias".to_string(),
+                    got: "other".to_string(),
+                    span,
+                }),
+            }
+        }
     }
 }
 
@@ -500,4 +533,27 @@ fn evaluate_int_with_constraints(
     }
 
     Ok(Object::Int(value as isize))
+}
+
+
+// TODO: this is temporary, make it smarter
+fn merge_constraints(
+    base_constraints: &[ConstraintExpression],
+    usage_constraints: &[ConstraintExpression],
+) -> Vec<ConstraintExpression> {
+    let mut merged = Vec::new();
+    let mut seen_kinds = std::collections::HashSet::new();
+    
+    for constraint in usage_constraints {
+        seen_kinds.insert(constraint.kind.clone());
+        merged.push(constraint.clone());
+    }
+    
+    for constraint in base_constraints {
+        if !seen_kinds.contains(&constraint.kind) {
+            merged.push(constraint.clone());
+        }
+    }
+    
+    merged
 }
