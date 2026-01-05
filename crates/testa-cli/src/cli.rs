@@ -1,6 +1,7 @@
 use std::{error::Error, path::PathBuf};
 
 use clap::{Parser, Subcommand};
+use testa_interpreter::evaluator::context::OutputFormat;
 
 use crate::commands::{
     check::check_command, generate::generate_command, info::info_command, init::init_command,
@@ -20,13 +21,7 @@ impl Cli {
     pub fn run() -> Result<(), Box<dyn Error>> {
         let cli = Cli::try_parse()?;
         match cli.command {
-            Command::Generate {
-                input,
-                output,
-                format,
-                count,
-                seed,
-            } => generate_command(input, output, format, count, seed),
+            Command::Generate { .. } => generate_command(cli.command.try_into()?),
             Command::Check {
                 files,
                 syntax_only,
@@ -57,8 +52,8 @@ pub enum Command {
         input: PathBuf,
         #[arg(short, long, value_name = "FILE")]
         output: Option<PathBuf>,
-        #[arg(short, long, value_enum, default_value = "csv")]
-        format: Option<String>,
+        #[arg(short, long, value_enum)]
+        format: Option<OutputFormat>,
         #[arg(short, long, value_name = "COUNT")]
         count: Option<usize>,
         #[arg(short, long, value_name = "SEED")]

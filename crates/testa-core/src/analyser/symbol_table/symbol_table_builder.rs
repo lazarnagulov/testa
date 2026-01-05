@@ -3,7 +3,7 @@ use crate::{
         error::SemanticError,
         symbol_table::{
             SymbolTable,
-            symbol::{ScopeKind, SymbolKind},
+            symbol::{ScopeKind, SymbolKind, VariantInfo},
         },
     },
     ast::{
@@ -86,10 +86,15 @@ impl Visitor for SymbolTableBuilder {
         };
 
         let parent_name = match &current_scope.kind {
-            ScopeKind::Template { name } | ScopeKind::Generate { name } => name.clone(),
-            _ => {
+            ScopeKind::Template { name }
+            | ScopeKind::Generate { name }
+            | ScopeKind::Directive { name } => name.clone(),
+            scope => {
                 self.insert_error(SemanticError::InvalidContext {
-                    message: format!("Field '{}' declared in invalid scope", field.name),
+                    message: format!(
+                        "Field '{}' declared in invalid scope: {}",
+                        field.name, scope
+                    ),
                     span: field.span,
                 });
                 return;
@@ -101,6 +106,7 @@ impl Visitor for SymbolTableBuilder {
             SymbolKind::Field {
                 is_override: field.overridable,
                 template_name: parent_name,
+                expression: field.value.clone(),
             },
             field.span,
         ) {
@@ -108,11 +114,31 @@ impl Visitor for SymbolTableBuilder {
         }
     }
 
-    fn visit_type_decl(&mut self, name: &str, attributes: &[Attribute], span: Span) {
+    fn visit_output_directive(&mut self, _argument: &str, options: &[Field], _span: Span) {
+        if !options.is_empty() {
+            self.table.enter_scope(ScopeKind::Directive {
+                name: "output".to_string(),
+            });
+            for field in options {
+                self.visit_field(field);
+            }
+            self.table.exit_scope();
+        }
+    }
+
+    fn visit_type_decl(
+        &mut self,
+        name: &str,
+        data_type: &Expression,
+        attributes: &[Attribute],
+        span: Span,
+    ) {
+        // TODO: it is not a good idea to clone ast node, think about doing it better
         if let Err(symbol_error) = self.table.insert(
             name.to_string(),
             SymbolKind::TypeAlias {
                 name: name.to_string(),
+                data_type: data_type.clone(),
                 attributes: attributes.to_vec(),
             },
             span,
@@ -150,10 +176,18 @@ impl Visitor for SymbolTableBuilder {
         attributes: &[Attribute],
         span: Span,
     ) {
+        let variant_infos = variants
+            .iter()
+            .map(|v| VariantInfo {
+                name: v.name.clone(),
+                weight: v.weight.clone(),
+            })
+            .collect::<Vec<VariantInfo>>();
+
         if let Err(symbol_error) = self.table.insert(
             name.to_string(),
             SymbolKind::Enum {
-                variants: variants.iter().map(|f| f.name.clone()).collect(),
+                variants: variant_infos,
                 attributes: attributes.to_vec(),
             },
             span,

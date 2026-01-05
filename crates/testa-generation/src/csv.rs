@@ -1,97 +1,100 @@
 use std::collections::HashMap;
 
-use testa_interpreter::object::Object;
+use testa_interpreter::{generator::Record, object::Object};
 
-use super::generator::{FileGenerator, GenerationError, Record};
+use crate::{error::GenerationError, generator::FileGenerator};
 
-#[derive(Debug)]
-pub struct CsvGenerator<'a> {
+#[derive(Debug, Clone)]
+pub struct CsvGenerator {
     delimiter: String,
-    header: bool,
-    quote: bool,
-
-    field_names: Vec<&'a str>,
+    quote: String,
+    include_header: bool,
 }
 
-impl Default for CsvGenerator<'_> {
-    fn default() -> Self {
+impl CsvGenerator {
+    pub fn new() -> Self {
         Self {
-            delimiter: ",".to_owned(),
-            header: true,
-            quote: false,
-            field_names: Vec::new(),
+            delimiter: ",".to_string(),
+            quote: "\"".to_string(),
+            include_header: true,
+        }
+    }
+
+    pub fn from_config(config: &HashMap<String, Object>) -> Self {
+        let delimiter = config
+            .get("delimiter")
+            .and_then(|o| match o {
+                Object::String(s) => Some(s.clone()),
+                _ => None,
+            })
+            .unwrap_or_else(|| ",".to_string());
+
+        let quote = config
+            .get("quote")
+            .and_then(|o| match o {
+                Object::String(s) => Some(s.clone()),
+                _ => None,
+            })
+            .unwrap_or_else(|| "\"".to_string());
+
+        let include_header = config
+            .get("header")
+            .and_then(|o| match o {
+                Object::Boolean(b) => Some(*b),
+                _ => None,
+            })
+            .unwrap_or(true);
+
+        Self {
+            delimiter,
+            quote,
+            include_header,
+        }
+    }
+
+    fn escape_csv_value(&self, value: &str) -> String {
+        if value.contains(&self.delimiter) || value.contains('\n') || value.contains(&self.quote) {
+            format!(
+                "{}{}{}",
+                self.quote,
+                value.replace(&self.quote, &format!("{}{}", self.quote, self.quote)),
+                self.quote
+            )
+        } else {
+            value.to_string()
         }
     }
 }
 
-impl<'a> CsvGenerator<'a> {
-    pub fn with_field_names(mut self, field_names: Vec<&'a str>) -> Self {
-        self.field_names = field_names;
-        self
-    }
-    pub fn with_config(mut self, config: &HashMap<String, Object>) -> Self {
-        config.iter().for_each(|(key, value)| match key.as_str() {
-            "delimiter" => {
-                if let Object::String(s) = value {
-                    self.delimiter = s.clone();
-                } else {
-                    eprintln!("WARNING: Expected string for 'delimiter'");
-                }
-            }
-            "header" => {
-                if let Object::Boolean(b) = value {
-                    self.header = *b;
-                } else {
-                    eprintln!("WARNING: Expected boolean for 'header'");
-                }
-            }
-            "quote" => {
-                if let Object::Boolean(b) = value {
-                    self.quote = *b;
-                } else {
-                    eprintln!("WARNING: Expected boolean for 'quote'");
-                }
-            }
-            _ => {
-                eprintln!("WARNING: Unknown config key: {}", key);
-            }
-        });
-        self
-    }
-}
-
-impl FileGenerator for CsvGenerator<'_> {
+impl FileGenerator for CsvGenerator {
     fn generate(&self, record: &Record) -> Result<String, GenerationError> {
-        Ok(record
-            .fields
-            .iter()
-            .map(|object| match object {
-                Object::Int(_) | Object::Float(_) | Object::Boolean(_) | Object::List(_) => {
-                    Ok(format!("{}", object))
-                }
-                Object::String(value) => {
-                    if self.quote {
-                        Ok(format!("\"{}\"", value))
-                    } else {
-                        Ok(value.to_string())
-                    }
-                }
-                Object::Range(_, _) => Err(GenerationError::NotSupported("Range")),
-                Object::NoReturn => Err(GenerationError::NotSupported("NoReturn")),
-            })
-            .collect::<Result<Vec<String>, GenerationError>>()?
-            .join(&self.delimiter))
+        let values: Vec<String> = record
+            .values()
+            .map(|v| self.escape_csv_value(&format!("{}", v)))
+            .collect();
+
+        Ok(values.join(&self.delimiter))
     }
 
     fn extension(&self) -> &'static str {
         "csv"
     }
 
-    fn generate_header(&self) -> Option<String> {
-        self.header.then(|| self.field_names.join(&self.delimiter))
+    fn generate_header(&self, fields: &[String]) -> Option<String> {
+        if self.include_header {
+            Some(fields.join(&self.delimiter))
+        } else {
+            None
+        }
     }
 
     fn generate_footer(&self) -> Option<String> {
         None
+    }
+}
+
+impl Default for CsvGenerator {
+    fn default() -> Self {
+        Self::new()
     }
 }
