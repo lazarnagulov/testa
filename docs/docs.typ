@@ -1,12 +1,74 @@
 #set page(paper: "a4", margin: 2.5cm, numbering: "1")
+#set raw(syntaxes: "testa.sublime-syntax")
 
-#let keywordColor = rgb(0, 12, 0)
-#let directiveColor = rgb(106, 90, 205)
+#set page(
+  paper: "a4",
+  margin: 0cm,
+)
 
-= testA
-Lazar Nagulov — #datetime.today()
+#align(center + horizon)[
+  #block(
+    width: 100%,
+    height: 100%,
+    fill: gradient.linear(
+      rgb(20, 30, 48),
+      rgb(36, 59, 85),
+      angle: 45deg
+    ),
+    [
+      #v(1fr)
+      
+      #text(
+        size: 52pt,
+        weight: "bold",
+        fill: white,
+      )[TestA]
+      
+      #v(12pt)
+      
+      #text(
+        size: 24pt,
+        weight: "light",
+        fill: rgb(200, 220, 240)
+      )[Documentation]
+      
+      #v(40pt)
+      
+      #line(length: 40%, stroke: 2pt + rgb(100, 150, 200))
+      
+      #v(40pt)
+      
+      #text(
+        size: 18pt,
+        fill: rgb(180, 200, 220)
+      )[Lazar Nagulov]
+      
+      #v(20pt)
+      
+      #text(
+        size: 14pt,
+        fill: rgb(150, 170, 190)
+      )[#datetime.today().display("[month repr:long] [day], [year]")]
+      
+      #v(1fr)
+      
+      #text(
+        size: 11pt,
+        fill: rgb(120, 140, 160),
+        style: "italic"
+      )[Version 0.2]
+      
+      #v(30pt)
+    ]
+  )
+]
 
-#pagebreak()
+#set page(
+  paper: "a4",
+  margin: 2.5cm,
+  numbering: "1"
+)
+
 #outline()
 #pagebreak()
 
@@ -21,7 +83,7 @@ prototyping, or seeding.
 #figure(
   caption: [testA example],
   [
-  ```cpp
+  ```testa
 @output csv {
     header = true;
     quote = true;
@@ -96,8 +158,8 @@ cd testa
 
 #figure[
 ```bash
-cargo build
-cargo run -- ./examples/01_anonymous_generate.testa
+# From the project root
+cargo install --path . --bins
 ```
 ]
 
@@ -111,6 +173,116 @@ cargo test
 
 #pagebreak()
 
+= CLI Usage
+
+The TestA CLI provides commands for generating test data, checking syntax, 
+running an LSP server, and managing projects. This section covers the most 
+common use cases and command-line options.
+
+== Generate Command
+
+The `generate` command is the primary way to produce test data from your 
+TestA templates.
+
+=== Basic Generation
+
+Generate JSON output (default format):
+```bash
+testa generate user.testa
+testa generate user.testa -o output.json
+testa generate user.testa --pretty
+```
+
+=== CSV Generation
+
+Generate CSV output:
+```bash
+testa generate user.testa -f csv
+testa generate user.testa -f csv -o users.csv
+```
+
+=== Reproducible Generation
+
+Use a seed value to ensure reproducible output:
+```bash
+testa generate user.testa --seed 42
+```
+
+=== Override Generation Count
+
+Specify the number of records to generate:
+```bash
+testa generate user.testa --count 1000
+```
+
+== Check Command
+
+Validate TestA files for syntax and semantic errors without generating output.
+```bash
+testa check *.testa
+testa check user.testa --warnings
+testa check user.testa --syntax-only
+```
+
+Options:
+- `--warnings` - Show warnings in addition to errors
+- `--syntax-only` - Only check syntax, skip semantic analysis
+
+== LSP Command
+
+Start the Language Server Protocol server for editor integration.
+```bash
+testa lsp
+testa lsp --port 9257
+testa lsp --log-file lsp.log
+```
+
+Options:
+- `--port <PORT>` - Specify the port for the LSP server
+- `--log-file <FILE>` - Write LSP logs to the specified file
+
+== Init Command
+
+Initialize a new TestA project with scaffolding and optional examples.
+```bash
+testa init
+testa init my-project --with-examples
+testa init --name "My Data Project"
+```
+
+Options:
+- `--with-examples` - Include example TestA files
+- `--name <NAME>` - Set the project name
+
+== Info Command
+
+Display information about the TestA installation and environment.
+```bash
+testa info
+testa info --extended
+```
+
+Options:
+- `--extended` - Show additional diagnostic information
+
+== Global Flags
+
+These flags can be used with any command:
+```bash
+testa -v generate user.testa     # Verbose output
+testa -q generate user.testa     # Quiet mode (minimal output)
+testa --version                  # Show version information
+testa --help                     # Display help message
+```
+
+Available global flags:
+- `-v, --verbose` - Enable verbose output
+- `-q, --quiet` - Suppress non-essential output
+- `--version` - Print version information
+- `--help` - Display help information
+
+#pagebreak()
+
 = Features
 
 == Templates
@@ -118,7 +290,7 @@ cargo test
 #figure(
   caption: [Template declaration],
   [
-```cpp
+```testa
 template <name> [: <parent_name>] {
     [override] <name1> = <expr>;
     ...
@@ -138,7 +310,7 @@ template.
 #figure(
   caption: [Example template in testA],
   [
-```cpp
+```testa
 template User {
     id = int;
     name = string;
@@ -153,8 +325,10 @@ template User {
 #figure(
   caption: [Inheritance example],
   [
-    ```cpp
-template User { age = int [range=0..=100]; }
+    ```testa
+template User { 
+  age = int [range=0..=100]; 
+}
 
 template Student : User {
     year = int[range=1..=4];
@@ -177,7 +351,7 @@ repeated fields are overridden by default.
 #figure(
   caption: [Override example],
 [
-```cpp
+```testa
 template User {
     id = string;
 }
@@ -196,7 +370,7 @@ template Student : User {
 #figure(
   caption: [Enumeration declaration],
 [
-```cpp
+```testa
 enum <name> {
     <variant1> [=> <expr:int>];
     ...
@@ -212,7 +386,7 @@ value of one if not specified.
 #figure(
   caption: [Enumerations in testA],
 [
-```cpp
+```testa
 enum Role {
     User => 8;
     Admin;
@@ -225,7 +399,7 @@ enum Role {
 #figure(
   caption: [Template with enumeration field],
 [
-```cpp
+```testa
 template User {
     id = int;
     name = string;
@@ -246,7 +420,7 @@ There are four fundamental data types available: integers (ints), floating-point
 #figure(
   caption: [Template with data types],
 [
-```cpp
+```testa
 template User {
     name = string;
     age = int + 18;
@@ -269,7 +443,7 @@ Further details about constraints can be found in the next section.
 
 #figure(
   caption: [List examples],
-```cpp
+```testa
 [int][count=5..15]
 [[int[range=1..=5]][count=1..5]][count=3..=5]
 ```
@@ -285,9 +459,9 @@ simplified by utilizing type constraints.
 #figure(
   caption: [Constrained type declaration],
 [
-```cpp
-type <name> = <type> [<constraint1>, <constraint2>...];
-type <name> = extend <type> with [<constraint1>, ...];
+```testa
+type <name> = <base_type> [<constraint1>, <constraint2>...];
+type <name> = extend <base_type> with [<constraint1>, ...];
 ```
   ]
 )
@@ -300,8 +474,11 @@ conforms to the expected parameters.
 #figure(
   caption: [Templates with constrained data types],
   [
-```cpp
-template User { age = int [range=0..=100]; }
+```testa
+template User { 
+  age = int [range=0..=100]; 
+}
+
 template Student : User { 
     override age = int[range=19..=100];
     grades = [int[range=6..=10]][count=0..=46]; 
@@ -315,13 +492,16 @@ To improve clarity and minimize redundancy, types may be effectively declared an
 #figure(
   caption: [Templates with user-defined data types],
 [
-```cpp
+```testa
 type Age = int [range=0..=100];
 type StudentAge = extend Age with [min=19];
 type Grade = int [range=6..=10];
 type GradeList = [Grade][count=1..=46];
 
-template User { age = Age; }
+template User { 
+  age = Age; 
+}
+
 template Student : User { 
     override age = StudentAge;
     grades = GradeList; 
@@ -335,7 +515,7 @@ template Student : User {
 #figure(
   caption: [Templates with user-defined lists],
 [
-```cpp
+```testa
 type IntList = [int][count=1..=5];
 type IntMatrix = [IntList][count=1..=5];
 type IntTensor = [IntMatrix][count=1..=5];
@@ -359,7 +539,7 @@ type IntTensor
     [min], [int, float], [int], [Sets lower bound.],
     [max], [int, float], [int], [Sets upper bound.],
     [multiple_of], [int], [int], [Number is multiple of input.],
-    [bias], [bool], [float (0-100)], [Sets chance of being true.],
+    [bias], [bool], [float \[0.0-1.0\] or int \[0,1\]], [Sets chance of being true.],
     [count], [list], [Inclusive / Exclusive range or int], [Sets number of items in list.],
   )
 )
@@ -368,7 +548,8 @@ type IntTensor
 
 == String Patterns
 
-Patterns define structure using placeholders:
+String patterns define the structure of a string. In these patterns, characters wrapped in \${} 
+represent placeholders where random values will be generated. Every other character is treated as literal. Placeholders are:
 
 - `${a}`  lowercase letter  
 - `${A}`  uppercase letter  
@@ -377,16 +558,16 @@ Patterns define structure using placeholders:
 #figure(
   caption: [String pattern example],
   [
-```cpp
+```testa
 string_pattern "pattern: ${aaaAAAA}";
 ```
   ]
-)
-
+) <listing:string_pattern_example>
+Example (@listing:string_pattern_example) can generate "pattern: abcABCD123"
 #figure(
   caption: [String pattern in template example],
 [
-```cpp
+```testa
 template User {
     id = int;
     name = string_pattern "${Aa[4]}";
@@ -394,13 +575,24 @@ template User {
 }
 ```
   ]
-)
+) <listing:string_pattern_in_template>
+
+Patterns can be utilized directly within the template, as illustrated in @listing:string_pattern_in_template. 
+They can also be simplified using the repeat syntax [integer or range].
 
 #pagebreak()
 
 = Changelog
 
-- v0.0.1 - Added csv template generation (MVP)  
-- v0.0.2 - Added enumerations and template inheritance  
-- v0.0.3 - Introduced string patterns and attributes
-- v0.1.0 - Introduced semantic analyzer and refactored code base
+v0.2.0 - *Semantic Analysis & Architecture Update*
+
+- Introduced a semantic analyzer
+- Refactored core architecture to support semantic validation and extensibility
+- Introduced CLI tool
+
+v0.1.0 - *Initial MVP*
+
+- Added CSV template generation
+- Implemented enumerations
+- Added template inheritance
+- Introduced string patterns and attribute support
