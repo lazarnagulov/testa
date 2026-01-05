@@ -1,8 +1,8 @@
 use crate::{
     evaluator::{
         context::{Context, State},
-        data_type::{evaluate_data_type, evaluate_identifier},
         error::EvalError,
+        identifier::{evaluate_data_type, evaluate_identifier},
     },
     object::Object,
 };

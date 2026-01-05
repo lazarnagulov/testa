@@ -86,10 +86,15 @@ impl Visitor for SymbolTableBuilder {
         };
 
         let parent_name = match &current_scope.kind {
-            ScopeKind::Template { name } | ScopeKind::Generate { name } => name.clone(),
-            _ => {
+            ScopeKind::Template { name }
+            | ScopeKind::Generate { name }
+            | ScopeKind::Directive { name } => name.clone(),
+            scope => {
                 self.insert_error(SemanticError::InvalidContext {
-                    message: format!("Field '{}' declared in invalid scope", field.name),
+                    message: format!(
+                        "Field '{}' declared in invalid scope: {}",
+                        field.name, scope
+                    ),
                     span: field.span,
                 });
                 return;
@@ -106,6 +111,18 @@ impl Visitor for SymbolTableBuilder {
             field.span,
         ) {
             self.insert_error(symbol_error);
+        }
+    }
+
+    fn visit_output_directive(&mut self, _argument: &str, options: &[Field], _span: Span) {
+        if !options.is_empty() {
+            self.table.enter_scope(ScopeKind::Directive {
+                name: "output".to_string(),
+            });
+            for field in options {
+                self.visit_field(field);
+            }
+            self.table.exit_scope();
         }
     }
 

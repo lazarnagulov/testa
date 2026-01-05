@@ -126,7 +126,21 @@ pub enum ScopeKind {
     Template { name: String },
     Enum { name: String },
     Generate { name: String },
+    Directive { name: String },
     Block,
+}
+
+impl fmt::Display for ScopeKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ScopeKind::Global => write!(f, "global"),
+            ScopeKind::Template { name } => write!(f, "template {}", name),
+            ScopeKind::Enum { name } => write!(f, "enum {}", name),
+            ScopeKind::Generate { name } => write!(f, "generate {}", name),
+            ScopeKind::Directive { name } => write!(f, "directive {}", name),
+            ScopeKind::Block => write!(f, "block"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

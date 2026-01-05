@@ -167,9 +167,6 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             ..
         } => {
             visitor.visit_output_directive(argument, options, *span);
-            for field in options {
-                visitor.visit_field(field);
-            }
         }
         Statement::OutputPathDirective { argument, span, .. } => {
             visitor.visit_output_path_directive(argument, *span);
