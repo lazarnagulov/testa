@@ -5,12 +5,12 @@ use crate::generator::{FileConfig, FileGenerator};
 
 #[derive(Debug)]
 pub struct SqlInsertGenerator {
-    table_name: String,
+    table_name: String
 }
 
 impl SqlInsertGenerator {
-    pub fn new(table_name: String) -> Self {
-        Self { table_name }
+    pub fn new(table_name: &str) -> Self {
+        Self { table_name: table_name.to_string() }
     }
     
     pub fn from_config(config: &FileConfig) -> Self {
@@ -61,5 +61,11 @@ impl FileGenerator for SqlInsertGenerator {
 
     fn generate_footer(&self) -> Option<String> {
         Some("-- End of generated data".to_string())
+    }
+}
+
+impl Default for SqlInsertGenerator {
+    fn default() -> Self {
+        SqlInsertGenerator::new("generated_data")
     }
 }
