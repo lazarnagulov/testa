@@ -2,25 +2,27 @@ use testa_interpreter::{generator::Record, object::Object};
 
 use crate::generator::{FileConfig, FileGenerator};
 
-
 #[derive(Debug)]
 pub struct SqlInsertGenerator {
-    table_name: String
+    table_name: String,
 }
 
 impl SqlInsertGenerator {
     pub fn new(table_name: &str) -> Self {
-        Self { table_name: table_name.to_string() }
+        Self {
+            table_name: table_name.to_string(),
+        }
     }
-    
+
     pub fn from_config(config: &FileConfig) -> Self {
-        let table_name = config.get("table")
+        let table_name = config
+            .get("table")
             .and_then(|o| match o {
                 Object::String(s) => Some(s.clone()),
-                _ => None
+                _ => None,
             })
             .unwrap_or_else(|| "generated_data".to_string());
-        
+
         Self { table_name }
     }
 
@@ -38,11 +40,8 @@ impl SqlInsertGenerator {
 impl FileGenerator for SqlInsertGenerator {
     fn generate(&self, record: &Record) -> Result<String, crate::error::GeneratorError> {
         let columns: Vec<String> = record.keys().cloned().collect();
-        let values: Vec<String> = record
-            .values()
-            .map(|v| self.escape_sql_value(v))
-            .collect();
-        
+        let values: Vec<String> = record.values().map(|v| self.escape_sql_value(v)).collect();
+
         Ok(format!(
             "INSERT INTO {} ({}) VALUES ({});\n",
             self.table_name,
@@ -56,7 +55,10 @@ impl FileGenerator for SqlInsertGenerator {
     }
 
     fn generate_header(&self, _fields: &[String]) -> Option<String> {
-        Some(format!("-- Generated SQL inserts for table {}", self.table_name))
+        Some(format!(
+            "-- Generated SQL inserts for table {}",
+            self.table_name
+        ))
     }
 
     fn generate_footer(&self) -> Option<String> {

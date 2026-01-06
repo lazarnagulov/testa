@@ -3,8 +3,12 @@ use std::collections::HashMap;
 
 use testa_interpreter::{evaluator::context::OutputFormat, generator::Record, object::Object};
 
-use crate::{error::GeneratorError, format::{csv::CsvGenerator, json::JsonGenerator, sql_insert::SqlInsertGenerator, xml::XmlGenerator}};
-
+use crate::{
+    error::GeneratorError,
+    format::{
+        csv::CsvGenerator, json::JsonGenerator, sql_insert::SqlInsertGenerator, xml::XmlGenerator,
+    },
+};
 
 pub type FileConfig = HashMap<String, Object>;
 

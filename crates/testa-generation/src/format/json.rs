@@ -1,8 +1,11 @@
-use serde_json::{Serializer, ser::PrettyFormatter};
 use serde::Serialize;
+use serde_json::{Serializer, ser::PrettyFormatter};
 use testa_interpreter::{generator::Record, object::Object};
 
-use crate::{error::GeneratorError, generator::{FileConfig, FileGenerator}};
+use crate::{
+    error::GeneratorError,
+    generator::{FileConfig, FileGenerator},
+};
 
 #[derive(Debug)]
 pub struct JsonGenerator {
@@ -18,20 +21,22 @@ impl JsonGenerator {
         }
     }
     pub fn from_config(config: &FileConfig) -> Self {
-        let pretty = config.get("pretty")
+        let pretty = config
+            .get("pretty")
             .and_then(|o| match o {
                 Object::Boolean(b) => Some(*b),
-                _ => None
+                _ => None,
             })
             .unwrap_or(false);
-        
-        let indent = config.get("indent")
+
+        let indent = config
+            .get("indent")
             .and_then(|o| match o {
                 Object::Int(i) => Some(*i as usize),
-                _ => None
+                _ => None,
             })
             .unwrap_or(2);
-        
+
         Self { pretty, indent }
     }
 
@@ -50,10 +55,11 @@ impl JsonGenerator {
             _ => serde_json::Value::Null,
         }
     }
-    
+
     fn indent_block(&self, value: &str) -> String {
         let pad = " ".repeat(self.indent);
-        value.lines()
+        value
+            .lines()
             .map(|line| format!("{pad}{line}"))
             .collect::<Vec<_>>()
             .join("\n")
@@ -66,7 +72,7 @@ impl FileGenerator for JsonGenerator {
             .iter()
             .map(|(k, v)| (k.clone(), Self::object_to_json(v)))
             .collect();
-        
+
         let json_value = serde_json::Value::Object(json_map);
         if self.pretty {
             let indent = vec![b' '; self.indent];
@@ -78,9 +84,9 @@ impl FileGenerator for JsonGenerator {
                 .serialize(&mut serializer)
                 .map_err(|e| GeneratorError::SerializationError(e.to_string()))?;
 
-            let json_str =  String::from_utf8(buf)
+            let json_str = String::from_utf8(buf)
                 .map_err(|e| GeneratorError::SerializationError(e.to_string()))?;
-            
+
             Ok(self.indent_block(&json_str))
         } else {
             serde_json::to_string(&json_value)
