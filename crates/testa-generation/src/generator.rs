@@ -3,10 +3,12 @@ use std::collections::HashMap;
 
 use testa_interpreter::{evaluator::context::OutputFormat, generator::Record, object::Object};
 
-use crate::{csv::CsvGenerator, error::GenerationError};
+use crate::{csv::CsvGenerator, error::GeneratorError, json::JsonGenerator};
+
+pub type FileConfig = HashMap<String, Object>;
 
 pub trait FileGenerator: fmt::Debug {
-    fn generate(&self, record: &Record) -> Result<String, GenerationError>;
+    fn generate(&self, record: &Record) -> Result<String, GeneratorError>;
     fn extension(&self) -> &'static str;
     fn generate_header(&self, fields: &[String]) -> Option<String>;
     fn generate_footer(&self) -> Option<String>;
@@ -18,13 +20,10 @@ pub trait FileGenerator: fmt::Debug {
     }
 }
 
-pub fn create_file_generator(
-    format: &OutputFormat,
-    config: &HashMap<String, Object>,
-) -> Box<dyn FileGenerator> {
+pub fn create_file_generator(format: &OutputFormat, config: &FileConfig) -> Box<dyn FileGenerator> {
     match format {
         OutputFormat::Csv => Box::new(CsvGenerator::from_config(config)),
-        OutputFormat::Json => todo!("implement json generator"),
+        OutputFormat::Json => Box::new(JsonGenerator::from_config(config)),
         OutputFormat::Xml => todo!("implement xml generator"),
         OutputFormat::Sql => todo!("implement sql generator"),
     }

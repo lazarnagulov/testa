@@ -1,6 +1,8 @@
 use core::fmt;
 
-#[derive(PartialEq, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum Object {
     Int(isize),
     Float(f32),

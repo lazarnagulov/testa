@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+serde = "1.0.228"
+serde_json = "1.0.148"
 testa-core = { path = "../testa-core" }
 testa-interpreter = { path = "../testa-interpreter" }
 
