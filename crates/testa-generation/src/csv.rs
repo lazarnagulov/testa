@@ -74,7 +74,7 @@ impl FileGenerator for CsvGenerator {
             .map(|v| self.escape_csv_value(&format!("{}", v)))
             .collect();
 
-        Ok(values.join(&self.delimiter))
+        Ok(format!("{}\n", values.join(&self.delimiter)))
     }
 
     fn extension(&self) -> &'static str {

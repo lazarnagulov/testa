@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use testa_interpreter::{evaluator::context::OutputFormat, generator::Record, object::Object};
 
-use crate::{csv::CsvGenerator, error::GeneratorError, json::JsonGenerator};
+use crate::{csv::CsvGenerator, error::GeneratorError, json::JsonGenerator, sql_insert::SqlInsertGenerator};
 
 pub type FileConfig = HashMap<String, Object>;
 
@@ -24,7 +24,7 @@ pub fn create_file_generator(format: &OutputFormat, config: &FileConfig) -> Box<
     match format {
         OutputFormat::Csv => Box::new(CsvGenerator::from_config(config)),
         OutputFormat::Json => Box::new(JsonGenerator::from_config(config)),
+        OutputFormat::Sql => Box::new(SqlInsertGenerator::from_config(config)),
         OutputFormat::Xml => todo!("implement xml generator"),
-        OutputFormat::Sql => todo!("implement sql generator"),
     }
 }
