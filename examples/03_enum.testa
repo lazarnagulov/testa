@@ -1,5 +1,5 @@
-@output csv;
-@output_path "./example_03.csv";
+@output sql { table = "users"; }
+@output_path "./example_03.sql";
 
 enum Role { 
     User; 

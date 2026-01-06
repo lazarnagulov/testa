@@ -1,5 +1,5 @@
-@output csv;
-@output_path "./example_04.csv";
+@output xml { root = "users"; record = "user"; }
+@output_path "./example_04.xml";
 
 enum Role { 
     User => 5;

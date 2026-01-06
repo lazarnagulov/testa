@@ -1,8 +1,9 @@
-use std::collections::HashMap;
-
 use testa_interpreter::{generator::Record, object::Object};
 
-use crate::{error::GenerationError, generator::FileGenerator};
+use crate::{
+    error::GeneratorError,
+    generator::{FileConfig, FileGenerator},
+};
 
 #[derive(Debug, Clone)]
 pub struct CsvGenerator {
@@ -20,7 +21,7 @@ impl CsvGenerator {
         }
     }
 
-    pub fn from_config(config: &HashMap<String, Object>) -> Self {
+    pub fn from_config(config: &FileConfig) -> Self {
         let delimiter = config
             .get("delimiter")
             .and_then(|o| match o {
@@ -67,13 +68,13 @@ impl CsvGenerator {
 }
 
 impl FileGenerator for CsvGenerator {
-    fn generate(&self, record: &Record) -> Result<String, GenerationError> {
+    fn generate(&self, record: &Record) -> Result<String, GeneratorError> {
         let values: Vec<String> = record
             .values()
             .map(|v| self.escape_csv_value(&format!("{}", v)))
             .collect();
 
-        Ok(values.join(&self.delimiter))
+        Ok(format!("{}\n", values.join(&self.delimiter)))
     }
 
     fn extension(&self) -> &'static str {

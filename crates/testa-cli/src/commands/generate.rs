@@ -82,7 +82,7 @@ fn write_records_streaming(
         first = false;
 
         let line = file_generator.generate(&record)?;
-        writeln!(file, "{}", line)?;
+        write!(file, "{}", line)?;
     }
 
     if let Some(footer) = file_generator.generate_footer() {

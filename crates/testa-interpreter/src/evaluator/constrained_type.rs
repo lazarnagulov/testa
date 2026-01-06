@@ -1,6 +1,8 @@
 use rand::Rng;
 use testa_core::{
-    analyser::symbol_table::symbol::SymbolKind, ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind, ExpressionKind}, utils::Span
+    analyser::symbol_table::symbol::SymbolKind,
+    ast::{ConstraintExpression, ConstraintKind, DataType, DataTypeKind, ExpressionKind},
+    utils::Span,
 };
 
 use crate::{
@@ -34,7 +36,7 @@ pub(crate) fn evaluate_constrained_type(
                 .symbol_table
                 .lookup(name)
                 .ok_or_else(|| EvalError::NotDefined(name.clone(), span))?;
-            
+
             match &symbol.kind {
                 SymbolKind::TypeAlias { data_type, .. } => {
                     let ExpressionKind::Type(base_data_type) = &data_type.kind else {
@@ -43,12 +45,12 @@ pub(crate) fn evaluate_constrained_type(
                             data_type.span,
                         ));
                     };
-                    
+
                     let merged_constraints = merge_constraints(
                         base_data_type.constraints.as_deref().unwrap_or(&[]),
                         constraints,
                     );
-                    
+
                     evaluate_constrained_type(
                         ctx,
                         state,
@@ -535,7 +537,6 @@ fn evaluate_int_with_constraints(
     Ok(Object::Int(value as isize))
 }
 
-
 // TODO: this is temporary, make it smarter
 fn merge_constraints(
     base_constraints: &[ConstraintExpression],
@@ -543,17 +544,17 @@ fn merge_constraints(
 ) -> Vec<ConstraintExpression> {
     let mut merged = Vec::new();
     let mut seen_kinds = std::collections::HashSet::new();
-    
+
     for constraint in usage_constraints {
         seen_kinds.insert(constraint.kind.clone());
         merged.push(constraint.clone());
     }
-    
+
     for constraint in base_constraints {
         if !seen_kinds.contains(&constraint.kind) {
             merged.push(constraint.clone());
         }
     }
-    
+
     merged
 }
