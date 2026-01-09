@@ -1,11 +1,10 @@
-use core::panic;
 use std::path::PathBuf;
 
 use crate::{
     ast::{ConstraintKind, DataTypeKind, Expression, ExpressionKind, InfixOperator, Statement},
     lexer::token::TokenKind,
     parser::error::ParserError,
-    utils::test_utils::*,
+    utils::{Span, test_utils::*},
 };
 
 #[test]
@@ -112,11 +111,22 @@ fn test_parse_enum_missing_identifier() {
 
     match parser.parse() {
         Ok(program) => panic!("expected error, got {:?}", program),
-        Err(ParserError::Expected { expected, got, .. }) => {
-            assert_eq!(expected, "identifier");
-            assert_eq!(got, "{");
+
+        Err(errors) => {
+            assert_eq!(errors.len(), 1);
+
+            assert!(matches!(
+                &errors[0],
+                ParserError::Expected {
+                    span,
+                    expected,
+                    got,
+                }
+                if span == &Span::default()
+                    && expected.as_str() == "identifier"
+                    && got.as_str() == "{"
+            ));
         }
-        Err(err) => panic!("unexpected error: {:?}", err),
     }
 }
 

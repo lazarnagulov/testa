@@ -6,6 +6,7 @@ mod expression;
 mod helpers;
 mod pattern;
 mod statement;
+mod synchronize;
 mod token_stream;
 
 #[cfg(test)]
@@ -43,12 +44,28 @@ where
         }
     }
 
-    pub fn parse(&mut self) -> Result<Program, ParserError> {
+    pub fn parse(&mut self) -> Result<Program, Vec<ParserError>> {
         let mut statements = vec![];
+        let mut errors = Vec::new();
+
         while self.token_stream.has_next() {
-            let stmt = self.parse_statement()?;
-            statements.push(stmt);
+            if !errors.is_empty() {
+                self.attributes.clear();
+            }
+
+            match self.parse_statement() {
+                Ok(stmt) => statements.push(stmt),
+                Err(parser_error) => {
+                    errors.push(parser_error);
+                    self.synchronize();
+                }
+            }
         }
-        Ok(Program(statements))
+
+        if errors.is_empty() {
+            Ok(Program(statements))
+        } else {
+            Err(errors)
+        }
     }
 }

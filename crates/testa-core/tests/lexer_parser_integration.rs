@@ -39,7 +39,7 @@ fn parse_tagged_template() {
             assert!(body.is_empty());
             assert!(parent_name.is_none());
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -70,7 +70,7 @@ fn parse_tagged_template_field() {
                 _ => panic!("Expected Type expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -95,7 +95,7 @@ fn parse_empty_template() {
             assert!(body.is_empty());
             assert!(parent_name.is_none());
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -129,7 +129,7 @@ fn parse_single_field_template() {
                 _ => panic!("Expected Type expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -176,7 +176,7 @@ fn parse_template() {
                 _ => panic!("Expected Type expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -220,7 +220,7 @@ fn parse_anonymus_generate() {
                 _ => panic!("Expected IntLiteral"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -245,7 +245,7 @@ fn parse_generate() {
                 _ => panic!("Expected IntLiteral"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -305,7 +305,7 @@ fn parse_weighted_variant_enum() {
                 None => panic!("Expected weight"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -327,7 +327,7 @@ fn parse_empty_enum() {
             assert!(variants.is_empty());
             assert!(attributes.is_empty());
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -351,7 +351,7 @@ fn parse_single_variant_enum() {
             assert_eq!(variants[0].name, "User");
             assert!(variants[0].weight.is_none());
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -396,7 +396,7 @@ fn parse_list_type() {
                 _ => panic!("Expected Type expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -450,7 +450,7 @@ fn parse_list_expression() {
                 _ => panic!("Expected List expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -540,7 +540,7 @@ fn parse_extended_type() {
                 _ => panic!("Expected Type expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -568,7 +568,7 @@ fn parse_enum() {
             assert_eq!(variants[2].name, "Moderator");
             assert!(variants[2].weight.is_none());
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -619,7 +619,7 @@ fn parse_infix_expression() {
                 _ => panic!("Expected Infix expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -664,7 +664,7 @@ fn parse_grouped_expression() {
                 _ => panic!("Expected Infix expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -673,14 +673,14 @@ fn parse_missing_paren_expression() {
     let mut parser = create_parser("(2 << 3 & 5 >> 1;");
     match parser.parse() {
         Ok(_) => panic!("Program should have returned err."),
-        Err(err) => match err {
+        Err(err) => match &err[0] {
             ParserError::Expected {
                 expected,
                 got,
                 span: _,
             } => {
-                assert_eq!(expected, ")".to_string());
-                assert_eq!(got, ";".to_string())
+                assert_eq!(*expected, ")".to_string());
+                assert_eq!(*got, ";".to_string())
             }
             _ => panic!("Program should have returned expected error"),
         },
@@ -728,7 +728,7 @@ fn parse_prefix_expression() {
                 _ => panic!("Expected Prefix expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -746,7 +746,7 @@ fn parse_directive() {
             assert_eq!(argument, "csv");
             assert!(options.is_empty());
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -760,7 +760,7 @@ fn parse_output_path() {
             };
             assert_eq!(argument, &PathBuf::from("./example.csv"));
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -796,7 +796,7 @@ fn parse_pattern_dollar_case() {
                 _ => panic!("Expected StringPattern expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -885,7 +885,7 @@ fn parse_string_pattern() {
                 _ => panic!("Expected StringPattern expression"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
@@ -908,14 +908,14 @@ fn parse_directive_options() {
                 _ => panic!("Expected StringLiteral"),
             }
         }
-        Err(err) => handle_error(err),
+        Err(err) => handle_error(&err[0]),
     }
 }
 
 fn expect_missing_paren(parser: &mut Parser<Lexer>) {
     match parser.parse() {
         Ok(_) => panic!("Program should have returned err."),
-        Err(err) => match err {
+        Err(err) => match &err[0] {
             ParserError::UnexpectedEof { .. } => {}
             err => panic!(
                 "Program should have returned unexpected EOF instead of {:?}",
@@ -925,7 +925,7 @@ fn expect_missing_paren(parser: &mut Parser<Lexer>) {
     }
 }
 
-fn handle_error(error: ParserError) {
+fn handle_error(error: &ParserError) {
     match error {
         ParserError::Expected {
             span,

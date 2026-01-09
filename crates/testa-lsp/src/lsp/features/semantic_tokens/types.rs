@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use testa_core::utils::Span;
 
 #[derive(Debug, Clone)]
