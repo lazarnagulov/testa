@@ -1,12 +1,7 @@
-mod backend;
-mod document;
-mod language_server;
-mod semantic_token;
-mod semantic_token_builder;
-
+mod lsp;
 use tower_lsp::{LspService, Server};
 
-use crate::backend::Backend;
+use crate::lsp::backend::Backend;
 
 #[tokio::main]
 async fn main() {

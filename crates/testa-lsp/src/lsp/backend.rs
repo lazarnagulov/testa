@@ -1,7 +1,5 @@
-use std::time::Duration;
-
-use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{TextDocumentSyncCapability, TextDocumentSyncKind};
+use tower_lsp::{Client, jsonrpc::Result};
 use tower_lsp::{
     LanguageServer,
     lsp_types::{
@@ -11,7 +9,22 @@ use tower_lsp::{
     },
 };
 
-use crate::backend::Backend;
+use crate::lsp::workspace::Workspace;
+
+#[derive(Debug)]
+pub struct Backend {
+    pub client: Client,
+    pub workspace: Workspace,
+}
+
+impl Backend {
+    pub fn new(client: Client) -> Self {
+        Self {
+            client,
+            workspace: Workspace::new(),
+        }
+    }
+}
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
@@ -28,29 +41,31 @@ impl LanguageServer for Backend {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        self.client
-            .log_message(
-                MessageType::INFO,
-                format!("Document opened: {}", params.text_document.uri),
+        let diagnostics = self
+            .workspace
+            .open(
+                params.text_document.uri.clone(),
+                params.text_document.text.clone(),
+                params.text_document.version,
             )
             .await;
-
-        self.update_document(
-            params.text_document.uri,
-            params.text_document.text,
-            params.text_document.version,
-        )
-        .await;
+        self.client
+            .publish_diagnostics(params.text_document.uri, diagnostics, None)
+            .await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        self.update_document(
-            params.text_document.uri,
-            params.content_changes[0].text.clone(),
-            params.text_document.version,
-        )
-        .await;
+        let diagnostics = self
+            .workspace
+            .change(
+                params.text_document.uri.clone(),
+                params.content_changes[0].text.clone(),
+                params.text_document.version,
+            )
+            .await;
+        self.client
+            .publish_diagnostics(params.text_document.uri, diagnostics, None)
+            .await;
     }
 
     async fn semantic_tokens_full(

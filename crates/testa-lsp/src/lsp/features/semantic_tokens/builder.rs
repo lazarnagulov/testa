@@ -5,7 +5,8 @@ use testa_core::{
 };
 use tower_lsp::lsp_types::SemanticToken;
 
-use crate::semantic_token::{MODIFIER_DECLARATION, RawToken, TokenType};
+use crate::lsp::features::semantic_tokens::types::{MODIFIER_DECLARATION, RawToken, TokenType};
+
 
 pub struct SemanticTokenBuilder {
     tokens: Vec<RawToken>,
