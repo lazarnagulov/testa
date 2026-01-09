@@ -8,5 +8,3 @@ type IntTensor = [IntMatrix][count=1..=5];
 @generate _ [10] {
     int_tensor = IntTensor;
 }
-
-

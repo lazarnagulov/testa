@@ -22,7 +22,7 @@ impl Location {
 
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}:{}", self.line, self.column, self.offset)
+        write!(f, "{}:{}", self.line, self.column)
     }
 }
 
@@ -96,12 +96,12 @@ impl Span {
     pub fn to_lsp_range(&self) -> lsp_types::Range {
         lsp_types::Range {
             start: lsp_types::Position {
-                line: self.start.line,
-                character: self.start.column,
+                line: self.start.line - 1,
+                character: self.start.column - 1,
             },
             end: lsp_types::Position {
-                line: self.end.line,
-                character: self.end.column,
+                line: self.end.line - 1,
+                character: self.end.column - 1,
             },
         }
     }
@@ -122,6 +122,16 @@ impl Span {
 
 impl fmt::Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.start, self.end)
+        if self.start.line == self.end.line {
+            write!(
+                f,
+                "{}:{}-{}",
+                self.start.line,
+                self.start.column,
+                self.end.column
+            )
+        } else {
+            write!(f, "{}-{}", self.start, self.end)
+        }
     }
 }
