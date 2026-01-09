@@ -126,9 +126,7 @@ impl fmt::Display for Span {
             write!(
                 f,
                 "{}:{}-{}",
-                self.start.line,
-                self.start.column,
-                self.end.column
+                self.start.line, self.start.column, self.end.column
             )
         } else {
             write!(f, "{}-{}", self.start, self.end)
