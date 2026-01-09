@@ -6,8 +6,7 @@ use tower_lsp::{
     LanguageServer,
     lsp_types::{
         DidChangeTextDocumentParams, DidOpenTextDocumentParams, InitializeParams, InitializeResult,
-        InitializedParams, MessageType,
-        SemanticTokensParams, SemanticTokensResult,
+        InitializedParams, MessageType, SemanticTokensParams, SemanticTokensResult,
         ServerCapabilities,
     },
 };
@@ -20,7 +19,7 @@ impl LanguageServer for Backend {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL
+                    TextDocumentSyncKind::FULL,
                 )),
                 ..Default::default()
             },

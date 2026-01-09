@@ -1,5 +1,7 @@
 use std::fmt;
 
+use lsp_types::{DiagnosticSeverity, NumberOrString};
+
 use crate::utils::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -167,6 +169,21 @@ impl Diagnostic {
                 .map(|h| format!("\n  hint: {}", h))
                 .unwrap_or_default()
         )
+    }
+
+    pub fn to_lsp_diagnostics(&self) -> lsp_types::Diagnostic {
+        lsp_types::Diagnostic {
+            range: self.span.to_lsp_range(),
+            severity: Some(match self.severity {
+                Severity::Error => DiagnosticSeverity::ERROR,
+                Severity::Warning => DiagnosticSeverity::WARNING,
+                Severity::Info => DiagnosticSeverity::INFORMATION,
+                Severity::Hint => DiagnosticSeverity::HINT,
+            }),
+            message: self.message.clone(),
+            code: self.code.map(|c| NumberOrString::String(c.to_string())),
+            ..Default::default()
+        }
     }
 }
 

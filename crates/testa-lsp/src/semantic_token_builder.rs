@@ -1,3 +1,4 @@
+#![allow(unused)]
 use testa_core::{
     ast::{Attribute, Variant, visitor::Visitor},
     utils::Span,

@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use testa_core::analyser::symbol_table::SymbolTable;
 use testa_core::ast::Program;
 use testa_core::diagnostics::Diagnostic;
