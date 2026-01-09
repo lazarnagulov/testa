@@ -6,8 +6,10 @@ use crate::cli::Cli;
 
 // TODO: think about using library for logging (https://docs.rs/fern/latest/fern/)
 fn main() {
-    if let Err(err) = Cli::run() {
-        eprintln!("{}", err);
+    if let Err(errors) = Cli::run() {
+        for error in errors {
+            eprintln!("{}", error.format_cli())
+        }
         std::process::exit(1);
     }
 }

@@ -1,11 +1,11 @@
-use std::{error::Error, path::PathBuf};
+use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use testa_core::diagnostics::Diagnostic;
 use testa_interpreter::evaluator::context::OutputFormat;
 
 use crate::commands::{
     check::check_command, generate::generate_command, info::info_command, init::init_command,
-    lsp::lsp_command,
 };
 
 #[derive(Parser)]
@@ -18,20 +18,15 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn run() -> Result<(), Box<dyn Error>> {
-        let cli = Cli::try_parse()?;
+    pub fn run() -> Result<(), Vec<Diagnostic>> {
+        let cli = Cli::try_parse().expect("Failed to parse CLI arugments");
         match cli.command {
-            Command::Generate { .. } => generate_command(cli.command.try_into()?),
+            Command::Generate { .. } => generate_command(cli.command.try_into().unwrap()),
             Command::Check {
                 files,
                 syntax_only,
                 warnings,
             } => check_command(files, syntax_only, warnings),
-            Command::Lsp {
-                stdio,
-                port,
-                log_file,
-            } => lsp_command(stdio, port, log_file),
             Command::Init {
                 directory,
                 name,
@@ -41,6 +36,7 @@ impl Cli {
                 info_command(extended);
                 Ok(())
             }
+            _ => todo!(),
         }
     }
 }

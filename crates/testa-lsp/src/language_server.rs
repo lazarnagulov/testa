@@ -1,17 +1,18 @@
+use std::time::Duration;
+
 use tower_lsp::jsonrpc::Result;
+use tower_lsp::lsp_types::{TextDocumentSyncCapability, TextDocumentSyncKind};
 use tower_lsp::{
     LanguageServer,
     lsp_types::{
         DidChangeTextDocumentParams, DidOpenTextDocumentParams, InitializeParams, InitializeResult,
-        InitializedParams, MessageType, SemanticTokenModifier, SemanticTokenType,
-        SemanticTokensFullOptions, SemanticTokensLegend, SemanticTokensOptions,
-        SemanticTokensParams, SemanticTokensResult, SemanticTokensServerCapabilities,
-        ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-        WorkDoneProgressOptions,
+        InitializedParams, MessageType,
+        SemanticTokensParams, SemanticTokensResult,
+        ServerCapabilities,
     },
 };
 
-use crate::Backend;
+use crate::backend::Backend;
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
@@ -19,38 +20,8 @@ impl LanguageServer for Backend {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL,
+                    TextDocumentSyncKind::FULL
                 )),
-                semantic_tokens_provider: Some(
-                    SemanticTokensServerCapabilities::SemanticTokensOptions(
-                        SemanticTokensOptions {
-                            work_done_progress_options: WorkDoneProgressOptions::default(),
-                            legend: SemanticTokensLegend {
-                                token_types: vec![
-                                    SemanticTokenType::KEYWORD,
-                                    SemanticTokenType::TYPE,
-                                    SemanticTokenType::ENUM,
-                                    SemanticTokenType::ENUM_MEMBER,
-                                    SemanticTokenType::PROPERTY,
-                                    SemanticTokenType::STRING,
-                                    SemanticTokenType::NUMBER,
-                                    SemanticTokenType::OPERATOR,
-                                    SemanticTokenType::COMMENT,
-                                    SemanticTokenType::MACRO,
-                                    SemanticTokenType::DECORATOR,
-                                ],
-                                token_modifiers: vec![
-                                    SemanticTokenModifier::DECLARATION,
-                                    SemanticTokenModifier::DEFINITION,
-                                    SemanticTokenModifier::READONLY,
-                                    SemanticTokenModifier::DEPRECATED,
-                                ],
-                            },
-                            range: Some(true),
-                            full: Some(SemanticTokensFullOptions::Bool(true)),
-                        },
-                    ),
-                ),
                 ..Default::default()
             },
             ..Default::default()
@@ -74,13 +45,13 @@ impl LanguageServer for Backend {
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        let uri = params.text_document.uri.to_string();
-        let text = params.content_changes[0].text.clone();
-
-        if let Some(doc) = self.documents.write().await.get_mut(&uri) {
-            doc.text = text;
-            doc.version = params.text_document.version;
-        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        self.update_document(
+            params.text_document.uri,
+            params.content_changes[0].text.clone(),
+            params.text_document.version,
+        )
+        .await;
     }
 
     async fn semantic_tokens_full(

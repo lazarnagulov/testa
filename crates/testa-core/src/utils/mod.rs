@@ -92,6 +92,32 @@ impl Span {
             end,
         }
     }
+
+    pub fn to_lsp_range(&self) -> lsp_types::Range {
+        lsp_types::Range {
+            start: lsp_types::Position {
+                line: self.start.line,
+                character: self.start.column,
+            },
+            end: lsp_types::Position {
+                line: self.end.line,
+                character: self.end.column,
+            },
+        }
+    }
+
+    pub fn contains_position(&self, line: u32, column: u32) -> bool {
+        if line < self.start.line || line > self.end.line {
+            return false;
+        }
+        if line == self.start.line && column < self.start.column {
+            return false;
+        }
+        if line == self.end.line && column > self.end.column {
+            return false;
+        }
+        true
+    }
 }
 
 impl fmt::Display for Span {

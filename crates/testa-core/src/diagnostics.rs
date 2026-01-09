@@ -1,6 +1,8 @@
+use std::fmt;
+
 use crate::utils::Span;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub span: Span,
     pub severity: Severity,
@@ -22,6 +24,7 @@ pub enum DiagnosticCode {
     UnexpectedToken,
     UnexpectedCharacter,
     ExpectedToken,
+    IOError,
 
     InvalidBuiltIn,
     InvalidDirective,
@@ -62,6 +65,54 @@ pub enum DiagnosticCode {
     UnknownIdentifier,
     UnknownParentTemplate,
     InheritanceCycle,
+}
+
+impl fmt::Display for DiagnosticCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            DiagnosticCode::UnexpectedToken => "unexpected token",
+            DiagnosticCode::UnexpectedCharacter => "unexpected character",
+            DiagnosticCode::ExpectedToken => "expected token",
+            DiagnosticCode::InvalidBuiltIn => "invalid built-in",
+            DiagnosticCode::InvalidDirective => "invalid directive",
+            DiagnosticCode::InvalidNumberLiteral => "invalid number literal",
+            DiagnosticCode::UnexpectedEof => "unexpected end of file",
+            DiagnosticCode::UnsupportedPrefixOperator => "unsupported prefix operator",
+            DiagnosticCode::UnsupportedInfixOperand => "unsupported infix operand",
+            DiagnosticCode::DivisionByZero => "division by zero",
+            DiagnosticCode::NotDefined => "not defined",
+            DiagnosticCode::UncompatibleConstraint => "incompatible constraint",
+            DiagnosticCode::InvalidTarget => "invalid target",
+            DiagnosticCode::FileError => "file error",
+            DiagnosticCode::MiscellaneousError => "miscellaneous error",
+            DiagnosticCode::InvalidStringPattern => "invalid string pattern",
+            DiagnosticCode::UndefinedType => "undefined type",
+            DiagnosticCode::SyntaxError => "syntax error",
+            DiagnosticCode::UndefinedConstraint => "undefined constraint",
+            DiagnosticCode::UndefinedTemplate => "undefined template",
+            DiagnosticCode::DuplicateDefinition => "duplicate definition",
+            DiagnosticCode::TypeMismatch => "type mismatch",
+            DiagnosticCode::InvalidAttribute => "invalid attribute",
+            DiagnosticCode::UnusedType => "unused type",
+            DiagnosticCode::UnusedTemplate => "unused template",
+            DiagnosticCode::DuplicateDeclaration => "duplicate declaration",
+            DiagnosticCode::InvalidParent => "invalid parent",
+            DiagnosticCode::EmptyEnum => "empty enum",
+            DiagnosticCode::DuplicateVariant => "duplicate enum variant",
+            DiagnosticCode::InvalidContext => "invalid context",
+            DiagnosticCode::UnknownType => "unknown type",
+            DiagnosticCode::UnknownTemplate => "unknown template",
+            DiagnosticCode::UnknownEnum => "unknown enum",
+            DiagnosticCode::UnknownEnumVariant => "unknown enum variant",
+            DiagnosticCode::UnknownField => "unknown field",
+            DiagnosticCode::UnknownIdentifier => "unknown identifier",
+            DiagnosticCode::UnknownParentTemplate => "unknown parent template",
+            DiagnosticCode::InheritanceCycle => "inheritance cycle detected",
+            DiagnosticCode::IOError => "failed to read file",
+        };
+
+        write!(f, "{message}")
+    }
 }
 
 impl Diagnostic {

@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::{error::Error, fs::File, path::PathBuf};
+use testa_core::diagnostics::Diagnostic;
 use testa_generation::generator::FileGenerator;
 use testa_generation::generator::create_file_generator;
 use testa_interpreter::evaluator::context::GenerateOptions;
@@ -32,12 +33,12 @@ impl TryFrom<Command> for GenerateOptions {
     }
 }
 
-pub fn generate_command(options: GenerateOptions) -> Result<(), Box<dyn Error>> {
+pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>> {
     let (program, symbol_table) = compile_file(&options.input, false)?;
     let context = Context::new(symbol_table);
     let mut evaluator = Evaluator::new(context, options.seed);
 
-    evaluator.evaluate_directives(&program)?;
+    evaluator.evaluate_directives(&program).unwrap();
     let (format, config, path) = evaluator.output_config();
 
     let file_generator = create_file_generator(format, config);
@@ -46,8 +47,8 @@ pub fn generate_command(options: GenerateOptions) -> Result<(), Box<dyn Error>> 
         .unwrap_or_else(|| PathBuf::from(format!("output.{}", format.extension())));
 
     let mut record_generator = RecordGenerator::new(&mut evaluator);
-    record_generator.generate_infos(&program)?;
-    write_records_streaming(record_generator, file_generator, output_path)?;
+    record_generator.generate_infos(&program).unwrap();
+    write_records_streaming(record_generator, file_generator, output_path).unwrap();
 
     Ok(())
 }
