@@ -59,7 +59,7 @@ impl<'a> Visitor for TypeChecker<'a> {
         _attributes: &[Attribute],
         _span: Span,
     ) {
-       for variant in variants {
+        for variant in variants {
             self.visit_variant(variant);
         }
     }
@@ -106,6 +106,19 @@ impl<'a> Visitor for TypeChecker<'a> {
             });
         }
 
+        for field in body {
+            walk_field(self, field);
+        }
+    }
+
+    fn visit_template(
+        &mut self,
+        _parent: &Option<String>,
+        _attributes: &[Attribute],
+        _name: &str,
+        body: &[Field],
+        _span: Span,
+    ) {
         for field in body {
             walk_field(self, field);
         }

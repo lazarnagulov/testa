@@ -1,5 +1,8 @@
 use crate::{
-    analyser::{error::SemanticError, symbol_table::SymbolTable},
+    analyser::{
+        error::SemanticError,
+        symbol_table::{SymbolTable, symbol::SymbolKind},
+    },
     ast::{
         Attribute, Expression, ExpressionKind, Field, Program,
         visitor::{Visitor, walk_expression, walk_field, walk_template},
@@ -59,11 +62,21 @@ impl<'a> Visitor for ReferenceChecker<'a> {
         span: Span,
     ) {
         if let Some(parent) = parent {
-            if self.symbol_table.lookup(parent).is_none() {
-                self.errors.push(SemanticError::UnknownParentTemplate {
-                    name: parent.clone(),
-                    span,
-                });
+            match self.symbol_table.lookup(parent) {
+                Some(template) => match &template.kind {
+                    SymbolKind::Template { .. } => {}
+                    kind => self.errors.push(SemanticError::TypeMismatch {
+                        expected: "template".to_string(),
+                        found: kind.to_string(),
+                        span,
+                    }),
+                },
+                None => {
+                    self.errors.push(SemanticError::UnknownParentTemplate {
+                        name: parent.clone(),
+                        span,
+                    });
+                }
             }
         }
 
