@@ -52,6 +52,18 @@ impl<'a> Visitor for TypeChecker<'a> {
         walk_field(self, field);
     }
 
+    fn visit_enum(
+        &mut self,
+        _name: &str,
+        variants: &[Variant],
+        _attributes: &[Attribute],
+        _span: Span,
+    ) {
+       for variant in variants {
+            self.visit_variant(variant);
+        }
+    }
+
     fn visit_type_decl(
         &mut self,
         _name: &str,
@@ -69,7 +81,8 @@ impl<'a> Visitor for TypeChecker<'a> {
         if let Some(weight) = &variant.weight {
             let weight_type = self.infer_type(weight);
             if !matches!(weight_type, Type::Int) && !weight_type.is_unknown() {
-                self.errors.push(SemanticError::InvalidWeightType {
+                self.errors.push(SemanticError::TypeMismatch {
+                    expected: "int".to_string(),
                     found: weight_type.display(),
                     span: variant.span,
                 });

@@ -97,11 +97,6 @@ pub enum SemanticError {
         found: String,
         span: Span,
     },
-
-    InvalidWeightType {
-        found: String,
-        span: Span,
-    },
 }
 
 impl SemanticError {
@@ -262,16 +257,6 @@ impl SemanticError {
             )
             .with_code(DiagnosticCode::InvalidConstraintValue)
             .with_hint("Adjust the value to satisfy the constraint requirements"),
-
-            SemanticError::InvalidWeightType { found, span } => Diagnostic::error(
-                *span,
-                format!(
-                    "Invalid weight type: expected numeric type, found '{}'",
-                    found
-                ),
-            )
-            .with_code(DiagnosticCode::InvalidWeightType)
-            .with_hint("Weight values must be numeric"),
         }
     }
 }

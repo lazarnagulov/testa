@@ -84,7 +84,8 @@ impl<'a> TypeChecker<'a> {
             if let Some(weight) = &element.weight {
                 let weight_type = self.infer_type(weight);
                 if !weight_type.is_numeric() && !weight_type.is_unknown() {
-                    self.errors.push(SemanticError::InvalidWeightType {
+                    self.errors.push(SemanticError::TypeMismatch {
+                        expected: "int".to_string(),
                         found: weight_type.display(),
                         span: weight.span,
                     });

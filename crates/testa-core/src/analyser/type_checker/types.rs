@@ -52,9 +52,7 @@ impl Type {
             DataTypeKind::Float => Type::Float,
             DataTypeKind::Str => Type::Str,
             DataTypeKind::Boolean => Type::Boolean,
-            DataTypeKind::List(inner) => {
-                Type::List(Box::new(Type::from_data_type(inner)))
-            }
+            DataTypeKind::List(inner) => Type::List(Box::new(Type::from_data_type(inner))),
             DataTypeKind::Custom(name) => Type::Custom(name.clone()),
         }
     }
@@ -66,9 +64,8 @@ impl fmt::Display for Type {
     }
 }
 
-
 impl From<&DataType> for Type {
     fn from(value: &DataType) -> Self {
-        Type::from_data_type(value)        
+        Type::from_data_type(value)
     }
 }
