@@ -1,10 +1,8 @@
 use serde::Serialize;
 use serde_json::{Serializer, ser::PrettyFormatter};
-use testa_interpreter::{generator::Record, object::Object};
-
-use crate::{
-    error::GeneratorError,
-    generator::{FileConfig, FileGenerator},
+use testa_interpreter::{
+    generator::{FileConfig, FileGenerator, Record, error::GeneratorError},
+    object::Object,
 };
 
 #[derive(Debug)]

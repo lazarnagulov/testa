@@ -1,4 +1,6 @@
 use indexmap::{IndexMap, IndexSet};
+use std::io::Write;
+use std::{collections::HashMap, fmt, fs::File, path::PathBuf};
 
 use testa_core::{
     analyser::symbol_table::symbol::SymbolKind,
@@ -13,12 +15,28 @@ use crate::{
         error::EvalError,
         expression::evaluate_expression,
     },
+    generator::error::GeneratorError,
     object::Object,
 };
 
+pub mod error;
 pub mod record_iterator;
 
 pub type Record = IndexMap<String, Object>;
+pub type FileConfig = HashMap<String, Object>;
+
+pub trait FileGenerator: fmt::Debug {
+    fn generate(&self, record: &Record) -> Result<String, GeneratorError>;
+    fn extension(&self) -> &'static str;
+    fn generate_header(&self, fields: &[String]) -> Option<String>;
+    fn generate_footer(&self) -> Option<String>;
+    fn needs_separator(&self) -> bool {
+        false
+    }
+    fn separator(&self) -> &str {
+        ""
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct GenerateInfo {
@@ -216,5 +234,55 @@ impl<'a> RecordGenerator<'a> {
         }
 
         Ok(record)
+    }
+
+    pub fn write_records(
+        self,
+        file_generator: Box<dyn FileGenerator>,
+        path: PathBuf,
+    ) -> Result<(), GeneratorError> {
+        let mut file = File::create(&path)
+            .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        let field_names = self
+            .get_field_names()
+            .map_err(|err| GeneratorError::EvaluationError(err.to_string()))?;
+
+        if let Some(header) = file_generator.generate_header(&field_names) {
+            writeln!(file, "{}", header)
+                .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        }
+
+        let total = self.len();
+        let mut count = 0;
+        let mut first = true;
+
+        for result in self {
+            let record =
+                result.map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+
+            count += 1;
+            if count % 10000 == 0 {
+                println!("Generated {}/{} records...", count, total);
+            }
+
+            if !first && file_generator.needs_separator() {
+                write!(file, "{}", file_generator.separator())
+                    .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+            }
+            first = false;
+
+            let line = file_generator.generate(&record)?;
+            write!(file, "{}", line)
+                .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        }
+
+        if let Some(footer) = file_generator.generate_footer() {
+            writeln!(file, "{}", footer)
+                .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        }
+
+        println!("Generated {} records to {:?}", count, path);
+
+        Ok(())
     }
 }

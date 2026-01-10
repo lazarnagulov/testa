@@ -1,29 +1,11 @@
-use core::fmt;
-use std::collections::HashMap;
-
-use testa_interpreter::{evaluator::context::OutputFormat, generator::Record, object::Object};
-
-use crate::{
-    error::GeneratorError,
-    format::{
-        csv::CsvGenerator, json::JsonGenerator, sql_insert::SqlInsertGenerator, xml::XmlGenerator,
-    },
+use testa_interpreter::{
+    evaluator::context::OutputFormat,
+    generator::{FileConfig, FileGenerator},
 };
 
-pub type FileConfig = HashMap<String, Object>;
-
-pub trait FileGenerator: fmt::Debug {
-    fn generate(&self, record: &Record) -> Result<String, GeneratorError>;
-    fn extension(&self) -> &'static str;
-    fn generate_header(&self, fields: &[String]) -> Option<String>;
-    fn generate_footer(&self) -> Option<String>;
-    fn needs_separator(&self) -> bool {
-        false
-    }
-    fn separator(&self) -> &str {
-        ""
-    }
-}
+use crate::format::{
+    csv::CsvGenerator, json::JsonGenerator, sql_insert::SqlInsertGenerator, xml::XmlGenerator,
+};
 
 pub fn create_file_generator(format: &OutputFormat, config: &FileConfig) -> Box<dyn FileGenerator> {
     match format {

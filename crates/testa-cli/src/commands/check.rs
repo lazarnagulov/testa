@@ -16,5 +16,6 @@ pub fn check_command(
             compile_file(&file, warnings)?;
         }
     }
+    println!("No errors found!");
     Ok(())
 }
