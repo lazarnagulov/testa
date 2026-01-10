@@ -137,6 +137,16 @@ impl Diagnostic {
         }
     }
 
+    pub fn info(span: Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            message: message.into(),
+            severity: Severity::Info,
+            code: None,
+            hint: None,
+        }
+    }
+
     pub fn with_code(mut self, code: DiagnosticCode) -> Self {
         self.code = Some(code);
         self
@@ -164,21 +174,34 @@ impl Diagnostic {
 
         let reset_color = "\x1b[0m";
 
+        let span_part = if self.span != Span::default() {
+            format!(
+                "{}:{}:{}: ",
+                self.span.start.line,
+                self.span.start.column,
+                self.span.start.offset
+            )
+        } else {
+            String::new()
+        };
+
+        let hint_part = self
+            .hint
+            .as_ref()
+            .map(|h| format!("\n  hint: {}", h))
+            .unwrap_or_default();
+
         format!(
-            "{}{}:{}:{}: [{}] {}{}{}",
+            "{}{}[{}] {}{}{}",
             severity_color,
-            self.span.start.line,
-            self.span.start.column,
-            self.span.start.offset,
+            span_part,
             severity_label,
             self.message,
             reset_color,
-            self.hint
-                .as_ref()
-                .map(|h| format!("\n  hint: {}", h))
-                .unwrap_or_default()
+            hint_part
         )
     }
+
 
     pub fn to_lsp_diagnostics(&self) -> lsp_types::Diagnostic {
         lsp_types::Diagnostic {
