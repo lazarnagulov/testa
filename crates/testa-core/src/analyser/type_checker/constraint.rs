@@ -3,7 +3,7 @@ use crate::{
         error::SemanticError,
         type_checker::{TypeChecker, types::Type},
     },
-    ast::{ConstraintKind, DataType},
+    ast::{ConstraintExpression, ConstraintKind, DataType},
     utils::Span,
 };
 
@@ -18,10 +18,11 @@ impl<'a> TypeChecker<'a> {
 
     fn validate_constraint(
         &mut self,
-        constraint: &crate::ast::constraint::ConstraintExpression,
+        constraint: &ConstraintExpression,
         base_type: &Type,
         span: Span,
     ) {
+        // TODO: Validate custom types (extend with syntax)
         match constraint.kind {
             ConstraintKind::Range => {
                 if !base_type.is_numeric() && !base_type.is_unknown() {
@@ -124,7 +125,7 @@ impl<'a> TypeChecker<'a> {
             }
 
             ConstraintKind::Bias => {
-                if !base_type.is_numeric() && !base_type.is_unknown() {
+                if !matches!(base_type, Type::Boolean) && !base_type.is_unknown() {
                     self.errors.push(SemanticError::InvalidConstraintForType {
                         constraint: "bias".to_string(),
                         type_name: base_type.display(),
