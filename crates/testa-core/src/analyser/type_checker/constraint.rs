@@ -22,7 +22,6 @@ impl<'a> TypeChecker<'a> {
         base_type: &Type,
         span: Span,
     ) {
-        // TODO: Validate custom types (extend with syntax)
         match constraint.kind {
             ConstraintKind::Range => {
                 if !base_type.is_numeric() && !base_type.is_unknown() {

@@ -1,7 +1,7 @@
 use crate::{
     analyser::{error::SemanticError, symbol_table::SymbolTable, type_checker::types::Type},
     ast::{
-        Attribute, Expression, ExpressionKind, Field, Program, Variant,
+        Attribute, Expression, Field, Program, Variant,
         visitor::{Visitor, walk_expression, walk_field},
     },
     utils::Span,
@@ -61,19 +61,6 @@ impl<'a> Visitor for TypeChecker<'a> {
     ) {
         for variant in variants {
             self.visit_variant(variant);
-        }
-    }
-
-    fn visit_type_decl(
-        &mut self,
-        _name: &str,
-        data_type: &Expression,
-        _attributes: &[Attribute],
-        _span: Span,
-    ) {
-        if let ExpressionKind::Type(dt) = &data_type.kind {
-            let base_type = Type::from(dt);
-            self.check_constraints(dt, &base_type);
         }
     }
 

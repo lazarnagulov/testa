@@ -7,13 +7,13 @@ use crate::compiler::{compile_file, parse_file};
 pub fn check_command(
     files: Vec<PathBuf>,
     syntax_only: bool,
-    warnings: bool,
+    _warnings: bool,
 ) -> Result<(), Vec<Diagnostic>> {
     for file in files {
         if syntax_only {
             parse_file(&file)?;
         } else {
-            compile_file(&file, warnings)?;
+            compile_file(&file)?;
         }
     }
     println!("No errors found!");

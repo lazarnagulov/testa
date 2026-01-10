@@ -195,7 +195,6 @@ fn evaluate_list_with_constraints(
         }
     }
 
-    // Determine final count
     let final_count = if let Some(c) = count {
         c
     } else {

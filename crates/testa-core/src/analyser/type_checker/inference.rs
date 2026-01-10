@@ -18,7 +18,10 @@ impl<'a> TypeChecker<'a> {
             ExpressionKind::Identifier(name) => self.get_identifier_type(name),
             ExpressionKind::List(elements) => self.infer_list_type(elements),
             ExpressionKind::Type(data_type) => {
-                let base_type = Type::from(data_type);
+                let base_type = match Type::from(data_type) {
+                    Type::Custom(type_name) => self.resolve_custom_type(&type_name),
+                    base_type => base_type
+                };
                 self.check_constraints(data_type, &base_type);
                 base_type
             }
@@ -38,6 +41,29 @@ impl<'a> TypeChecker<'a> {
                 // Functions not yet implemented
                 Type::Unknown
             }
+        }
+    }
+
+    pub(crate) fn resolve_custom_type(&self, type_name: &str) -> Type {
+        if let Some(symbol) = self.symbol_table.lookup(type_name) {
+            match &symbol.kind {
+                crate::analyser::symbol_table::symbol::SymbolKind::TypeAlias {
+                    data_type,
+                    ..
+                } => {
+                    if let ExpressionKind::Type(dt) = &data_type.kind {
+                        Type::from(dt)
+                    } else {
+                        Type::Unknown
+                    }
+                }
+                crate::analyser::symbol_table::symbol::SymbolKind::Enum { .. } => {
+                    Type::Custom(type_name.to_string())
+                }
+                _ => Type::Unknown,
+            }
+        } else {
+            Type::Unknown
         }
     }
 
