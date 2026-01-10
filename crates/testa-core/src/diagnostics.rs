@@ -32,7 +32,11 @@ pub enum DiagnosticCode {
     InvalidDirective,
     InvalidNumberLiteral,
     UnexpectedEof,
-
+    InvalidBinaryOperator,
+    InvalidUnaryOperator,
+    InvalidConstraintForType,
+    InvalidConstraintValue,
+    InvalidWeightType,
     UnsupportedPrefixOperator,
     UnsupportedInfixOperand,
     DivisionByZero,
@@ -111,6 +115,11 @@ impl fmt::Display for DiagnosticCode {
             DiagnosticCode::UnknownParentTemplate => "unknown parent template",
             DiagnosticCode::InheritanceCycle => "inheritance cycle detected",
             DiagnosticCode::IOError => "failed to read file",
+            DiagnosticCode::InvalidBinaryOperator => "invalid binary operator",
+            DiagnosticCode::InvalidUnaryOperator => "invalid unary operator",
+            DiagnosticCode::InvalidConstraintForType => "invalid constraint for type",
+            DiagnosticCode::InvalidConstraintValue => "invalid constraint value",
+            DiagnosticCode::InvalidWeightType => "invalid weight type",
         };
 
         write!(f, "{message}")

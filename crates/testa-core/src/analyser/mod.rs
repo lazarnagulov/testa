@@ -1,6 +1,7 @@
 pub mod error;
 pub mod reference_checker;
 pub mod symbol_table;
+pub mod type_checker;
 
 use std::collections::HashSet;
 
