@@ -19,18 +19,15 @@ impl<'a> TypeChecker<'a> {
             ExpressionKind::List(elements) => self.infer_list_type(elements),
             ExpressionKind::Type(data_type) => {
                 let base_type = match Type::from(data_type) {
-                    Type::Custom(type_name) => {
-                        match self.type_cache.get(&type_name) {
-                            Some(custom_type) => custom_type.clone(),
-                            None => {
-                                let custom_type = self.resolve_custom_type(&type_name);
-                                self.type_cache.insert(type_name, custom_type.clone());
-                                custom_type
-                            },
+                    Type::Custom(type_name) => match self.type_cache.get(&type_name) {
+                        Some(custom_type) => custom_type.clone(),
+                        None => {
+                            let custom_type = self.resolve_custom_type(&type_name);
+                            self.type_cache.insert(type_name, custom_type.clone());
+                            custom_type
                         }
-
-                    }
-                    base_type => base_type
+                    },
+                    base_type => base_type,
                 };
                 self.check_constraints(data_type, &base_type);
                 base_type
@@ -57,22 +54,19 @@ impl<'a> TypeChecker<'a> {
     pub(crate) fn resolve_custom_type(&self, type_name: &str) -> Type {
         if let Some(symbol) = self.symbol_table.lookup(type_name) {
             match &symbol.kind {
-                SymbolKind::TypeAlias {
-                    data_type,
-                    ..
-                } => {
+                SymbolKind::TypeAlias { data_type, .. } => {
                     if let ExpressionKind::Type(dt) = &data_type.kind {
                         match &dt.kind {
-                            DataTypeKind::Custom(custome_type) => self.resolve_custom_type(custome_type),
-                            _ => Type::from(dt)
+                            DataTypeKind::Custom(custome_type) => {
+                                self.resolve_custom_type(custome_type)
+                            }
+                            _ => Type::from(dt),
                         }
                     } else {
                         Type::Unknown
                     }
                 }
-                SymbolKind::Enum { .. } => {
-                    Type::Custom(type_name.to_string())
-                }
+                SymbolKind::Enum { .. } => Type::Custom(type_name.to_string()),
                 _ => Type::Unknown,
             }
         } else {

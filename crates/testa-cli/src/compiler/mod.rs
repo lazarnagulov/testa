@@ -25,9 +25,7 @@ pub fn parse_file(path: &PathBuf) -> Result<Program, Vec<Diagnostic>> {
     }
 }
 
-pub fn compile_file(
-    path: &PathBuf,
-) -> Result<(Program, SymbolTable), Vec<Diagnostic>> {
+pub fn compile_file(path: &PathBuf) -> Result<(Program, SymbolTable), Vec<Diagnostic>> {
     let program = parse_file(path)?;
     let AnalysisResult {
         diagnostics,

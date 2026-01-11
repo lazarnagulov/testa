@@ -19,7 +19,8 @@ pub struct Cli {
 
 impl Cli {
     pub fn run() -> Result<(), Vec<Diagnostic>> {
-        let cli = Cli::try_parse().map_err(|err| vec![Diagnostic::info(Span::default(), err.to_string())])?;
+        let cli = Cli::try_parse()
+            .map_err(|err| vec![Diagnostic::info(Span::default(), err.to_string())])?;
         match cli.command {
             Command::Generate { .. } => generate_command(
                 cli.command

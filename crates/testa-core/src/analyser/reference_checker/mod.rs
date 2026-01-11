@@ -4,7 +4,7 @@ use crate::{
         symbol_table::{SymbolTable, symbol::SymbolKind},
     },
     ast::{
-        Attribute, Expression, ExpressionKind, Field, Program,
+        Attribute, DataType, DataTypeKind, Expression, ExpressionKind, Field, Program,
         visitor::{Visitor, walk_expression, walk_field, walk_template},
     },
     utils::Span,
@@ -41,12 +41,23 @@ impl<'a> ReferenceChecker<'a> {
 impl<'a> Visitor for ReferenceChecker<'a> {
     fn visit_expression(&mut self, expression: &Expression) {
         match &expression.kind {
-            ExpressionKind::Identifier(name) => {
-                if self.symbol_table.lookup(name).is_none() {
-                    self.errors.push(SemanticError::UnknownIdentifier {
-                        name: name.clone(),
-                        span: expression.span,
-                    });
+            ExpressionKind::Identifier(name) if self.symbol_table.lookup(name).is_none() => {
+                self.errors.push(SemanticError::UnknownIdentifier {
+                    name: name.clone(),
+                    span: expression.span,
+                });
+            }
+            ExpressionKind::Type(DataType {
+                kind: DataTypeKind::List(list_type),
+                ..
+            }) => {
+                if let DataTypeKind::Custom(custom_type) = &list_type.kind {
+                    if self.symbol_table.lookup(custom_type).is_none() {
+                        self.errors.push(SemanticError::UnknownIdentifier {
+                            name: custom_type.clone(),
+                            span: list_type.span,
+                        });
+                    }
                 }
             }
             _ => walk_expression(self, expression),

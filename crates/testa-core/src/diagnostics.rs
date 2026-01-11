@@ -177,9 +177,7 @@ impl Diagnostic {
         let span_part = if self.span != Span::default() {
             format!(
                 "{}:{}:{}: ",
-                self.span.start.line,
-                self.span.start.column,
-                self.span.start.offset
+                self.span.start.line, self.span.start.column, self.span.start.offset
             )
         } else {
             String::new()
@@ -193,15 +191,9 @@ impl Diagnostic {
 
         format!(
             "{}{}[{}] {}{}{}",
-            severity_color,
-            span_part,
-            severity_label,
-            self.message,
-            reset_color,
-            hint_part
+            severity_color, span_part, severity_label, self.message, reset_color, hint_part
         )
     }
-
 
     pub fn to_lsp_diagnostics(&self) -> lsp_types::Diagnostic {
         lsp_types::Diagnostic {
