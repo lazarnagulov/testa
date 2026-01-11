@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     analyser::{error::SemanticError, symbol_table::SymbolTable, type_checker::types::Type},
     ast::{
@@ -17,8 +19,7 @@ mod prefix;
 pub struct TypeChecker<'a> {
     symbol_table: &'a SymbolTable,
     errors: Vec<SemanticError>,
-    // TODO: Add caching later
-    // type_cache: HashMap<String, Type>,
+    type_cache: HashMap<String, Type>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -26,7 +27,7 @@ impl<'a> TypeChecker<'a> {
         Self {
             symbol_table,
             errors: Vec::new(),
-            // type_cache: HashMap::new(),
+            type_cache: HashMap::new(),
         }
     }
 

@@ -33,7 +33,7 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 let expr_type = self.infer_type(&constraint.expression);
-                if !matches!(expr_type, Type::List(_)) && !expr_type.is_unknown() {
+                if !matches!(expr_type, Type::Range) && !expr_type.is_unknown() {
                     self.errors.push(SemanticError::InvalidConstraintValue {
                         constraint: "range".to_string(),
                         expected: "range expression (e.g., 1..10)".to_string(),
@@ -73,10 +73,10 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 let expr_type = self.infer_type(&constraint.expression);
-                if !matches!(expr_type, Type::Int | Type::List(_)) && !expr_type.is_unknown() {
+                if !matches!(expr_type, Type::Int) && !expr_type.is_unknown() {
                     self.errors.push(SemanticError::InvalidConstraintValue {
                         constraint: "length".to_string(),
-                        expected: "int or range".to_string(),
+                        expected: "int".to_string(),
                         found: expr_type.display(),
                         span: constraint.span,
                     });
@@ -93,10 +93,10 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 let expr_type = self.infer_type(&constraint.expression);
-                if !matches!(expr_type, Type::Int) && !expr_type.is_unknown() {
+                if !matches!(expr_type, Type::Range | Type::Int) && !expr_type.is_unknown() {
                     self.errors.push(SemanticError::InvalidConstraintValue {
                         constraint: "count".to_string(),
-                        expected: "int".to_string(),
+                        expected: "int value or range expression (e.g., 1..10)".to_string(),
                         found: expr_type.display(),
                         span: constraint.span,
                     });

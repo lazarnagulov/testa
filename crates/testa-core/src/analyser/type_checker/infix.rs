@@ -169,11 +169,7 @@ impl<'a> TypeChecker<'a> {
                     });
                 }
 
-                if left_type == Type::Float || right_type == Type::Float {
-                    Type::List(Box::new(Type::Float))
-                } else {
-                    Type::List(Box::new(Type::Int))
-                }
+                Type::Range
             }
         }
     }
