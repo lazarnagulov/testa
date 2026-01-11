@@ -1,6 +1,7 @@
 pub mod error;
 pub mod reference_checker;
 pub mod symbol_table;
+pub mod type_checker;
 
 use std::collections::HashSet;
 
@@ -10,6 +11,7 @@ use crate::{
         reference_checker::ReferenceChecker,
         result::AnalysisResult,
         symbol_table::{SymbolTable, symbol_table_builder::SymbolTableBuilder},
+        type_checker::TypeChecker,
     },
     ast::{Program, Statement},
     utils::Span,
@@ -50,6 +52,10 @@ impl<'a> SemanticAnalyser<'a> {
         self.check_all_inheritance_cycles(&symbol_table);
 
         if let Err(errs) = ReferenceChecker::new(&symbol_table).check(self.program) {
+            self.errors.extend(errs);
+        }
+
+        if let Err(errs) = TypeChecker::new(&symbol_table).check(self.program) {
             self.errors.extend(errs);
         }
 

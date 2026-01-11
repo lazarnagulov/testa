@@ -4,7 +4,7 @@ pub fn info_command(extended: bool) {
     println!("Authors: {}", env!("CARGO_PKG_AUTHORS"));
 
     if extended {
-        println!("\nSupported formats:\n  - CSV\n");
+        println!("\nSupported formats:\n  - CSV, JSON, SQL Insert, XML\n");
         println!("Features:");
         println!("  - Template-based data generation");
         println!("  - Type constraints and validation");

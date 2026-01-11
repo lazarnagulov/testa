@@ -1,6 +1,7 @@
-use testa_interpreter::{generator::Record, object::Object};
-
-use crate::generator::{FileConfig, FileGenerator};
+use testa_interpreter::{
+    generator::{FileConfig, FileGenerator, Record, error::GeneratorError},
+    object::Object,
+};
 
 #[derive(Debug)]
 pub struct SqlInsertGenerator {
@@ -38,7 +39,7 @@ impl SqlInsertGenerator {
 }
 
 impl FileGenerator for SqlInsertGenerator {
-    fn generate(&self, record: &Record) -> Result<String, crate::error::GeneratorError> {
+    fn generate(&self, record: &Record) -> Result<String, GeneratorError> {
         let columns: Vec<String> = record.keys().cloned().collect();
         let values: Vec<String> = record.values().map(|v| self.escape_sql_value(v)).collect();
 

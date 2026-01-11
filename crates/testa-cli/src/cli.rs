@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use testa_core::diagnostics::Diagnostic;
+use testa_core::{diagnostics::Diagnostic, utils::Span};
 use testa_interpreter::evaluator::context::OutputFormat;
 
 use crate::commands::{
@@ -19,9 +19,14 @@ pub struct Cli {
 
 impl Cli {
     pub fn run() -> Result<(), Vec<Diagnostic>> {
-        let cli = Cli::try_parse().expect("Failed to parse CLI arugments");
+        let cli = Cli::try_parse()
+            .map_err(|err| vec![Diagnostic::info(Span::default(), err.to_string())])?;
         match cli.command {
-            Command::Generate { .. } => generate_command(cli.command.try_into().unwrap()),
+            Command::Generate { .. } => generate_command(
+                cli.command
+                    .try_into()
+                    .map_err(|err| vec![Diagnostic::error(Span::default(), err)])?,
+            ),
             Command::Check {
                 files,
                 syntax_only,

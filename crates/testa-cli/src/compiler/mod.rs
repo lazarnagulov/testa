@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use testa_core::{
     analyser::{SemanticAnalyser, result::AnalysisResult, symbol_table::SymbolTable},
     ast::Program,
-    diagnostics::{Diagnostic, DiagnosticCode, Severity},
+    diagnostics::{Diagnostic, DiagnosticCode},
     lexer::Lexer,
     parser::Parser,
     utils::Span,
@@ -25,21 +25,15 @@ pub fn parse_file(path: &PathBuf) -> Result<Program, Vec<Diagnostic>> {
     }
 }
 
-pub fn compile_file(
-    path: &PathBuf,
-    show_warnings: bool,
-) -> Result<(Program, SymbolTable), Vec<Diagnostic>> {
+pub fn compile_file(path: &PathBuf) -> Result<(Program, SymbolTable), Vec<Diagnostic>> {
     let program = parse_file(path)?;
     let AnalysisResult {
         diagnostics,
         symbol_table,
     } = SemanticAnalyser::new(&program).analyse();
 
-    for diag in &diagnostics {
-        if diag.severity == Severity::Warning && !show_warnings {
-            continue;
-        }
-        eprintln!("{}", diag.format_cli());
+    if !diagnostics.is_empty() {
+        return Err(diagnostics);
     }
 
     Ok((program, symbol_table))

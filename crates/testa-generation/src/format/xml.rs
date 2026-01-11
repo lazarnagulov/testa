@@ -1,6 +1,7 @@
-use testa_interpreter::{generator::Record, object::Object};
-
-use crate::generator::{FileConfig, FileGenerator};
+use testa_interpreter::{
+    generator::{FileConfig, FileGenerator, Record, error::GeneratorError},
+    object::Object,
+};
 
 #[derive(Debug)]
 pub struct XmlGenerator {
@@ -50,7 +51,7 @@ impl XmlGenerator {
 }
 
 impl FileGenerator for XmlGenerator {
-    fn generate(&self, record: &Record) -> Result<String, crate::error::GeneratorError> {
+    fn generate(&self, record: &Record) -> Result<String, GeneratorError> {
         let mut xml = format!("  <{}>", self.record_element);
 
         for (key, value) in record {

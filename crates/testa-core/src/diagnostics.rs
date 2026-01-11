@@ -32,7 +32,11 @@ pub enum DiagnosticCode {
     InvalidDirective,
     InvalidNumberLiteral,
     UnexpectedEof,
-
+    InvalidBinaryOperator,
+    InvalidUnaryOperator,
+    InvalidConstraintForType,
+    InvalidConstraintValue,
+    InvalidWeightType,
     UnsupportedPrefixOperator,
     UnsupportedInfixOperand,
     DivisionByZero,
@@ -111,6 +115,11 @@ impl fmt::Display for DiagnosticCode {
             DiagnosticCode::UnknownParentTemplate => "unknown parent template",
             DiagnosticCode::InheritanceCycle => "inheritance cycle detected",
             DiagnosticCode::IOError => "failed to read file",
+            DiagnosticCode::InvalidBinaryOperator => "invalid binary operator",
+            DiagnosticCode::InvalidUnaryOperator => "invalid unary operator",
+            DiagnosticCode::InvalidConstraintForType => "invalid constraint for type",
+            DiagnosticCode::InvalidConstraintValue => "invalid constraint value",
+            DiagnosticCode::InvalidWeightType => "invalid weight type",
         };
 
         write!(f, "{message}")
@@ -123,6 +132,16 @@ impl Diagnostic {
             span,
             message: message.into(),
             severity: Severity::Error,
+            code: None,
+            hint: None,
+        }
+    }
+
+    pub fn info(span: Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            message: message.into(),
+            severity: Severity::Info,
             code: None,
             hint: None,
         }
@@ -155,19 +174,24 @@ impl Diagnostic {
 
         let reset_color = "\x1b[0m";
 
+        let span_part = if self.span != Span::default() {
+            format!(
+                "{}:{}:{}: ",
+                self.span.start.line, self.span.start.column, self.span.start.offset
+            )
+        } else {
+            String::new()
+        };
+
+        let hint_part = self
+            .hint
+            .as_ref()
+            .map(|h| format!("\n  hint: {}", h))
+            .unwrap_or_default();
+
         format!(
-            "{}{}:{}:{}: [{}] {}{}{}",
-            severity_color,
-            self.span.start.line,
-            self.span.start.column,
-            self.span.start.offset,
-            severity_label,
-            self.message,
-            reset_color,
-            self.hint
-                .as_ref()
-                .map(|h| format!("\n  hint: {}", h))
-                .unwrap_or_default()
+            "{}{}[{}] {}{}{}",
+            severity_color, span_part, severity_label, self.message, reset_color, hint_part
         )
     }
 
