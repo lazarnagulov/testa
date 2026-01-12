@@ -473,7 +473,6 @@ fn test_parse_output_path_directive() {
     assert_eq!(argument, &PathBuf::from("test.csv"));
 }
 
-
 #[test]
 fn test_parse_struct() {
     let name_span = span(0, 1, 1, 5, 1, 6);

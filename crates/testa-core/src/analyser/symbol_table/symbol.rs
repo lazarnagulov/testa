@@ -24,6 +24,9 @@ pub enum SymbolKind {
         parent: Option<String>,
         attributes: Vec<Attribute>,
     },
+    Struct {
+        fields: Vec<String>,
+    },
     Enum {
         variants: Vec<VariantInfo>,
         attributes: Vec<Attribute>,
@@ -64,7 +67,6 @@ impl Display for SymbolKind {
                 }
                 Ok(())
             }
-
             SymbolKind::Enum {
                 variants,
                 attributes,
@@ -75,11 +77,9 @@ impl Display for SymbolKind {
                 }
                 Ok(())
             }
-
             SymbolKind::Resource { values } => {
                 write!(f, "resource with {} values", values.len())
             }
-
             SymbolKind::TypeAlias {
                 name, attributes, ..
             } => {
@@ -89,11 +89,9 @@ impl Display for SymbolKind {
                 }
                 Ok(())
             }
-
             SymbolKind::Variant { enum_name } => {
                 write!(f, "variant of enum {}", enum_name)
             }
-
             SymbolKind::Field {
                 template_name,
                 is_override,
@@ -104,6 +102,11 @@ impl Display for SymbolKind {
                 } else {
                     write!(f, "field of template {}", template_name)
                 }
+            }
+            SymbolKind::Struct { fields } => {
+                write!(f, "struct")?;
+                write!(f, " with {} fields", fields.len())?;
+                Ok(())
             }
         }
     }

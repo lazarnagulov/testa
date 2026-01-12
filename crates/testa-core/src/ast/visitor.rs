@@ -257,6 +257,12 @@ pub fn walk_template<V: Visitor>(visitor: &mut V, attributes: &[Attribute], body
     }
 }
 
+pub fn walk_struct<V: Visitor>(visitor: &mut V, body: &[Field]) {
+    for field in body {
+        visitor.visit_field(field);
+    }
+}
+
 pub fn walk_variant<V: Visitor>(visitor: &mut V, variant: &Variant) {
     if let Some(weight) = &variant.weight {
         visitor.visit_expression(weight);

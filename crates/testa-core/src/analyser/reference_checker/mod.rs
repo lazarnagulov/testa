@@ -102,11 +102,21 @@ impl<'a> Visitor for ReferenceChecker<'a> {
         span: Span,
     ) {
         if let Some(name) = template_name {
-            if self.symbol_table.lookup(name).is_none() {
-                self.errors.push(SemanticError::UnknownTemplate {
-                    name: name.clone(),
-                    span,
-                });
+            match self.symbol_table.lookup(name) {
+                Some(symbol) => match &symbol.kind {
+                    SymbolKind::Template { .. } => {}
+                    kind => self.errors.push(SemanticError::TypeMismatch {
+                        expected: "template".to_string(),
+                        found: kind.to_string(),
+                        span,
+                    }),
+                },
+                None => {
+                    self.errors.push(SemanticError::UnknownTemplate {
+                        name: name.clone(),
+                        span,
+                    });
+                }
             }
         }
         for field in body {

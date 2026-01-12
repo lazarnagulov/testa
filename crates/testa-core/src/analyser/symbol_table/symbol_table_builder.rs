@@ -8,7 +8,7 @@ use crate::{
     },
     ast::{
         Attribute, Expression, Field, Program, Variant,
-        visitor::{Visitor, walk_enum, walk_template},
+        visitor::{Visitor, walk_enum, walk_struct, walk_template},
     },
     utils::Span,
 };
@@ -232,5 +232,23 @@ impl Visitor for SymbolTableBuilder {
         ) {
             self.insert_error(symbol_error);
         }
+    }
+
+    fn visit_struct(&mut self, name: &str, body: &[Field], span: Span) {
+        if let Err(symbol_error) = self.table.insert(
+            name.to_string(),
+            SymbolKind::Struct {
+                fields: body.iter().map(|f| f.name.clone()).collect(),
+            },
+            span,
+        ) {
+            self.insert_error(symbol_error);
+        }
+
+        self.table.enter_scope(ScopeKind::Template {
+            name: name.to_string(),
+        });
+        walk_struct(self, body);
+        self.table.exit_scope();
     }
 }
