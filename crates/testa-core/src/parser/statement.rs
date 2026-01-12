@@ -16,6 +16,7 @@ where
             Output | Seed => self.parse_directive(),
             OutputPath => self.parse_output_path(),
             Template => self.parse_template(),
+            Struct => self.parse_struct(),
             Resource => todo!(),
             Tag => self.parse_attribute(),
             Enum => self.parse_enum(),
@@ -261,5 +262,20 @@ where
                 span: self.token_stream.last_span(),
             }),
         }
+    }
+
+    pub(super) fn parse_struct(&mut self) -> Result<Statement, ParserError> {
+        let token = self.token_stream.next_token()?;
+        let start = token.span;
+        let name_span = self.token_stream.expect_token(Identifier)?;
+        let name = self.token_text(name_span).to_string();
+        let fields = self.parse_template_fields()?;
+
+        Ok(Statement::Struct {
+            name,
+            name_span,
+            body: fields,
+            span: start.merge(self.token_stream.last_span()),
+        })
     }
 }

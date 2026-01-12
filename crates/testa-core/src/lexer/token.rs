@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use once_cell::sync::Lazy;
 
-use crate::{lexer::error::LexerError, utils::Span};
+use crate::utils::Span;
 
 macro_rules! keywords {
     ($($str:expr => $kind:expr),* $(,)?) => {
@@ -37,6 +37,7 @@ pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
         "type" => TokenKind::Type,
         "string_template" => TokenKind::StringTemplate,
         "string_pattern" => TokenKind::StringPattern,
+        "struct" => TokenKind::Struct,
         "constraint" => TokenKind::Constraint,
     }
 });
@@ -70,6 +71,7 @@ pub enum TokenKind {
     Float,
     Str,
     Bool,
+    Struct,
 
     // syntax
     LParen,            // (
@@ -110,7 +112,6 @@ pub enum TokenKind {
     GreaterThanOrEqual, // >=
 
     Identifier,
-    Error(LexerError),
     Tag,
     IntLiteral,
     StringLiteral,
@@ -183,7 +184,7 @@ impl Display for TokenKind {
             TokenKind::Enum => "enum",
             TokenKind::False => "false",
             TokenKind::True => "true",
-            TokenKind::Error(lexer_error) => &format!("error({})", lexer_error),
+            TokenKind::Struct => "struct",
         };
         f.write_str(str)
     }

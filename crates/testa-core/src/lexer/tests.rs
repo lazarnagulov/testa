@@ -73,7 +73,7 @@ fn lex_range() {
 
 #[test]
 fn lex_string_tokens() {
-    let program = "@generate @output $uuid john \"Peter\" 123 true false int float string 123.123 type constraint override #[readonly] numeric123";
+    let program = "@generate @output $uuid john \"Peter\" 123 true false int float string 123.123 type constraint override #[readonly] numeric123 struct";
     let mut lexer = Lexer::new(program);
     expect_token(
         &mut lexer,
@@ -95,6 +95,7 @@ fn lex_string_tokens() {
             Override,
             Tag,
             Identifier,
+            Struct,
         ],
     );
 }
