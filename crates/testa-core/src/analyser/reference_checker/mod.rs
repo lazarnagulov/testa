@@ -10,6 +10,7 @@ use crate::{
     utils::Span,
 };
 
+// TODO: Should not allow template references in template and structs.
 pub struct ReferenceChecker<'a> {
     symbol_table: &'a SymbolTable,
     errors: Vec<SemanticError>,

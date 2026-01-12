@@ -111,4 +111,10 @@ impl<'a> Visitor for TypeChecker<'a> {
             walk_field(self, field);
         }
     }
+
+    fn visit_struct(&mut self, _name: &str, body: &[Field], _span: Span) {
+        for field in body {
+            walk_field(self, field);
+        }
+    }
 }
