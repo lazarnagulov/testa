@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use rand::Rng;
 use testa_core::{
     analyser::symbol_table::symbol::SymbolKind,
-    ast::{Attribute, DataType, DataTypeKind, Expression, ExpressionKind},
+    ast::{Attribute, DataType, DataTypeKind, Expression, ExpressionKind, Field},
     utils::Span,
 };
 
@@ -11,6 +13,7 @@ use crate::{
         context::{Context, State},
         enumeration::evaluate_enum,
         error::EvalError,
+        expression::evaluate_expression,
     },
     object::Object,
     util::generate_random_string,
@@ -62,6 +65,7 @@ pub(crate) fn evaluate_identifier(
 
     match &symbol.kind {
         SymbolKind::Enum { variants, .. } => evaluate_enum(ctx, state, variants),
+        SymbolKind::Struct { name, fields } => evaluate_struct(ctx, state, name, fields),
         SymbolKind::TypeAlias {
             name,
             data_type,
@@ -69,6 +73,23 @@ pub(crate) fn evaluate_identifier(
         } => evaluate_type_alias(ctx, state, data_type, name, attributes),
         _ => Err(EvalError::NotDefined(name.to_string(), span)),
     }
+}
+
+fn evaluate_struct(
+    ctx: &Context,
+    state: &mut State,
+    name: &str,
+    fields: &[Field],
+) -> Result<Object, EvalError> {
+    let objects: HashMap<_, _> = fields
+        .iter()
+        .map(|field| {
+            let value = evaluate_expression(ctx, state, &field.value)?;
+            Ok((field.name.clone(), value))
+        })
+        .collect::<Result<_, _>>()?;
+
+    Ok(Object::Struct(name.to_owned(), objects))
 }
 
 fn evaluate_type_alias(

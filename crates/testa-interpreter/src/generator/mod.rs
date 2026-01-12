@@ -170,32 +170,18 @@ impl<'a> RecordGenerator<'a> {
         Ok(())
     }
 
-    fn generate_from_template(
+    fn generate_from_template_parts(
         ctx: &Context,
         state: &mut State,
         name: &str,
+        parent: &Option<String>,
+        field_names: &Vec<String>,
         span: Span,
     ) -> Result<Record, EvalError> {
-        let symbol = ctx
-            .symbol_table
-            .lookup(name)
-            .ok_or_else(|| EvalError::NotDefined(name.to_string(), span))?;
-
-        let (parent, field_names) = match &symbol.kind {
-            SymbolKind::Template { parent, fields, .. } => (parent, fields),
-            kind => {
-                return Err(EvalError::TypeMismatch {
-                    expected: "template".to_string(),
-                    got: kind.to_string(),
-                    span: symbol.span,
-                });
-            }
-        };
-
         let mut record = IndexMap::new();
 
         if let Some(parent_name) = parent {
-            let parent_record = Self::generate_from_template(ctx, state, parent_name, span)?;
+            let parent_record = Self::generate_record(ctx, state, Some(parent_name), None, span)?;
             record.extend(parent_record);
         }
 
@@ -216,21 +202,6 @@ impl<'a> RecordGenerator<'a> {
 
             let value = evaluate_expression(ctx, state, expression)?;
             record.insert(field_name.clone(), value);
-        }
-
-        Ok(record)
-    }
-
-    fn generate_anonymous(
-        ctx: &Context,
-        state: &mut State,
-        body: &[Field],
-    ) -> Result<Record, EvalError> {
-        let mut record = IndexMap::new();
-
-        for field in body {
-            let value = evaluate_expression(ctx, state, &field.value)?;
-            record.insert(field.name.clone(), value);
         }
 
         Ok(record)
@@ -284,5 +255,64 @@ impl<'a> RecordGenerator<'a> {
         println!("Generated {} records to {:?}", count, path);
 
         Ok(())
+    }
+
+    fn generate_record(
+        ctx: &Context,
+        state: &mut State,
+        name: Option<&str>,
+        body: Option<&[Field]>,
+        span: Span,
+    ) -> Result<Record, EvalError> {
+        match (name, body) {
+            (Some(template_or_struct), _) => {
+                let symbol = ctx
+                    .symbol_table
+                    .lookup(template_or_struct)
+                    .ok_or_else(|| EvalError::NotDefined(template_or_struct.to_string(), span))?;
+
+                match &symbol.kind {
+                    SymbolKind::Template { parent, fields, .. } => {
+                        Self::generate_from_template_parts(
+                            ctx,
+                            state,
+                            template_or_struct,
+                            parent,
+                            fields,
+                            span,
+                        )
+                    }
+
+                    SymbolKind::Struct { fields, .. } => {
+                        let mut record = IndexMap::new();
+                        for field in fields {
+                            let value = evaluate_expression(ctx, state, &field.value)?;
+                            record.insert(field.name.clone(), value);
+                        }
+                        Ok(record)
+                    }
+
+                    kind => Err(EvalError::TypeMismatch {
+                        expected: "template or struct".to_string(),
+                        got: kind.to_string(),
+                        span: symbol.span,
+                    }),
+                }
+            }
+
+            (None, Some(body)) => {
+                let mut record = IndexMap::new();
+                for field in body {
+                    let value = evaluate_expression(ctx, state, &field.value)?;
+                    record.insert(field.name.clone(), value);
+                }
+                Ok(record)
+            }
+
+            _ => Err(EvalError::MiscellaneousError(
+                "Invalid generate target".into(),
+                span,
+            )),
+        }
     }
 }

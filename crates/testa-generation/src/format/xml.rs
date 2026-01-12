@@ -55,12 +55,31 @@ impl FileGenerator for XmlGenerator {
         let mut xml = format!("  <{}>", self.record_element);
 
         for (key, value) in record {
-            xml.push_str(&format!(
-                "\n    <{}>{}</{}>",
-                key,
-                self.escape_xml(&format!("{}", value)),
-                key
-            ));
+            match value {
+                Object::Struct(_, fields) => {
+                    xml.push_str(&format!("\n    <{}>", key));
+
+                    for (inner_key, inner_value) in fields {
+                        xml.push_str(&format!(
+                            "\n      <{}>{}</{}>",
+                            inner_key,
+                            self.escape_xml(&format!("{}", inner_value)),
+                            inner_key
+                        ));
+                    }
+
+                    xml.push_str(&format!("\n    </{}>", key));
+                }
+
+                _ => {
+                    xml.push_str(&format!(
+                        "\n    <{}>{}</{}>",
+                        key,
+                        self.escape_xml(&format!("{}", value)),
+                        key
+                    ));
+                }
+            }
         }
 
         xml.push_str(&format!("\n  </{}>\n", self.record_element));

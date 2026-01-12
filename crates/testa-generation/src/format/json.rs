@@ -46,6 +46,14 @@ impl JsonGenerator {
                 .unwrap_or(serde_json::Value::Null),
             Object::String(s) => serde_json::Value::String(s.clone()),
             Object::Boolean(b) => serde_json::Value::Bool(*b),
+            Object::Struct(_, fields) => {
+                let map = fields
+                    .iter()
+                    .map(|(k, v)| (k.clone(), Self::object_to_json(v)))
+                    .collect::<serde_json::Map<String, serde_json::Value>>();
+
+                serde_json::Value::Object(map)
+            }
             Object::List(items) => {
                 serde_json::Value::Array(items.iter().map(Self::object_to_json).collect())
             }

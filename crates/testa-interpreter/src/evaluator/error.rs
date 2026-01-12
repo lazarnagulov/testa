@@ -13,7 +13,7 @@ use crate::object::Object;
 pub enum EvalError {
     UnsupportedPrefixOperator {
         operator: PrefixOperator,
-        object: Object,
+        object: Box<Object>,
         span: Span,
     },
     InvalidCount {
@@ -26,9 +26,9 @@ pub enum EvalError {
         span: Span,
     },
     UnsupportedInfixOperand {
-        left: Object,
+        left: Box<Object>,
         operator: InfixOperator,
-        right: Object,
+        right: Box<Object>,
         span: Span,
     },
     TypeMismatch {
@@ -57,7 +57,7 @@ impl EvalError {
     ) -> Self {
         EvalError::UnsupportedPrefixOperator {
             operator,
-            object: object.into(),
+            object: Box::new(object.into()),
             span: Span::default(),
         }
     }
@@ -70,15 +70,15 @@ impl EvalError {
         }
     }
 
-    pub fn unsupported_infix_operator<T: Into<Object>>(
-        left: T,
-        operator: InfixOperator,
-        right: T,
-    ) -> Self {
+    pub fn unsupported_infix_operator<L, R>(left: L, operator: InfixOperator, right: R) -> Self
+    where
+        L: Into<Object>,
+        R: Into<Object>,
+    {
         EvalError::UnsupportedInfixOperand {
-            left: left.into(),
+            left: Box::new(left.into()),
             operator,
-            right: right.into(),
+            right: Box::new(right.into()),
             span: Span::default(),
         }
     }

@@ -238,7 +238,8 @@ impl Visitor for SymbolTableBuilder {
         if let Err(symbol_error) = self.table.insert(
             name.to_string(),
             SymbolKind::Struct {
-                fields: body.iter().map(|f| f.name.clone()).collect(),
+                name: name.to_string(),
+                fields: body.to_vec(),
             },
             span,
         ) {

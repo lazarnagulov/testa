@@ -1,5 +1,5 @@
-@output xml;
-@output_path "example12.xml";
+@output json { pretty = true; }
+@output_path "example12.json";
 
 struct GeoLocation {
     lat = float [range=-90..=90];

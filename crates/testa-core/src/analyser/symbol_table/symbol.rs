@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    ast::{Attribute, Expression},
+    ast::{Attribute, Expression, Field},
     utils::Span,
 };
 
@@ -25,7 +25,8 @@ pub enum SymbolKind {
         attributes: Vec<Attribute>,
     },
     Struct {
-        fields: Vec<String>,
+        name: String,
+        fields: Vec<Field>,
     },
     Enum {
         variants: Vec<VariantInfo>,
@@ -103,8 +104,8 @@ impl Display for SymbolKind {
                     write!(f, "field of template {}", template_name)
                 }
             }
-            SymbolKind::Struct { fields } => {
-                write!(f, "struct")?;
+            SymbolKind::Struct { name, fields } => {
+                write!(f, "struct {}", name)?;
                 write!(f, " with {} fields", fields.len())?;
                 Ok(())
             }
