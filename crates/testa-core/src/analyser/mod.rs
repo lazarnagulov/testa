@@ -1,14 +1,16 @@
 pub mod error;
 pub mod reference_checker;
+pub mod reference_tracker;
 pub mod symbol_table;
 pub mod type_checker;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     analyser::{
         error::SemanticError,
         reference_checker::ReferenceChecker,
+        reference_tracker::ReferenceTracker,
         result::AnalysisResult,
         symbol_table::{SymbolTable, symbol_table_builder::SymbolTableBuilder},
         type_checker::TypeChecker,
@@ -40,6 +42,7 @@ impl<'a> SemanticAnalyser<'a> {
                 self.errors.extend(errors);
                 return AnalysisResult {
                     symbol_table: SymbolTable::default(),
+                    references: HashMap::new(),
                     diagnostics: self
                         .errors
                         .iter()
@@ -55,12 +58,21 @@ impl<'a> SemanticAnalyser<'a> {
             self.errors.extend(errs);
         }
 
+        let references = match ReferenceTracker::new(&symbol_table).track_references(self.program) {
+            Ok(refs) => refs,
+            Err(errs) => {
+                self.errors.extend(errs);
+                HashMap::new()
+            }
+        };
+
         if let Err(errs) = TypeChecker::new(&symbol_table).check(self.program) {
             self.errors.extend(errs);
         }
 
         AnalysisResult {
             symbol_table,
+            references,
             diagnostics: self
                 .errors
                 .iter()

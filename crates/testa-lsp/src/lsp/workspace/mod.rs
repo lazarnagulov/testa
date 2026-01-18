@@ -40,18 +40,14 @@ impl Workspace {
         self.documents.read().await.get(uri).cloned()
     }
 
-    pub async fn update(
-        &self,
-        uri: Url,
-        text: String,
-        version: i32,
-    ) -> Vec<lsp_types::Diagnostic> {
+    pub async fn update(&self, uri: Url, text: String, version: i32) -> Vec<lsp_types::Diagnostic> {
         let result = AnalysisEngine::analyse(&text);
 
         let document = match (result.ast, result.symbol_table) {
             (Some(ast), Some(symbols)) => {
                 Document::new(uri.clone(), text, version).with_analysis(Analysis {
                     ast: Some(ast),
+                    references: result.references,
                     symbol_table: Some(symbols),
                     diagnostics: result.diagnostics.clone(),
                 })

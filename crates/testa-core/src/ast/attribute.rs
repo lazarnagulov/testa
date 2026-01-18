@@ -1,4 +1,3 @@
-// crates/testa-core/src/ast/attribute.rs
 use crate::utils::Span;
 
 #[derive(PartialEq, Eq, Debug, Clone)]

@@ -1,7 +1,9 @@
 #![allow(unused)]
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
+use testa_core::analyser::reference_tracker::Reference;
 use testa_core::analyser::symbol_table::SymbolTable;
 use testa_core::ast::Program;
 use testa_core::diagnostics::Diagnostic;
@@ -11,7 +13,25 @@ use tower_lsp::lsp_types::Url;
 pub struct Analysis {
     pub ast: Option<Program>,
     pub symbol_table: Option<SymbolTable>,
+    pub references: HashMap<String, Vec<Reference>>,
     pub diagnostics: Vec<Diagnostic>,
+}
+
+impl Analysis {
+    pub fn find_reference_at(&self, line: u32, column: u32) -> Option<&Reference> {
+        for refs in self.references.values() {
+            for reference in refs {
+                if reference.span.contains_position(line, column) {
+                    return Some(reference);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn get_references(&self, name: &str) -> Option<&Vec<Reference>> {
+        self.references.get(name)
+    }
 }
 
 #[derive(Debug, Clone)]

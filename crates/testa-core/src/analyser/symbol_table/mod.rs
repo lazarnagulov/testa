@@ -92,29 +92,30 @@ impl SymbolTable {
     }
 
     pub fn get_template(&self, name: &str) -> Option<&Symbol> {
-        self.lookup(name).and_then(|symbol| {
-            match &symbol.kind {
-                SymbolKind::Template { .. } => Some(symbol),
-                _ => None,
-            }
+        self.lookup(name).and_then(|symbol| match &symbol.kind {
+            SymbolKind::Template { .. } => Some(symbol),
+            _ => None,
         })
     }
 
+    pub fn get_all_symbols(&self) -> Vec<&Symbol> {
+        self.scopes
+            .iter()
+            .flat_map(|scope| scope.symbols.values())
+            .collect()
+    }
+
     pub fn get_type(&self, name: &str) -> Option<&Symbol> {
-        self.lookup(name).and_then(|symbol| {
-            match &symbol.kind {
-                SymbolKind::TypeAlias { .. } => Some(symbol),
-                _ => None,
-            }
+        self.lookup(name).and_then(|symbol| match &symbol.kind {
+            SymbolKind::TypeAlias { .. } => Some(symbol),
+            _ => None,
         })
     }
 
     pub fn get_enum(&self, name: &str) -> Option<&Symbol> {
-        self.lookup(name).and_then(|symbol| {
-            match &symbol.kind {
-                SymbolKind::Enum { .. } => Some(symbol),
-                _ => None,
-            }
+        self.lookup(name).and_then(|symbol| match &symbol.kind {
+            SymbolKind::Enum { .. } => Some(symbol),
+            _ => None,
         })
     }
 

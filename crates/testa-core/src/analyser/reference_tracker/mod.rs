@@ -1,0 +1,117 @@
+use crate::analyser::error::SemanticError;
+use crate::analyser::symbol_table::SymbolTable;
+use crate::ast::visitor::*;
+use crate::ast::*;
+use crate::utils::Span;
+use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub struct Reference {
+    pub name: String,
+    pub span: Span,
+    pub kind: ReferenceKind,
+    pub is_resolved: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReferenceKind {
+    Type,
+    TemplateParent,
+    TemplateGenerate,
+    EnumVariant,
+    Field,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReferenceTracker<'a> {
+    references: HashMap<String, Vec<Reference>>,
+    symbol_table: &'a SymbolTable,
+    errors: Vec<SemanticError>,
+}
+
+impl<'a> ReferenceTracker<'a> {
+    pub fn new(symbol_table: &'a SymbolTable) -> Self {
+        Self {
+            symbol_table,
+            references: HashMap::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    pub fn track_references(
+        mut self,
+        program: &Program,
+    ) -> Result<HashMap<String, Vec<Reference>>, Vec<SemanticError>> {
+        self.visit_program(program);
+
+        if self.errors.is_empty() {
+            Ok(self.references)
+        } else {
+            Err(self.errors)
+        }
+    }
+
+    fn add_reference(&mut self, name: String, span: Span, kind: ReferenceKind) {
+        let is_resolved = self.symbol_table.lookup(&name).is_some();
+
+        if !is_resolved {
+            self.errors.push(SemanticError::UnknownIdentifier {
+                span,
+                name: name.clone(),
+            });
+        }
+
+        let reference = Reference {
+            name: name.clone(),
+            span,
+            kind,
+            is_resolved,
+        };
+
+        self.references.entry(name).or_default().push(reference);
+    }
+
+    pub fn take_errors(&mut self) -> Vec<SemanticError> {
+        std::mem::take(&mut self.errors)
+    }
+}
+
+impl<'a> Visitor for ReferenceTracker<'a> {
+    fn visit_statement(&mut self, stmt: &Statement) {
+        match stmt {
+            Statement::Template {
+                parent_name,
+                parent_span,
+                ..
+            } => {
+                if let (Some(parent), Some(span)) = (parent_name, parent_span) {
+                    self.add_reference(parent.clone(), *span, ReferenceKind::TemplateParent);
+                }
+            }
+
+            Statement::Generate {
+                template_name,
+                template_name_span,
+                ..
+            } => {
+                if let (Some(name), Some(span)) = (template_name, template_name_span) {
+                    self.add_reference(name.clone(), *span, ReferenceKind::TemplateGenerate);
+                }
+            }
+
+            _ => {}
+        }
+
+        walk_statement(self, stmt);
+    }
+
+    fn visit_expression(&mut self, expression: &Expression) {
+        if let ExpressionKind::Identifier(name) = &expression.kind {
+            if name.chars().next().is_some_and(|c| c.is_uppercase()) {
+                self.add_reference(name.clone(), expression.span, ReferenceKind::Type);
+            }
+        }
+
+        walk_expression(self, expression);
+    }
+}

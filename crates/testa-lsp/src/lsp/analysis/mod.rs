@@ -1,8 +1,6 @@
-use testa_core::{
-    analyser::SemanticAnalyser,
-    lexer::Lexer,
-    parser::Parser,
-};
+use std::collections::HashMap;
+
+use testa_core::{analyser::SemanticAnalyser, lexer::Lexer, parser::Parser};
 
 use crate::lsp::workspace::document::Analysis;
 
@@ -22,10 +20,12 @@ impl AnalysisEngine {
                     ast: Some(ast),
                     diagnostics: analysis.diagnostics,
                     symbol_table: Some(analysis.symbol_table),
+                    references: analysis.references,
                 }
             }
             Err(errors) => Analysis {
                 ast: None,
+                references: HashMap::new(),
                 diagnostics: errors.into_iter().map(|e| e.to_diagnostic()).collect(),
                 symbol_table: None,
             },
