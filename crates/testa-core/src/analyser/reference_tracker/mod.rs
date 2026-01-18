@@ -18,7 +18,7 @@ pub enum ReferenceKind {
     Type,
     TemplateParent,
     TemplateGenerate,
-    EnumVariant,
+    Enum,
     Field,
 }
 
@@ -77,6 +77,29 @@ impl<'a> ReferenceTracker<'a> {
 }
 
 impl<'a> Visitor for ReferenceTracker<'a> {
+    fn visit_template(
+        &mut self,
+        _parent: &Option<String>,
+        attributes: &[Attribute],
+        _name: &str,
+        body: &[Field],
+        _span: Span,
+    ) {
+        walk_template(self, attributes, body);
+    }
+
+    fn visit_generate(
+        &mut self,
+        _template_name: &Option<String>,
+        body: &[Field],
+        _count: &Expression,
+        _span: Span,
+    ) {
+        for field in body {
+            walk_field(self, field);
+        }
+    }
+
     fn visit_statement(&mut self, stmt: &Statement) {
         match stmt {
             Statement::Template {
@@ -90,13 +113,11 @@ impl<'a> Visitor for ReferenceTracker<'a> {
             }
 
             Statement::Generate {
-                template_name,
-                template_name_span,
+                template_name: Some(name),
+                template_name_span: Some(span),
                 ..
             } => {
-                if let (Some(name), Some(span)) = (template_name, template_name_span) {
-                    self.add_reference(name.clone(), *span, ReferenceKind::TemplateGenerate);
-                }
+                self.add_reference(name.clone(), *span, ReferenceKind::TemplateGenerate);
             }
 
             _ => {}
