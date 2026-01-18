@@ -1,14 +1,17 @@
-use tower_lsp::lsp_types::{TextDocumentSyncCapability, TextDocumentSyncKind};
+use tower_lsp::lsp_types::{
+    GotoDefinitionParams, GotoDefinitionResponse, Location, OneOf, ReferenceParams,
+    TextDocumentSyncCapability, TextDocumentSyncKind,
+};
 use tower_lsp::{Client, jsonrpc::Result};
 use tower_lsp::{
     LanguageServer,
     lsp_types::{
         DidChangeTextDocumentParams, DidOpenTextDocumentParams, InitializeParams, InitializeResult,
-        InitializedParams, MessageType, SemanticTokensParams, SemanticTokensResult,
-        ServerCapabilities,
+        InitializedParams, MessageType, ServerCapabilities,
     },
 };
 
+use crate::lsp::features::{goto_definition, references};
 use crate::lsp::workspace::Workspace;
 
 #[derive(Debug)]
@@ -28,12 +31,20 @@ impl Backend {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
+    async fn initialized(&self, _: InitializedParams) {
+        self.client
+            .log_message(MessageType::INFO, "Testa LSP server initialized!")
+            .await;
+    }
+
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
+                definition_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             ..Default::default()
@@ -68,19 +79,15 @@ impl LanguageServer for Backend {
             .await;
     }
 
-    async fn semantic_tokens_full(
+    async fn goto_definition(
         &self,
-        params: SemanticTokensParams,
-    ) -> Result<Option<SemanticTokensResult>> {
-        let _uri = params.text_document.uri.to_string();
-
-        Ok(None)
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        goto_definition::handle_goto_definition(self, params).await
     }
 
-    async fn initialized(&self, _: InitializedParams) {
-        self.client
-            .log_message(MessageType::INFO, "Testa LSP server initialized!")
-            .await;
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        references::handle_references(self, params).await
     }
 
     async fn shutdown(&self) -> Result<()> {

@@ -1,41 +1,59 @@
 #![allow(unused)]
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use testa_core::analyser::reference_tracker::Reference;
 use testa_core::analyser::symbol_table::SymbolTable;
 use testa_core::ast::Program;
 use testa_core::diagnostics::Diagnostic;
+use tower_lsp::lsp_types::Url;
 
 #[derive(Debug)]
-pub struct Document {
-    pub text: String,
-    pub version: i32,
+pub struct Analysis {
     pub ast: Option<Program>,
-    pub diagnostics: Vec<Diagnostic>,
     pub symbol_table: Option<SymbolTable>,
+    pub references: HashMap<String, Vec<Reference>>,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+impl Analysis {
+    pub fn find_reference_at(&self, line: u32, column: u32) -> Option<&Reference> {
+        for refs in self.references.values() {
+            for reference in refs {
+                if reference.span.contains_position(line, column) {
+                    return Some(reference);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn get_references(&self, name: &str) -> Option<&Vec<Reference>> {
+        self.references.get(name)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Document {
+    pub uri: Url,
+    pub text: Arc<str>,
+    pub version: i32,
+    pub analysis: Option<Arc<Analysis>>,
 }
 
 impl Document {
-    pub fn new(text: &str, version: i32) -> Self {
+    pub fn new(uri: Url, text: String, version: i32) -> Self {
         Self {
-            text: text.to_string(),
+            uri,
             version,
-            ast: None,
-            diagnostics: Vec::new(),
-            symbol_table: None,
+            text: Arc::from(text),
+            analysis: None,
         }
     }
 
-    pub fn with_ast(mut self, ast: Option<Program>) -> Self {
-        self.ast = ast;
-        self
-    }
-
-    pub fn with_diagnostics(mut self, diagnostics: &[Diagnostic]) -> Self {
-        self.diagnostics = diagnostics.to_vec();
-        self
-    }
-
-    pub fn with_symbol_table(mut self, symbol_table: Option<SymbolTable>) -> Self {
-        self.symbol_table = symbol_table;
+    pub fn with_analysis(mut self, analysis: Analysis) -> Self {
+        self.analysis = Some(Arc::new(analysis));
         self
     }
 }

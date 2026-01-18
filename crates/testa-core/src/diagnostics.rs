@@ -195,7 +195,7 @@ impl Diagnostic {
         )
     }
 
-    pub fn to_lsp_diagnostics(&self) -> lsp_types::Diagnostic {
+    pub fn to_lsp_diagnostics(self) -> lsp_types::Diagnostic {
         lsp_types::Diagnostic {
             range: self.span.to_lsp_range(),
             severity: Some(match self.severity {
