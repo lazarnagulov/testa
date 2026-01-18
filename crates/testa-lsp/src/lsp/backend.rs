@@ -1,18 +1,17 @@
 use tower_lsp::lsp_types::{
-    GotoDefinitionParams, GotoDefinitionResponse, OneOf, TextDocumentSyncCapability,
-    TextDocumentSyncKind,
+    GotoDefinitionParams, GotoDefinitionResponse, Location, OneOf, ReferenceParams,
+    TextDocumentSyncCapability, TextDocumentSyncKind,
 };
 use tower_lsp::{Client, jsonrpc::Result};
 use tower_lsp::{
     LanguageServer,
     lsp_types::{
         DidChangeTextDocumentParams, DidOpenTextDocumentParams, InitializeParams, InitializeResult,
-        InitializedParams, MessageType, SemanticTokensParams, SemanticTokensResult,
-        ServerCapabilities,
+        InitializedParams, MessageType, ServerCapabilities,
     },
 };
 
-use crate::lsp::features::goto_definition;
+use crate::lsp::features::{goto_definition, references};
 use crate::lsp::workspace::Workspace;
 
 #[derive(Debug)]
@@ -45,6 +44,7 @@ impl LanguageServer for Backend {
                     TextDocumentSyncKind::FULL,
                 )),
                 definition_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             ..Default::default()
@@ -86,13 +86,8 @@ impl LanguageServer for Backend {
         goto_definition::handle_goto_definition(self, params).await
     }
 
-    async fn semantic_tokens_full(
-        &self,
-        params: SemanticTokensParams,
-    ) -> Result<Option<SemanticTokensResult>> {
-        let _uri = params.text_document.uri.to_string();
-
-        Ok(None)
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        references::handle_references(self, params).await
     }
 
     async fn shutdown(&self) -> Result<()> {

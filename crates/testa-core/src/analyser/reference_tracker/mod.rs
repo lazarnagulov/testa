@@ -18,6 +18,7 @@ pub enum ReferenceKind {
     Type,
     TemplateParent,
     TemplateGenerate,
+    TemplateDecl,
     Enum,
     Field,
 }
@@ -103,12 +104,15 @@ impl<'a> Visitor for ReferenceTracker<'a> {
     fn visit_statement(&mut self, stmt: &Statement) {
         match stmt {
             Statement::Template {
+                name,
+                name_span: Some(span),
                 parent_name,
                 parent_span,
                 ..
             } => {
-                if let (Some(parent), Some(span)) = (parent_name, parent_span) {
-                    self.add_reference(parent.clone(), *span, ReferenceKind::TemplateParent);
+                self.add_reference(name.to_string(), *span, ReferenceKind::TemplateDecl);
+                if let (Some(parent), Some(parent_span)) = (parent_name, parent_span) {
+                    self.add_reference(parent.to_string(), *parent_span, ReferenceKind::TemplateParent);
                 }
             }
 
@@ -120,6 +124,10 @@ impl<'a> Visitor for ReferenceTracker<'a> {
                 self.add_reference(name.clone(), *span, ReferenceKind::TemplateGenerate);
             }
 
+            Statement::TypeDecl { name, name_span: Some(name_span),  ..} => {
+                self.add_reference(name.clone(), *name_span, ReferenceKind::Type);
+            }
+
             _ => {}
         }
 
@@ -127,11 +135,18 @@ impl<'a> Visitor for ReferenceTracker<'a> {
     }
 
     fn visit_expression(&mut self, expression: &Expression) {
-        if let ExpressionKind::Identifier(name) = &expression.kind {
-            if name.chars().next().is_some_and(|c| c.is_uppercase()) {
-                self.add_reference(name.clone(), expression.span, ReferenceKind::Type);
+        match &expression.kind {
+            ExpressionKind::Identifier(name) => self.add_reference(name.clone(), expression.span, ReferenceKind::Type),
+            ExpressionKind::Type(DataType {
+                kind: DataTypeKind::Custom(custom_type),
+                span,
+                ..
+            }) => {
+                self.add_reference(custom_type.clone(), *span, ReferenceKind::Type);
             }
+            _ => {}
         }
+        
 
         walk_expression(self, expression);
     }
