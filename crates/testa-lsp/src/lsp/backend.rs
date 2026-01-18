@@ -1,4 +1,7 @@
-use tower_lsp::lsp_types::{TextDocumentSyncCapability, TextDocumentSyncKind};
+use tower_lsp::lsp_types::{
+    GotoDefinitionParams, GotoDefinitionResponse, OneOf, TextDocumentSyncCapability,
+    TextDocumentSyncKind,
+};
 use tower_lsp::{Client, jsonrpc::Result};
 use tower_lsp::{
     LanguageServer,
@@ -9,6 +12,7 @@ use tower_lsp::{
     },
 };
 
+use crate::lsp::features::goto_definition;
 use crate::lsp::workspace::Workspace;
 
 #[derive(Debug)]
@@ -28,12 +32,19 @@ impl Backend {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
+    async fn initialized(&self, _: InitializedParams) {
+        self.client
+            .log_message(MessageType::INFO, "Testa LSP server initialized!")
+            .await;
+    }
+
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
+                definition_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             ..Default::default()
@@ -68,6 +79,13 @@ impl LanguageServer for Backend {
             .await;
     }
 
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        goto_definition::handle_goto_definition(self, params).await
+    }
+
     async fn semantic_tokens_full(
         &self,
         params: SemanticTokensParams,
@@ -75,12 +93,6 @@ impl LanguageServer for Backend {
         let _uri = params.text_document.uri.to_string();
 
         Ok(None)
-    }
-
-    async fn initialized(&self, _: InitializedParams) {
-        self.client
-            .log_message(MessageType::INFO, "Testa LSP server initialized!")
-            .await;
     }
 
     async fn shutdown(&self) -> Result<()> {

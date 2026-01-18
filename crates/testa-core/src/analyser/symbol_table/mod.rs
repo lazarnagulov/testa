@@ -87,6 +87,41 @@ impl SymbolTable {
         self.get_current_scope().map(|s| &s.kind)
     }
 
+    pub fn get_definition_span(&self, name: &str) -> Option<Span> {
+        self.lookup(name).map(|symbol| symbol.span)
+    }
+
+    pub fn get_template(&self, name: &str) -> Option<&Symbol> {
+        self.lookup(name).and_then(|symbol| {
+            match &symbol.kind {
+                SymbolKind::Template { .. } => Some(symbol),
+                _ => None,
+            }
+        })
+    }
+
+    pub fn get_type(&self, name: &str) -> Option<&Symbol> {
+        self.lookup(name).and_then(|symbol| {
+            match &symbol.kind {
+                SymbolKind::TypeAlias { .. } => Some(symbol),
+                _ => None,
+            }
+        })
+    }
+
+    pub fn get_enum(&self, name: &str) -> Option<&Symbol> {
+        self.lookup(name).and_then(|symbol| {
+            match &symbol.kind {
+                SymbolKind::Enum { .. } => Some(symbol),
+                _ => None,
+            }
+        })
+    }
+
+    pub fn get_symbol_kind(&self, name: &str) -> Option<&SymbolKind> {
+        self.lookup(name).map(|symbol| &symbol.kind)
+    }
+
     pub fn lookup_current_scope(&self, name: &str) -> Option<&Symbol> {
         self.get_scope(self.current_scope)
             .and_then(|scope| scope.symbols.get(name))

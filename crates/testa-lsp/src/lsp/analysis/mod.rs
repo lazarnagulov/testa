@@ -1,21 +1,15 @@
 use testa_core::{
-    analyser::{SemanticAnalyser, symbol_table::SymbolTable},
-    diagnostics::Diagnostic,
+    analyser::SemanticAnalyser,
     lexer::Lexer,
     parser::Parser,
 };
 
-#[derive(Debug)]
-pub struct AnalysisOutcome {
-    pub ast: Option<testa_core::ast::Program>,
-    pub diagnostics: Vec<Diagnostic>,
-    pub symbol_table: Option<SymbolTable>,
-}
+use crate::lsp::workspace::document::Analysis;
 
 pub struct AnalysisEngine;
 
 impl AnalysisEngine {
-    pub fn analyse(text: &str) -> AnalysisOutcome {
+    pub fn analyse(text: &str) -> Analysis {
         let lexer = Lexer::new(text);
         let mut parser = Parser::new(lexer, text);
 
@@ -24,13 +18,13 @@ impl AnalysisEngine {
                 let mut analyser = SemanticAnalyser::new(&ast);
                 let analysis = analyser.analyse();
 
-                AnalysisOutcome {
+                Analysis {
                     ast: Some(ast),
                     diagnostics: analysis.diagnostics,
                     symbol_table: Some(analysis.symbol_table),
                 }
             }
-            Err(errors) => AnalysisOutcome {
+            Err(errors) => Analysis {
                 ast: None,
                 diagnostics: errors.into_iter().map(|e| e.to_diagnostic()).collect(),
                 symbol_table: None,
