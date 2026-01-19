@@ -29,8 +29,12 @@ pub(crate) async fn handle_hover(backend: &Backend, params: HoverParams) -> Resu
     }))
 }
 
-fn resolve_symbol_at_position(analysis: &Analysis, line: u32, column: u32) -> Option<(&Symbol, &Reference)>{
-    let reference= analysis.find_reference_at(line, column)?;
+fn resolve_symbol_at_position(
+    analysis: &Analysis,
+    line: u32,
+    column: u32,
+) -> Option<(&Symbol, &Reference)> {
+    let reference = analysis.find_reference_at(line, column)?;
     let symbol_table = analysis.symbol_table.as_ref()?;
     let symbol = symbol_table.lookup(&reference.name)?;
     Some((symbol, reference))
@@ -68,10 +72,13 @@ fn generate_hover_content(name: &str, kind: &SymbolKind) -> String {
 
             content
         }
-        SymbolKind::Enum { variants, attributes } => {
+        SymbolKind::Enum {
+            variants,
+            attributes,
+        } => {
             let mut content = String::new();
             content.push_str(&format!("```testa\nenum {}\n```\n\n", name));
-            
+
             if !attributes.is_empty() {
                 content.push_str("**Attributes:**\n");
                 for attr in attributes {
@@ -79,7 +86,7 @@ fn generate_hover_content(name: &str, kind: &SymbolKind) -> String {
                 }
                 content.push('\n');
             }
-            
+
             content.push_str(&format!("**Variants:** {}\n", variants.len()));
             for variant in variants {
                 if let Some(weight) = &variant.weight {
@@ -88,7 +95,7 @@ fn generate_hover_content(name: &str, kind: &SymbolKind) -> String {
                     content.push_str(&format!("- `{}`\n", variant.name));
                 }
             }
-            
+
             content
         }
         SymbolKind::Resource { values } => {
@@ -98,40 +105,54 @@ fn generate_hover_content(name: &str, kind: &SymbolKind) -> String {
                 values.len()
             )
         }
-        SymbolKind::TypeAlias { name, data_type, attributes } => {
+        SymbolKind::TypeAlias {
+            name,
+            data_type,
+            attributes,
+        } => {
             let mut content = String::new();
-            
+
             content.push_str(&format!("```testa\ntype {} = ", name));
-            
+
             content.push_str(&data_type.kind.to_string());
             content.push_str("\n```\n\n");
-            
+
             if !attributes.is_empty() {
                 content.push_str("**Attributes:**\n");
                 for attr in attributes {
                     content.push_str(&format!("- `{}`\n", attr.name()));
                 }
             }
-            
+
             content
         }
         SymbolKind::Variant { enum_name } => {
-            format!(
-                "```testa\n{}\n```\n\nVariant of enum `{}`",
-                name, enum_name
-            )
+            format!("```testa\n{}\n```\n\nVariant of enum `{}`", name, enum_name)
         }
-        SymbolKind::Field { template_name, is_override, expression } => {
+        SymbolKind::Field {
+            template_name,
+            is_override,
+            expression,
+        } => {
             let mut content = String::new();
-            
+
             if *is_override {
-                content.push_str(&format!("```testa\n{} = {}\n```\n\n", name, expression.kind));
-                content.push_str(&format!("**Override** field of template `{}`", template_name));
+                content.push_str(&format!(
+                    "```testa\n{} = {}\n```\n\n",
+                    name, expression.kind
+                ));
+                content.push_str(&format!(
+                    "**Override** field of template `{}`",
+                    template_name
+                ));
             } else {
-                content.push_str(&format!("```testa\n{} = {}\n```\n\n", name, expression.kind));
+                content.push_str(&format!(
+                    "```testa\n{} = {}\n```\n\n",
+                    name, expression.kind
+                ));
                 content.push_str(&format!("Field of template `{}`", template_name));
             }
-            
+
             content
         }
     }

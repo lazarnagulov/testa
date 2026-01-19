@@ -119,7 +119,6 @@ impl<'a> Visitor for ReferenceTracker<'a> {
                     );
                 }
             }
-
             Statement::Generate {
                 template_name: Some(name),
                 template_name_span: Some(span),
@@ -127,7 +126,9 @@ impl<'a> Visitor for ReferenceTracker<'a> {
             } => {
                 self.add_reference(name.clone(), *span, ReferenceKind::TemplateGenerate);
             }
-
+            Statement::Enum { name, name_span: Some(span) , ..} => {
+                self.add_reference(name.clone(), *span, ReferenceKind::Enum);
+            }
             Statement::TypeDecl {
                 name,
                 name_span: Some(name_span),
@@ -153,6 +154,14 @@ impl<'a> Visitor for ReferenceTracker<'a> {
                 ..
             }) => {
                 self.add_reference(custom_type.clone(), *span, ReferenceKind::Type);
+            }
+            ExpressionKind::Type(DataType {
+                kind: DataTypeKind::List(list_type),
+                ..
+            }) => {
+               if let DataTypeKind::Custom(custom_type) = &list_type.kind {
+                    self.add_reference(custom_type.clone(), list_type.span, ReferenceKind::Type);
+               }
             }
             _ => {}
         }

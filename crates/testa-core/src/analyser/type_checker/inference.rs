@@ -32,18 +32,15 @@ impl<'a> TypeChecker<'a> {
                 self.check_constraints(data_type, &base_type);
                 base_type
             }
-
             ExpressionKind::Prefix {
                 operator,
                 expression,
             } => self.check_prefix_op(*operator, expression),
-
             ExpressionKind::Infix {
                 left,
                 operator,
                 right,
             } => self.check_infix_op(left, *operator, right),
-
             ExpressionKind::FuncCall { arguments: _ } => {
                 // Functions not yet implemented
                 Type::Unknown

@@ -41,7 +41,7 @@ impl fmt::Display for DataTypeKind {
             DataTypeKind::Float => write!(f, "float"),
             DataTypeKind::Boolean => write!(f, "bool"),
             DataTypeKind::List(data_type) => write!(f, "[{}]", data_type.kind),
-            DataTypeKind::Custom(name) => write!(f, "type: {}", name),
+            DataTypeKind::Custom(name) => write!(f, "{}", name),
         }
     }
 }
