@@ -1,6 +1,7 @@
+use tower_lsp::jsonrpc::{self, Error};
 use tower_lsp::lsp_types::{
-    GotoDefinitionParams, GotoDefinitionResponse, Location, OneOf, ReferenceParams,
-    TextDocumentSyncCapability, TextDocumentSyncKind,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability,
+    Location, OneOf, ReferenceParams, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::{Client, jsonrpc::Result};
 use tower_lsp::{
@@ -11,8 +12,9 @@ use tower_lsp::{
     },
 };
 
-use crate::lsp::features::{goto_definition, references};
+use crate::lsp::features::{goto_definition, hover, references};
 use crate::lsp::workspace::Workspace;
+use crate::lsp::workspace::document::Document;
 
 #[derive(Debug)]
 pub struct Backend {
@@ -26,6 +28,13 @@ impl Backend {
             client,
             workspace: Workspace::new(),
         }
+    }
+
+    pub async fn get_document(&self, uri: &Url) -> std::result::Result<Document, jsonrpc::Error> {
+        self.workspace
+            .get(uri)
+            .await
+            .ok_or_else(Error::invalid_request)
     }
 }
 
@@ -43,6 +52,7 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
                 ..Default::default()
@@ -88,6 +98,10 @@ impl LanguageServer for Backend {
 
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
         references::handle_references(self, params).await
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        hover::handle_hover(self, params).await
     }
 
     async fn shutdown(&self) -> Result<()> {

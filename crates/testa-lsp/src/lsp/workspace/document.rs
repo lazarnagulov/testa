@@ -7,6 +7,7 @@ use testa_core::analyser::reference_tracker::Reference;
 use testa_core::analyser::symbol_table::SymbolTable;
 use testa_core::ast::Program;
 use testa_core::diagnostics::Diagnostic;
+use tower_lsp::jsonrpc::{self, Error};
 use tower_lsp::lsp_types::Url;
 
 #[derive(Debug)]
@@ -39,7 +40,7 @@ pub struct Document {
     pub uri: Url,
     pub text: Arc<str>,
     pub version: i32,
-    pub analysis: Option<Arc<Analysis>>,
+    analysis: Option<Arc<Analysis>>,
 }
 
 impl Document {
@@ -55,5 +56,9 @@ impl Document {
     pub fn with_analysis(mut self, analysis: Analysis) -> Self {
         self.analysis = Some(Arc::new(analysis));
         self
+    }
+
+    pub fn get_analysis(&self) -> Result<&Arc<Analysis>, jsonrpc::Error> {
+        self.analysis.as_ref().ok_or_else(Error::invalid_request)
     }
 }
