@@ -1,0 +1,100 @@
+%YAML 1.2
+---
+# See http://www.sublimetext.com/docs/syntax.html
+name: TestA
+file_extensions:
+  - testa
+  - ta
+scope: source.testa
+
+contexts:
+  main:
+    # Comments
+    - match: '//'
+      scope: punctuation.definition.comment.testa
+      push: line_comment
+
+    # Block comments
+    - match: '/\*'
+      scope: punctuation.definition.comment.testa
+      push: block_comment
+
+    # Directives
+    - match: '@(output|output_path|seed|generate)\b'
+      scope: keyword.control.directive.testa
+
+    # Keywords
+    - match: '\b(template|enum|type|extend|with|override|string_pattern)\b'
+      scope: keyword.control.testa
+
+    # Boolean literals
+    - match: '\b(true|false)\b'
+      scope: constant.language.boolean.testa
+
+    # Data types
+    - match: '\b(int|bool|float|string|csv|json|xml)\b'
+      scope: storage.type.testa
+
+    # Built-in functions
+    - match: '\b(uuid|range|count|min|max|multiple_of|bias)\b'
+      scope: support.function.builtin.testa
+
+    # Numbers
+    - match: '\b\d+\.?\d*\b'
+      scope: constant.numeric.testa
+
+    # String literals (double quotes)
+    - match: '"'
+      scope: punctuation.definition.string.begin.testa
+      push: double_quoted_string
+
+    # String literals (single quotes)
+    - match: "'"
+      scope: punctuation.definition.string.begin.testa
+      push: single_quoted_string
+
+    # String pattern placeholders
+    - match: '\$\{[aA#\[\]0-9.=]+\}'
+      scope: constant.character.escape.testa
+
+    # Operators
+    - match: '(\+|-|\*|/|%|=>|=|:|;)'
+      scope: keyword.operator.testa
+
+    # Brackets
+    - match: '[(){}\[\]]'
+      scope: punctuation.section.testa
+
+    # Identifiers (template names, field names, enum variants)
+    - match: '\b[A-Z][a-zA-Z0-9_]*\b'
+      scope: entity.name.type.testa
+
+    - match: '\b[a-z_][a-zA-Z0-9_]*\b'
+      scope: variable.other.testa
+
+  line_comment:
+    - meta_scope: comment.line.double-slash.testa
+    - match: $
+      pop: true
+
+  block_comment:
+    - meta_scope: comment.block.testa
+    - match: '\*/'
+      scope: punctuation.definition.comment.testa
+      pop: true
+
+  double_quoted_string:
+    - meta_scope: string.quoted.double.testa
+    - match: '\\.'
+      scope: constant.character.escape.testa
+    - match: '"'
+      scope: punctuation.definition.string.end.testa
+      pop: true
+
+  single_quoted_string:
+    - meta_scope: string.quoted.single.testa
+    - match: '\\.'
+      scope: constant.character.escape.testa
+    - match: "'"
+      scope: punctuation.definition.string.end.testa
+      pop: true
