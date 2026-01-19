@@ -1,8 +1,8 @@
 use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::{Location, ReferenceParams};
+use tower_lsp::lsp_types::{Location, ReferenceParams, Url};
 
 use crate::lsp::backend::Backend;
-use crate::lsp::features::util::references_at;
+use crate::lsp::workspace::document::Analysis;
 
 pub(crate) async fn handle_references(
     backend: &Backend,
@@ -18,4 +18,19 @@ pub(crate) async fn handle_references(
     let analysis = document.get_analysis()?;
 
     Ok(references_at(analysis, &uri, line, column))
+}
+
+fn references_at(analysis: &Analysis, uri: &Url, line: u32, column: u32) -> Option<Vec<Location>> {
+    let reference = analysis.find_reference_at(line, column)?;
+    let all_refs = analysis.get_references(&reference.name)?;
+
+    Some(
+        all_refs
+            .iter()
+            .map(|r| Location {
+                uri: uri.clone(),
+                range: r.span.to_lsp_range(),
+            })
+            .collect(),
+    )
 }

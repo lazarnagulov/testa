@@ -112,7 +112,11 @@ impl<'a> Visitor for ReferenceTracker<'a> {
             } => {
                 self.add_reference(name.to_string(), *span, ReferenceKind::TemplateDecl);
                 if let (Some(parent), Some(parent_span)) = (parent_name, parent_span) {
-                    self.add_reference(parent.to_string(), *parent_span, ReferenceKind::TemplateParent);
+                    self.add_reference(
+                        parent.to_string(),
+                        *parent_span,
+                        ReferenceKind::TemplateParent,
+                    );
                 }
             }
 
@@ -124,7 +128,11 @@ impl<'a> Visitor for ReferenceTracker<'a> {
                 self.add_reference(name.clone(), *span, ReferenceKind::TemplateGenerate);
             }
 
-            Statement::TypeDecl { name, name_span: Some(name_span),  ..} => {
+            Statement::TypeDecl {
+                name,
+                name_span: Some(name_span),
+                ..
+            } => {
                 self.add_reference(name.clone(), *name_span, ReferenceKind::Type);
             }
 
@@ -136,7 +144,9 @@ impl<'a> Visitor for ReferenceTracker<'a> {
 
     fn visit_expression(&mut self, expression: &Expression) {
         match &expression.kind {
-            ExpressionKind::Identifier(name) => self.add_reference(name.clone(), expression.span, ReferenceKind::Type),
+            ExpressionKind::Identifier(name) => {
+                self.add_reference(name.clone(), expression.span, ReferenceKind::Type)
+            }
             ExpressionKind::Type(DataType {
                 kind: DataTypeKind::Custom(custom_type),
                 span,
@@ -146,7 +156,6 @@ impl<'a> Visitor for ReferenceTracker<'a> {
             }
             _ => {}
         }
-        
 
         walk_expression(self, expression);
     }

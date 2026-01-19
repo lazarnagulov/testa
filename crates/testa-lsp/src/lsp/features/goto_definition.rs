@@ -1,8 +1,9 @@
+use testa_core::utils::Span;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location};
 
 use crate::lsp::backend::Backend;
-use crate::lsp::features::util::definition_at;
+use crate::lsp::workspace::document::Analysis;
 
 pub(crate) async fn handle_goto_definition(
     backend: &Backend,
@@ -26,4 +27,10 @@ pub(crate) async fn handle_goto_definition(
         uri,
         range: definition_span.to_lsp_range(),
     })))
+}
+
+fn definition_at(analysis: &Analysis, line: u32, column: u32) -> Option<Span> {
+    let reference = analysis.find_reference_at(line, column)?;
+    let symbol_table = analysis.symbol_table.as_ref()?;
+    symbol_table.get_definition_span(&reference.name)
 }
