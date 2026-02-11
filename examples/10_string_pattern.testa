@@ -1,5 +1,5 @@
-@output csv;
-@output_path "./example10.csv";
+@output json { pretty = true; }
+@output_path "./example10.json";
 
 template User {
     id = "ID_" + string_pattern "${#[5]}";
