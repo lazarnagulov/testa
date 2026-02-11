@@ -19,6 +19,7 @@ mod constrained_type;
 mod directive;
 mod enumeration;
 mod identifier;
+mod pattern;
 mod tests;
 
 pub struct EvaluationResult {
