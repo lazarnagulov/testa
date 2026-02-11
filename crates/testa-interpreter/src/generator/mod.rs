@@ -1,0 +1,318 @@
+use indexmap::{IndexMap, IndexSet};
+use std::io::Write;
+use std::{collections::HashMap, fmt, fs::File, path::PathBuf};
+
+use testa_core::{
+    analyser::symbol_table::symbol::SymbolKind,
+    ast::{Field, Program, Statement},
+    utils::Span,
+};
+
+use crate::{
+    evaluator::{
+        Evaluator,
+        context::{Context, State},
+        error::EvalError,
+        expression::evaluate_expression,
+    },
+    generator::error::GeneratorError,
+    object::Object,
+};
+
+pub mod error;
+pub mod record_iterator;
+
+pub type Record = IndexMap<String, Object>;
+pub type FileConfig = HashMap<String, Object>;
+
+pub trait FileGenerator: fmt::Debug {
+    fn generate(&self, record: &Record) -> Result<String, GeneratorError>;
+    fn extension(&self) -> &'static str;
+    fn generate_header(&self, fields: &[String]) -> Option<String>;
+    fn generate_footer(&self) -> Option<String>;
+    fn needs_separator(&self) -> bool {
+        false
+    }
+    fn separator(&self) -> &str {
+        ""
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct GenerateInfo {
+    template_name: Option<String>,
+    body: Vec<Field>,
+    total_count: usize,
+    span: Span,
+}
+
+pub struct RecordGenerator<'a> {
+    pub evaluator: &'a mut Evaluator,
+    generate_infos: Vec<GenerateInfo>,
+    current_statement: usize,
+    current_count: usize,
+}
+
+impl<'a> RecordGenerator<'a> {
+    pub fn new(evaluator: &'a mut Evaluator) -> Self {
+        Self {
+            evaluator,
+            generate_infos: Vec::new(),
+            current_count: 0,
+            current_statement: 0,
+        }
+    }
+
+    pub fn stream(self) -> impl Iterator<Item = Result<Record, EvalError>> {
+        self
+    }
+
+    pub fn collect_all(self) -> Result<Vec<Record>, EvalError> {
+        self.collect()
+    }
+
+    pub fn collect_limit(self, limit: usize) -> Result<Vec<Record>, EvalError> {
+        self.take(limit).collect()
+    }
+
+    pub fn get_field_names(&self) -> Result<Vec<String>, EvalError> {
+        let mut names = IndexSet::new();
+
+        for info in &self.generate_infos {
+            match &info.template_name {
+                Some(template_name) => {
+                    self.collect_template_field_names(template_name, info.span, &mut names)?;
+                }
+                None => {
+                    for field in &info.body {
+                        names.insert(field.name.clone());
+                    }
+                }
+            }
+        }
+
+        Ok(names.into_iter().collect())
+    }
+
+    fn collect_template_field_names(
+        &self,
+        template_name: &str,
+        span: Span,
+        out: &mut IndexSet<String>,
+    ) -> Result<(), EvalError> {
+        let symbol = self
+            .evaluator
+            .context
+            .symbol_table
+            .lookup(template_name)
+            .ok_or_else(|| EvalError::NotDefined(template_name.to_string(), span))?;
+
+        let (parent, fields) = match &symbol.kind {
+            SymbolKind::Template { parent, fields, .. } => (parent, fields),
+            kind => {
+                return Err(EvalError::TypeMismatch {
+                    expected: "template".to_string(),
+                    got: kind.to_string(),
+                    span: symbol.span,
+                });
+            }
+        };
+
+        if let Some(parent_name) = parent {
+            self.collect_template_field_names(parent_name, span, out)?;
+        }
+
+        for field_name in fields {
+            out.insert(field_name.clone());
+        }
+
+        Ok(())
+    }
+
+    pub fn generate_infos(&mut self, program: &Program) -> Result<(), EvalError> {
+        for stmt in &program.0 {
+            if let Statement::Generate {
+                template_name,
+                body,
+                count,
+                span,
+                ..
+            } = stmt
+            {
+                let count_value = self.evaluator.evaluate_expression(count)?;
+
+                let total_count = match count_value {
+                    Object::Int(n) if n > 0 => n as usize,
+                    Object::Int(n) => {
+                        return Err(EvalError::InvalidCount {
+                            value: n,
+                            span: count.span,
+                        });
+                    }
+                    other => {
+                        return Err(EvalError::TypeMismatch {
+                            expected: "positive integer".to_string(),
+                            got: format!("{}", other),
+                            span: count.span,
+                        });
+                    }
+                };
+
+                self.generate_infos.push(GenerateInfo {
+                    template_name: template_name.clone(),
+                    body: body.clone(),
+                    total_count,
+                    span: *span,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    fn generate_from_template_parts(
+        ctx: &Context,
+        state: &mut State,
+        name: &str,
+        parent: &Option<String>,
+        field_names: &Vec<String>,
+        span: Span,
+    ) -> Result<Record, EvalError> {
+        let mut record = IndexMap::new();
+
+        if let Some(parent_name) = parent {
+            let parent_record = Self::generate_record(ctx, state, Some(parent_name), None, span)?;
+            record.extend(parent_record);
+        }
+
+        let template_scope = ctx
+            .find_template_scope(name)
+            .ok_or_else(|| EvalError::MiscellaneousError("Invalid scope".into(), span))?;
+
+        for field_name in field_names {
+            let field_symbol = template_scope
+                .symbols
+                .get(field_name)
+                .ok_or_else(|| EvalError::NotDefined(field_name.to_string(), span))?;
+
+            let expression = match &field_symbol.kind {
+                SymbolKind::Field { expression, .. } => expression,
+                _ => return Err(EvalError::NotDefined(field_name.to_string(), span)),
+            };
+
+            let value = evaluate_expression(ctx, state, expression)?;
+            record.insert(field_name.clone(), value);
+        }
+
+        Ok(record)
+    }
+
+    pub fn write_records(
+        self,
+        file_generator: Box<dyn FileGenerator>,
+        path: PathBuf,
+    ) -> Result<(), GeneratorError> {
+        let mut file = File::create(&path)
+            .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        let field_names = self
+            .get_field_names()
+            .map_err(|err| GeneratorError::EvaluationError(err.to_string()))?;
+
+        if let Some(header) = file_generator.generate_header(&field_names) {
+            writeln!(file, "{}", header)
+                .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        }
+
+        let total = self.len();
+        let mut count = 0;
+        let mut first = true;
+
+        for result in self {
+            let record =
+                result.map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+
+            count += 1;
+            if count % 10000 == 0 {
+                println!("Generated {}/{} records...", count, total);
+            }
+
+            if !first && file_generator.needs_separator() {
+                write!(file, "{}", file_generator.separator())
+                    .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+            }
+            first = false;
+
+            let line = file_generator.generate(&record)?;
+            write!(file, "{}", line)
+                .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        }
+
+        if let Some(footer) = file_generator.generate_footer() {
+            writeln!(file, "{}", footer)
+                .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+        }
+
+        println!("Generated {} records to {:?}", count, path);
+
+        Ok(())
+    }
+
+    fn generate_record(
+        ctx: &Context,
+        state: &mut State,
+        name: Option<&str>,
+        body: Option<&[Field]>,
+        span: Span,
+    ) -> Result<Record, EvalError> {
+        match (name, body) {
+            (Some(template_or_struct), _) => {
+                let symbol = ctx
+                    .symbol_table
+                    .lookup(template_or_struct)
+                    .ok_or_else(|| EvalError::NotDefined(template_or_struct.to_string(), span))?;
+
+                match &symbol.kind {
+                    SymbolKind::Template { parent, fields, .. } => {
+                        Self::generate_from_template_parts(
+                            ctx,
+                            state,
+                            template_or_struct,
+                            parent,
+                            fields,
+                            span,
+                        )
+                    }
+
+                    SymbolKind::Struct { fields, .. } => {
+                        let mut record = IndexMap::new();
+                        for field in fields {
+                            let value = evaluate_expression(ctx, state, &field.value)?;
+                            record.insert(field.name.clone(), value);
+                        }
+                        Ok(record)
+                    }
+
+                    kind => Err(EvalError::TypeMismatch {
+                        expected: "template or struct".to_string(),
+                        got: kind.to_string(),
+                        span: symbol.span,
+                    }),
+                }
+            }
+
+            (None, Some(body)) => {
+                let mut record = IndexMap::new();
+                for field in body {
+                    let value = evaluate_expression(ctx, state, &field.value)?;
+                    record.insert(field.name.clone(), value);
+                }
+                Ok(record)
+            }
+
+            _ => Err(EvalError::MiscellaneousError(
+                "Invalid generate target".into(),
+                span,
+            )),
+        }
+    }
+}

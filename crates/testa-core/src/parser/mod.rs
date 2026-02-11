@@ -1,0 +1,71 @@
+pub mod error;
+
+mod constraint;
+mod data_type;
+mod expression;
+mod helpers;
+mod pattern;
+mod statement;
+mod synchronize;
+mod token_stream;
+
+#[cfg(test)]
+mod tests;
+
+use crate::ast::{Attribute, Program};
+use crate::lexer::error::LexerError;
+use crate::lexer::token::Token;
+use crate::parser::error::ParserError;
+use crate::parser::token_stream::TokenStream;
+
+pub struct Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    token_stream: TokenStream<I>,
+    source: &'src str,
+
+    attributes: Vec<Attribute>,
+}
+
+impl<'src, I> Parser<'src, I>
+where
+    I: Iterator<Item = Result<Token, LexerError>>,
+{
+    pub fn new(lexer: I, program: &'src str) -> Self
+    where
+        I: Iterator<Item = Result<Token, LexerError>>,
+    {
+        let lexer = lexer.peekable();
+        Self {
+            token_stream: TokenStream::new(lexer),
+            source: program,
+            attributes: Vec::new(),
+        }
+    }
+
+    pub fn parse(&mut self) -> Result<Program, Vec<ParserError>> {
+        let mut statements = vec![];
+        let mut errors = Vec::new();
+
+        while self.token_stream.has_next() {
+            if !errors.is_empty() {
+                self.attributes.clear();
+            }
+
+            match self.parse_statement() {
+                Ok(stmt) => statements.push(stmt),
+                Err(parser_error) => {
+                    errors.push(parser_error);
+                    self.synchronize();
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(Program(statements))
+        } else {
+            Err(errors)
+        }
+    }
+}

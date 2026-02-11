@@ -1,0 +1,99 @@
+use core::fmt;
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub enum Object {
+    Int(isize),
+    Float(f32),
+    String(String),
+    Boolean(bool),
+    Range(isize, isize),
+    List(Vec<Object>),
+    Struct(String, HashMap<String, Object>),
+    NoReturn,
+}
+
+impl Object {
+    pub fn new<T: Into<Object>>(value: T) -> Self {
+        value.into()
+    }
+}
+
+impl From<i32> for Object {
+    fn from(value: i32) -> Self {
+        Object::Int(value as isize)
+    }
+}
+
+impl From<Vec<Object>> for Object {
+    fn from(value: Vec<Object>) -> Self {
+        Object::List(value)
+    }
+}
+
+impl From<(isize, isize)> for Object {
+    fn from(value: (isize, isize)) -> Self {
+        Object::Range(value.0, value.1)
+    }
+}
+
+impl From<isize> for Object {
+    fn from(value: isize) -> Self {
+        Object::Int(value)
+    }
+}
+
+impl From<f32> for Object {
+    fn from(value: f32) -> Self {
+        Object::Float(value)
+    }
+}
+
+impl From<String> for Object {
+    fn from(value: String) -> Self {
+        Object::String(value)
+    }
+}
+
+impl From<&str> for Object {
+    fn from(value: &str) -> Self {
+        Object::String(value.to_string())
+    }
+}
+
+impl From<bool> for Object {
+    fn from(value: bool) -> Self {
+        Object::Boolean(value)
+    }
+}
+
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Object::Int(value) => write!(f, "{}", value),
+            Object::Float(value) => write!(f, "{}", value),
+            Object::String(value) => write!(f, "{}", value),
+            Object::Boolean(value) => write!(f, "{}", value),
+            Object::List(value) => {
+                let objects = value
+                    .iter()
+                    .map(|val| format!("{}", val))
+                    .collect::<Vec<String>>()
+                    .join(";");
+                write!(f, "[{}]", objects)
+            }
+            Object::Struct(name, objects) => {
+                let fields = objects
+                    .iter()
+                    .map(|(key, val)| format!("{}: {}", key, val))
+                    .collect::<Vec<String>>()
+                    .join("; ");
+
+                write!(f, "{} {{ {} }}", name, fields)
+            }
+            _ => write!(f, "Nothing"),
+        }
+    }
+}

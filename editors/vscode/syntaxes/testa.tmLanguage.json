@@ -1,0 +1,141 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Testa",
+  "scopeName": "source.testa",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#directives" },
+    { "include": "#attributes" },
+    { "include": "#keywords" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#types" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.testa",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.testa",
+          "match": "@(output|output_path|generate)\\b"
+        }
+      ]
+    },
+    "attributes": {
+      "patterns": [
+        {
+          "name": "storage.modifier.attribute.testa",
+          "match": "#\\[(required|nullable|primary_key|private|public|abstract)\\]"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.testa",
+          "match": "\\b(type|enum|template|string_pattern|extend|with|override|struct)\\b"
+        },
+        {
+          "name": "keyword.operator.testa",
+          "match": "\\b(range)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.builtin.testa",
+          "match": "\\b(int|string|bool|float)\\b"
+        },
+        {
+          "name": "entity.name.type.testa",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.testa",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.testa",
+              "match": "\\\\."
+            },
+            {
+              "name": "constant.other.placeholder.testa",
+              "match": "\\$\\{[^}]*\\}"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.testa",
+          "match": "\\b\\d+\\.\\d+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.testa",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.testa",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.range.testa",
+          "match": "\\.\\.=?"
+        },
+        {
+          "name": "keyword.operator.arrow.testa",
+          "match": "=>"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.testa",
+          "match": ";"
+        },
+        {
+          "name": "punctuation.separator.testa",
+          "match": ","
+        },
+        {
+          "name": "punctuation.definition.block.testa",
+          "match": "[{}]"
+        },
+        {
+          "name": "punctuation.definition.brackets.testa",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "punctuation.definition.parens.testa",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.separator.colon.testa",
+          "match": ":"
+        }
+      ]
+    }
+  }
+}

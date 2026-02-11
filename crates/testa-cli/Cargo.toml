@@ -1,0 +1,11 @@
+[package]
+name = "testa-cli"
+version = "0.1.1"
+edition = "2024"
+authors = ["Lazar Nagulov"]
+
+[dependencies]
+testa-core = { path = "../testa-core" }
+testa-interpreter = { path = "../testa-interpreter" }
+testa-generation = { path = "../testa-generation" }
+clap = { version = "4", features = ["derive"] }

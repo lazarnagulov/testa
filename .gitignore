@@ -68,3 +68,6 @@ target/
 .mtc
 build/
 *.py*
+
+node_modules
+out

@@ -1,0 +1,15 @@
+@output json { pretty = true; }
+@output_path "example12.json";
+
+struct GeoLocation {
+    lat = float [range=-90..=90];
+    lon = float [range=-180..=180];
+}
+
+template Vehicle {
+    id = int;
+    model = string [length=5];
+    location = GeoLocation;
+}
+
+@generate Vehicle[10]; 

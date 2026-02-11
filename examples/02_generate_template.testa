@@ -1,5 +1,5 @@
-@output csv;
-@output_path "./example_02.csv";
+@output json { pretty = true; indent = 4; }
+@output_path "./example_02.json";
 
 template User {
     id = int;
