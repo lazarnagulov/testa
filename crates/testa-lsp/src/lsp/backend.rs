@@ -1,7 +1,8 @@
 use tower_lsp::jsonrpc::{self, Error};
 use tower_lsp::lsp_types::{
-    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability,
-    Location, OneOf, ReferenceParams, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    CompletionOptions, CompletionParams, CompletionResponse, GotoDefinitionParams,
+    GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability, Location, OneOf,
+    ReferenceParams, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::{Client, jsonrpc::Result};
 use tower_lsp::{
@@ -12,7 +13,7 @@ use tower_lsp::{
     },
 };
 
-use crate::lsp::features::{goto_definition, hover, references};
+use crate::lsp::features::{completion, goto_definition, hover, references};
 use crate::lsp::workspace::Workspace;
 use crate::lsp::workspace::document::Document;
 
@@ -55,6 +56,16 @@ impl LanguageServer for Backend {
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
+                completion_provider: Some(CompletionOptions {
+                    trigger_characters: Some(vec![
+                        "@".to_string(),
+                        "#".to_string(),
+                        ":".to_string(),
+                        "=".to_string(),
+                    ]),
+                    resolve_provider: Some(false),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             ..Default::default()
@@ -102,6 +113,10 @@ impl LanguageServer for Backend {
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
         hover::handle_hover(self, params).await
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        completion::handle_completion(self, params).await
     }
 
     async fn shutdown(&self) -> Result<()> {

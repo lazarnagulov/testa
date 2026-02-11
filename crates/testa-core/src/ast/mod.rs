@@ -1,5 +1,6 @@
 pub mod attribute;
 pub mod constraint;
+pub mod context;
 pub mod data_type;
 pub mod expression;
 pub mod field;
@@ -12,6 +13,7 @@ pub mod visitor;
 
 pub use attribute::*;
 pub use constraint::*;
+pub use context::*;
 pub use data_type::*;
 pub use expression::*;
 pub use field::*;
