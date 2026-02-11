@@ -30,6 +30,7 @@ pub fn compile_file(path: &PathBuf) -> Result<(Program, SymbolTable), Vec<Diagno
     let AnalysisResult {
         diagnostics,
         symbol_table,
+        ..
     } = SemanticAnalyser::new(&program).analyse();
 
     if !diagnostics.is_empty() {

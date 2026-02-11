@@ -1,7 +1,7 @@
 use crate::diagnostics::{Diagnostic, DiagnosticCode};
 use crate::utils::Span;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SemanticError {
     UnknownType {
         name: String,

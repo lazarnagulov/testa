@@ -1,12 +1,14 @@
+use std::collections::HashMap;
+
 use crate::{
-    analyser::symbol_table::SymbolTable,
+    analyser::{reference_tracker::Reference, symbol_table::SymbolTable},
     diagnostics::{Diagnostic, Severity},
-    utils::Span,
 };
 
 #[derive(Debug, Clone)]
 pub struct AnalysisResult {
     pub symbol_table: SymbolTable,
+    pub references: HashMap<String, Vec<Reference>>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -28,28 +30,4 @@ impl AnalysisResult {
             .iter()
             .filter(|d| d.severity == Severity::Warning)
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct HoverInfo {
-    pub content: String,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct CompletionItem {
-    pub label: String,
-    pub kind: CompletionKind,
-    pub detail: Option<String>,
-    pub documentation: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub enum CompletionKind {
-    Template,
-    Enum,
-    Field,
-    Keyword,
-    Function,
-    Type,
 }

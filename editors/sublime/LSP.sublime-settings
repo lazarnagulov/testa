@@ -1,0 +1,17 @@
+{
+  "clients": {
+    "testa": {
+      "enabled": true,
+      "command": ["testa-lsp"],
+      "languageId": "testa",
+      "scopes": ["source.testa"],
+      "syntaxes": ["Packages/TestA/testa.sublime-syntax"],
+      "file_watcher": {
+        "patterns": [
+          "**/*.testa",
+          "**/*.ta"
+        ]
+      }
+    }
+  }
+}
