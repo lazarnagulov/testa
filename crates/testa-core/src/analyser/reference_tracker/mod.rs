@@ -19,6 +19,7 @@ pub enum ReferenceKind {
     TemplateParent,
     TemplateGenerate,
     TemplateDecl,
+    StructDecl,
     Enum,
     Field,
 }
@@ -118,6 +119,9 @@ impl<'a> Visitor for ReferenceTracker<'a> {
                         ReferenceKind::TemplateParent,
                     );
                 }
+            }
+            Statement::Struct { name, name_span, .. } => {
+                self.add_reference(name.to_string(), *name_span, ReferenceKind::StructDecl);
             }
             Statement::Generate {
                 template_name: Some(name),

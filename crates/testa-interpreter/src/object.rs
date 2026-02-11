@@ -1,4 +1,5 @@
 use core::fmt;
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +11,7 @@ pub enum Object {
     Boolean(bool),
     Range(isize, isize),
     List(Vec<Object>),
+    Struct(String, HashMap<String, Object>),
     NoReturn,
 }
 
@@ -81,6 +83,15 @@ impl fmt::Display for Object {
                     .collect::<Vec<String>>()
                     .join(";");
                 write!(f, "[{}]", objects)
+            }
+            Object::Struct(name, objects) => {
+                let fields = objects
+                    .iter()
+                    .map(|(key, val)| format!("{}: {}", key, val))
+                    .collect::<Vec<String>>()
+                    .join("; ");
+
+                write!(f, "{} {{ {} }}", name, fields)
             }
             _ => write!(f, "Nothing"),
         }

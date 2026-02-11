@@ -17,6 +17,12 @@ pub enum Statement {
         span: Span,
         name_span: Option<Span>,
     },
+    Struct {
+        name: String,
+        name_span: Span,
+        body: Vec<Field>,
+        span: Span,
+    },
     OutputDirective {
         argument: String,
         options: Vec<Field>,

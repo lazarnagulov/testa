@@ -36,6 +36,10 @@ pub trait Visitor: Sized {
         // Default: do nothing
     }
 
+    fn visit_struct(&mut self, _name: &str, _body: &[Field], _span: Span) {
+        // Default: do nothing
+    }
+
     fn visit_type_decl(
         &mut self,
         _name: &str,
@@ -174,6 +178,11 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
         Statement::Expression(expr_stmt) => {
             visitor.visit_expression(&expr_stmt.expression);
         }
+        Statement::Struct {
+            name, body, span, ..
+        } => {
+            visitor.visit_struct(name, body, *span);
+        }
     }
 }
 
@@ -243,6 +252,12 @@ pub fn walk_template<V: Visitor>(visitor: &mut V, attributes: &[Attribute], body
     for attr in attributes {
         visitor.visit_attribute(attr);
     }
+    for field in body {
+        visitor.visit_field(field);
+    }
+}
+
+pub fn walk_struct<V: Visitor>(visitor: &mut V, body: &[Field]) {
     for field in body {
         visitor.visit_field(field);
     }

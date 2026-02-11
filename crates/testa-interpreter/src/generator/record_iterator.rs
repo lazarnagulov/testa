@@ -15,11 +15,17 @@ impl<'a> Iterator for RecordGenerator<'a> {
             if self.current_count < info.total_count {
                 self.current_count += 1;
 
-                let result = if let Some(name) = &info.template_name {
-                    Self::generate_from_template(ctx, state, name, info.span)
-                } else {
-                    Self::generate_anonymous(ctx, state, &info.body)
-                };
+                let result = Self::generate_record(
+                    ctx,
+                    state,
+                    info.template_name.as_deref(),
+                    if info.template_name.is_none() {
+                        Some(&info.body)
+                    } else {
+                        None
+                    },
+                    info.span,
+                );
 
                 return Some(result);
             }
