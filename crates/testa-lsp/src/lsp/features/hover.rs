@@ -155,5 +155,17 @@ fn generate_hover_content(name: &str, kind: &SymbolKind) -> String {
 
             content
         }
+        SymbolKind::Struct { name, fields } => {
+            let mut content = String::new();
+            content.push_str(&format!("```testa\nstruct {}\n```\n\n", name));
+            content.push_str(&format!("**Fields:** {}\n", fields.len()));
+            if !fields.is_empty() {
+                for field in fields {
+                    content.push_str(&format!("- `{}`\n", field.name));
+                }
+            }
+
+            content
+        }
     }
 }
