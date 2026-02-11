@@ -1,7 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum CompletionContext {
     TopLevel,
-    TemplateInheritance,
     TemplateBody,
     FieldValue,
     Attribute,
@@ -29,13 +28,9 @@ pub fn detect_completion_context(text: &str, line: u32, column: u32) -> Completi
         return CompletionContext::Attribute;
     }
 
-    if before_cursor.contains("template") && before_cursor.ends_with(':') {
-        return CompletionContext::TemplateInheritance;
-    }
-
     let context = find_enclosing_context(text, line);
     match context {
-        Some(EnclosingContext::Template) => {
+        Some(EnclosingContext::Template) | Some(EnclosingContext::Struct) => {
             if before_cursor.contains('=') && !before_cursor.trim_end().ends_with('=') {
                 return CompletionContext::FieldValue;
             }
@@ -53,6 +48,7 @@ pub fn detect_completion_context(text: &str, line: u32, column: u32) -> Completi
 #[derive(Debug, Clone, PartialEq)]
 enum EnclosingContext {
     Template,
+    Struct,
     Enum,
 }
 
@@ -72,6 +68,8 @@ fn find_enclosing_context(text: &str, target_line: u32) -> Option<EnclosingConte
                 current_context = Some(EnclosingContext::Template);
             } else if trimmed.starts_with("enum ") {
                 current_context = Some(EnclosingContext::Enum);
+            } else if trimmed.starts_with("struct ") {
+                current_context = Some(EnclosingContext::Struct);
             }
         }
 
