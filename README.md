@@ -14,15 +14,13 @@ TestA is a domain-specific language designed for generating structured test data
 
 enum Role { Admin, User, Guest }
 
-resource Names {
-    first = ["Ana", "Marko"];
-    last = ["Petrović", "Nikolić"];
-}
-
 template User {
-    id = $uuid();
-    name = $pick(Names.first) + " " + $pick(Names.last);
-    role = $pick(Role);
+    id = int;
+    name = string;
+    password = string;
+    age = int[range=1..=100];
+    balance = float;
+    role = Role;
 }
 
 @generate User [10];
@@ -42,11 +40,12 @@ cd testa
 ```
 Compile project:
 ```
-cargo build
+cargo build --bin testa-cli --release
+cargo build --bin testa-lsp --release
 ```
 Run the project:
 ```
-cargo run -- ./examples/01_anonymous_generate.testa
+./target/release/testa-cli generate ./examples/02_generate_template.testa
 ```
 
 ## Syntax
@@ -173,8 +172,8 @@ template User {
 Templates can be extended using `: <parent name>`.
 ```
 template Student : User {
-    index_id: string;
-    override age: int [range=19..=30];
+    index_id = string;
+    override age = int [range=19..=30];
 }
 ```
 > [!NOTE]
@@ -202,12 +201,7 @@ template User {
 
 Check examples: [enum](./examples/03_enum.testa), [weight_enum](./examples/04_weight_enum.testa).
 
-
-## Resource
-todo...
-
 ## Generate
-todo...
 ```
 @generate <template_name|_> [<count>] ; | { key = <value:expr> }
 ```
