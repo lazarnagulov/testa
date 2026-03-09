@@ -792,6 +792,7 @@ dependencies = [
  "clap",
  "testa-core",
  "testa-generation",
+ "testa-hir",
  "testa-interpreter",
 ]
 

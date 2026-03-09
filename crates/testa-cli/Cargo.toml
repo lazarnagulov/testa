@@ -7,5 +7,6 @@ authors = ["Lazar Nagulov"]
 [dependencies]
 testa-core = { path = "../testa-core" }
 testa-interpreter = { path = "../testa-interpreter" }
+testa-hir = { path = "../testa-hir" }
 testa-generation = { path = "../testa-generation" }
 clap = { version = "4", features = ["derive"] }

@@ -6,13 +6,20 @@ use crate::StringId;
 
 
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StringPool {
     strings: Vec<String>,
     map: HashMap<String, StringId>,
 }
 
 impl StringPool {
+    pub fn new() -> Self {
+        Self {
+            strings: Vec::new(),
+            map: HashMap::new()
+        }
+    }
+
     pub fn intern(&mut self, s: &str) -> StringId {
         if let Some(&id) = self.map.get(s) {
             return id;

@@ -8,10 +8,10 @@ use crate::{SourceMap, StringPool};
 pub struct StringId(pub u32);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ItemId(u32);
+pub struct ItemId(pub u32);
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub struct FieldId(u32);
+pub struct FieldId(pub u32);
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
