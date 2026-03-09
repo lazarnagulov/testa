@@ -801,6 +801,7 @@ version = "0.2.0"
 dependencies = [
  "lsp-types",
  "once_cell",
+ "serde",
 ]
 
 [[package]]

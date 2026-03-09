@@ -1,14 +1,7 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod source_map;
+pub mod module;
+pub mod string_pool;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use source_map::SourceMap;
+pub use module::{Module, StringId, ItemId, FieldId};
+pub use string_pool::StringPool;
