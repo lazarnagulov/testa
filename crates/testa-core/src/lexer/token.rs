@@ -19,6 +19,7 @@ pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
         "output" => TokenKind::Output,
         "generate" => TokenKind::Generate,
         "seed" => TokenKind::Seed,
+        "import" => TokenKind::Import,
         "output_path" => TokenKind::OutputPath,
         "pick" => TokenKind::Pick,
         "uuid" => TokenKind::Uuid,
@@ -49,6 +50,7 @@ pub enum TokenKind {
     Generate,
     Seed,
     OutputPath,
+    Import,
 
     // builtins -- starts with $
     Pick,
@@ -124,6 +126,7 @@ impl Display for TokenKind {
         let str = match self {
             TokenKind::Output => "@output",
             TokenKind::Seed => "@seed",
+            TokenKind::Import => "@import",
             TokenKind::OutputPath => "@output_path",
             TokenKind::Generate => "generate",
             TokenKind::Template => "template",

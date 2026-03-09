@@ -26,7 +26,7 @@
       "patterns": [
         {
           "name": "keyword.control.directive.testa",
-          "match": "@(output|output_path|generate)\\b"
+          "match": "@(output|output_path|generate|import)\\b"
         }
       ]
     },
