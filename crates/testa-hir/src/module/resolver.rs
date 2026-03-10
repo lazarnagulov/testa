@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::{Path, PathBuf}};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use crate::{Module, module::error::ResolveError};
 
@@ -65,7 +68,11 @@ impl ModuleResolver {
         for name in names {
             self.resolve_one(name, relative_to)?;
         }
-        Ok(self.cache.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+        Ok(self
+            .cache
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect())
     }
 
     fn find_tmod(&self, name: &str, relative_to: &Path) -> Option<PathBuf> {

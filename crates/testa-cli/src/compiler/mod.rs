@@ -45,30 +45,46 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
 
     let lexer = Lexer::new(&source);
     let mut parser = Parser::new(lexer, &source);
-    let program = parser.parse().map_err(|errors| {
-        errors.iter().map(|e| e.to_diagnostic()).collect::<Vec<_>>()
-    })?;
+    let program = parser
+        .parse()
+        .map_err(|errors| errors.iter().map(|e| e.to_diagnostic()).collect::<Vec<_>>())?;
 
-    let import_names: Vec<String> = program.0.iter().filter_map(|stmt| {
-        if let Statement::ImportDirective { argument, .. } = stmt {
-            Some(argument.clone())
-        } else {
-            None
-        }
-    }).collect();
+    let import_names: Vec<String> = program
+        .0
+        .iter()
+        .filter_map(|stmt| {
+            if let Statement::ImportDirective { argument, .. } = stmt {
+                Some(argument.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let mut resolver = ModuleResolver::with_defaults(path);
     let imported = resolver.resolve_all(&import_names, path).map_err(|err| {
         vec![
-            Diagnostic::error(Span::default(), format!("Failed to resolve imports: {}", err))
-                .with_code(DiagnosticCode::IOError),
+            Diagnostic::error(
+                Span::default(),
+                format!("Failed to resolve imports: {}", err),
+            )
+            .with_code(DiagnosticCode::IOError),
         ]
     })?;
+    let imported_tables = imported
+        .values()
+        .map(|m| m.to_symbol_table())
+        .collect::<Vec<_>>();
 
-    let analysis= SemanticAnalyser::new(&program).analyse();
+    let analysis = SemanticAnalyser::new(&program).analyse_with_imports(&imported_tables);
     if !analysis.diagnostics.is_empty() {
         return Err(analysis.diagnostics);
     }
 
-    Ok(CompiledUnit { source, program, analysis, imported })
+    Ok(CompiledUnit {
+        source,
+        program,
+        analysis,
+        imported,
+    })
 }

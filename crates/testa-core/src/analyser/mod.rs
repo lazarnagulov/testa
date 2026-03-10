@@ -36,6 +36,10 @@ impl<'a> SemanticAnalyser<'a> {
     }
 
     pub fn analyse(&mut self) -> AnalysisResult {
+        self.analyse_with_imports(&[])
+    }
+
+    pub fn analyse_with_imports(&mut self, imported: &[SymbolTable]) -> AnalysisResult {
         let symbol_table = match SymbolTableBuilder::new().build(self.program) {
             Ok(table) => table,
             Err(errors) => {
@@ -55,11 +59,17 @@ impl<'a> SemanticAnalyser<'a> {
 
         self.check_all_inheritance_cycles(&symbol_table);
 
-        if let Err(errs) = ReferenceChecker::new(&symbol_table).check(self.program) {
+        let imported_refs = imported.iter().collect::<Vec<_>>();
+
+        if let Err(errs) =
+            ReferenceChecker::with_imports(&symbol_table, &imported_refs).check(self.program)
+        {
             self.errors.extend(errs);
         }
 
-        let references = match ReferenceTracker::new(&symbol_table).track_references(self.program) {
+        let references = match ReferenceTracker::with_imports(&symbol_table, &imported_refs)
+            .track_references(self.program)
+        {
             Ok(refs) => refs,
             Err(errs) => {
                 self.errors.extend(errs);

@@ -33,7 +33,7 @@ impl TryFrom<Command> for GenerateOptions {
 }
 
 pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>> {
-    let unit= compile_file(&options.input)?;
+    let unit = compile_file(&options.input)?;
     let context = Context::new(unit.analysis.symbol_table);
     let mut evaluator = Evaluator::new(context, options.seed);
 
