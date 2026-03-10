@@ -19,11 +19,11 @@ impl<'a> TypeChecker<'a> {
             ExpressionKind::List(elements) => self.infer_list_type(elements),
             ExpressionKind::Type(data_type) => {
                 let base_type = match Type::from(data_type) {
-                    Type::Custom(type_name) => match self.type_cache.get(&type_name) {
+                    Type::Custom(type_name) => match self.type_map.get(&type_name) {
                         Some(custom_type) => custom_type.clone(),
                         None => {
                             let custom_type = self.resolve_custom_type(&type_name);
-                            self.type_cache.insert(type_name, custom_type.clone());
+                            self.type_map.insert(type_name, custom_type.clone());
                             custom_type
                         }
                     },

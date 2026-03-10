@@ -1,9 +1,9 @@
 pub mod serialize;
 
-use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use crate::{StringPool, source_map::SourceMap};
-
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use testa_core::{self, analyser::type_checker};
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct StringId(pub u32);
@@ -17,8 +17,26 @@ pub struct FieldId(pub u32);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Item {
     Template(Template),
-    Enum(Enum),    
-    TypeAlias(TypeAlias), 
+    Enum(Enum),
+    TypeAlias(TypeAlias),
+}
+
+impl Item {
+    pub fn id(&self) -> ItemId {
+        match self {
+            Item::Template(t) => t.id,
+            Item::Enum(e) => e.id,
+            Item::TypeAlias(t) => t.id,
+        }
+    }
+
+    pub fn name(&self) -> StringId {
+        match self {
+            Item::Template(t) => t.name,
+            Item::Enum(e) => e.name,
+            Item::TypeAlias(t) => t.name,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,22 +118,33 @@ pub enum AttributeKind {
     Required,
     Nullable,
     PrimaryKey,
-    Private,   
-    Public,   
-    Abstract,  
+    Private,
+    Public,
+    Abstract,
+}
+
+pub fn attribute_kind(name: &str) -> AttributeKind {
+    match name {
+        "nullable" => AttributeKind::Nullable,
+        "primary_key" => AttributeKind::PrimaryKey,
+        "private" => AttributeKind::Private,
+        "public" => AttributeKind::Public,
+        "abstract" => AttributeKind::Abstract,
+        _ => AttributeKind::Required,
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Expr {
     Int(i64),
-    Float(f64),         
+    Float(f64),
     String(StringId),
     Bool(bool),
     List(Vec<Expr>),
-    Range { 
-        start: Box<Expr>, 
-        end: Box<Expr>, 
-        inclusive: bool 
+    Range {
+        start: Box<Expr>,
+        end: Box<Expr>,
+        inclusive: bool,
     },
 }
 
@@ -137,17 +166,14 @@ pub struct ModuleMetadata {
 }
 
 impl Module {
-
     pub fn get_item(&self, id: ItemId) -> Option<&Item> {
-        self.items.iter().find(|item| {
-            match item {
-                Item::Template(t) => t.id == id,
-                Item::Enum(e) => e.id == id,
-                Item::TypeAlias(t) => t.id == id,
-            }
+        self.items.iter().find(|item| match item {
+            Item::Template(t) => t.id == id,
+            Item::Enum(e) => e.id == id,
+            Item::TypeAlias(t) => t.id == id,
         })
     }
-    
+
     pub fn get_item_by_name(&self, name: &str) -> Option<&Item> {
         self.items.iter().find(|item| {
             let item_name = match item {
@@ -158,7 +184,7 @@ impl Module {
             item_name == name
         })
     }
-    
+
     pub fn templates(&self) -> impl Iterator<Item = &Template> {
         self.items.iter().filter_map(|item| {
             if let Item::Template(t) = item {
@@ -168,7 +194,7 @@ impl Module {
             }
         })
     }
-    
+
     pub fn enums(&self) -> impl Iterator<Item = &Enum> {
         self.items.iter().filter_map(|item| {
             if let Item::Enum(e) = item {
@@ -178,7 +204,7 @@ impl Module {
             }
         })
     }
-    
+
     pub fn type_aliases(&self) -> impl Iterator<Item = &TypeAlias> {
         self.items.iter().filter_map(|item| {
             if let Item::TypeAlias(t) = item {
@@ -188,18 +214,18 @@ impl Module {
             }
         })
     }
-    
+
     pub fn is_stale(&self) -> Result<bool, std::io::Error> {
         use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
         use std::fs;
-        
+        use std::hash::{Hash, Hasher};
+
         let current_source = fs::read_to_string(&self.metadata.source_file)?;
-        
+
         let mut hasher = DefaultHasher::new();
         current_source.hash(&mut hasher);
         let current_hash = hasher.finish();
-        
+
         Ok(current_hash != self.metadata.source_hash)
     }
 }
@@ -208,7 +234,7 @@ impl Template {
     pub fn get_field(&self, id: FieldId) -> Option<&Field> {
         self.fields.iter().find(|f| f.id == id)
     }
-    
+
     pub fn get_field_by_name(&self, name: StringId) -> Option<&Field> {
         self.fields.iter().find(|f| f.name == name)
     }
@@ -230,6 +256,22 @@ impl std::fmt::Display for Type {
             Type::Optional(inner) => write!(f, "?{}", inner),
             Type::List(inner) => write!(f, "[{}]", inner),
             Type::UserDefined(id) => write!(f, "UserDefined({})", id.0),
+        }
+    }
+}
+
+impl From<&type_checker::types::Type> for Type {
+    fn from(ty: &type_checker::types::Type) -> Self {
+        match ty {
+            type_checker::types::Type::Int => Type::Int,
+            type_checker::types::Type::Float => Type::Float,
+            type_checker::types::Type::Str => Type::String,
+            type_checker::types::Type::Boolean => Type::Bool,
+            type_checker::types::Type::List(inner) => {
+                Type::List(Box::new(Type::from(inner.as_ref())))
+            }
+            type_checker::types::Type::Custom(_) => Type::Int, // caller handles this
+            _ => Type::Int,
         }
     }
 }

@@ -38,7 +38,6 @@ pub fn compile_module(input: PathBuf, output: Option<PathBuf>) -> Result<(), Vec
 
     let lowering = AstLowering::new(source_file.clone());
     let hir = lowering.lower(&ast, &analysis, &content);
-
     let output_path = output.unwrap_or_else(|| source_file.with_extension("tmod"));
 
     hir.save(&output_path).map_err(|err| {

@@ -11,5 +11,5 @@ fn main() {
             eprintln!("{}", error.format_cli())
         }
         std::process::exit(1);
-    }
+    } 
 }
