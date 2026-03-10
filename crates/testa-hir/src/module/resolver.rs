@@ -45,11 +45,11 @@ impl ModuleResolver {
 
         let module = Module::load(&path)?;
 
-        let transitive: Vec<String> = module
+        let transitive= module
             .imports
             .iter()
             .map(|id| module.string_pool.resolve(*id).to_string())
-            .collect();
+            .collect::<Vec<_>>();
 
         self.cache.insert(name.to_string(), module);
 

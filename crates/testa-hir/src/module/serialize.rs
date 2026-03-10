@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use testa_core::analyser::symbol_table::SymbolTable;
+use testa_core::{analyser::symbol_table::SymbolTable, ast::{DataTypeKind, Expression}, utils::Span};
 
 use crate::{
     Item, Module,
@@ -74,21 +74,17 @@ impl Module {
                     table.enter_scope(ScopeKind::Template { name: name.clone() });
                     for field in &t.fields {
                         let field_name = self.string_pool.resolve(field.name).to_string();
-                        let expr = Expression {
-                            kind: ExpressionKind::Identifier(field_name.clone()),
-                            span: Span::default(),
-                        };
-                        table
-                            .insert(
-                                field_name,
-                                SymbolKind::Field {
-                                    template_name: name.clone(),
-                                    is_override: false,
-                                    expression: expr,
-                                },
-                                Span::default(),
-                            )
-                            .ok();
+                        let expr = self.type_to_expression(&field.ty);
+                        
+                        table.insert(
+                            field_name.clone(),
+                            SymbolKind::Field {
+                                template_name: name.clone(),
+                                is_override: false,
+                                expression: expr,
+                            },
+                            Span::default(),
+                        ).ok();
                     }
                     table.exit_scope();
                 }
@@ -184,5 +180,78 @@ impl Module {
         }
 
         table
+    }
+
+    fn type_to_expression(&self, ty: &Type) -> Expression {
+        use testa_core::ast::{DataType, DataTypeKind, Expression, ExpressionKind};
+
+        let kind = match ty {
+            Type::Int => ExpressionKind::Type(DataType {
+                kind: DataTypeKind::Int,
+                constraints: None,
+                span: Span::default(),
+            }),
+            Type::String => ExpressionKind::Type(DataType {
+                kind: DataTypeKind::Str,
+                constraints: None,
+                span: Span::default(),
+            }),
+            Type::Bool => ExpressionKind::Type(DataType {
+                kind: DataTypeKind::Boolean,
+                constraints: None,
+                span: Span::default(),
+            }),
+            Type::Float => ExpressionKind::Type(DataType {
+                kind: DataTypeKind::Float,
+                constraints: None,
+                span: Span::default(),
+            }),
+            Type::List(inner) => ExpressionKind::Type(DataType {
+                kind: DataTypeKind::List(Box::new(DataType {
+                    kind: self.data_type_kind_from_type(inner),
+                    constraints: None,
+                    span: Span::default(),
+                })),
+                constraints: None,
+                span: Span::default(),
+            }),
+            Type::Optional(inner) => ExpressionKind::Type(DataType {
+                kind: self.data_type_kind_from_type(inner),
+                constraints: None,
+                span: Span::default(),
+            }),
+            Type::UserDefined(item_ref) => {
+                let id = match item_ref {
+                    ItemRef::Local(id) => *id,
+                    ItemRef::Imported { item, .. } => *item,
+                };
+                let type_name = self.get_item(id)
+                    .map(|i| self.string_pool.resolve(i.name()).to_string())
+                    .unwrap_or_default();
+                ExpressionKind::Identifier(type_name)
+            }
+        };
+
+        Expression { kind, span: Span::default() }
+    }
+
+    fn data_type_kind_from_type(&self, ty: &Type) -> DataTypeKind {
+        match ty {
+            Type::Int => DataTypeKind::Int,
+            Type::String => DataTypeKind::Str,
+            Type::Bool => DataTypeKind::Boolean,
+            Type::Float => DataTypeKind::Float,
+            Type::UserDefined(item_ref) => {
+                let id = match item_ref {
+                    ItemRef::Local(id) => *id,
+                    ItemRef::Imported { item, .. } => *item,
+                };
+                let type_name = self.get_item(id)
+                    .map(|i| self.string_pool.resolve(i.name()).to_string())
+                    .unwrap_or_default();
+                DataTypeKind::Custom(type_name)
+            }
+            _ => DataTypeKind::Int,
+        }
     }
 }
