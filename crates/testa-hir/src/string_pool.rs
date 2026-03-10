@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::StringId;
 
-
-
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StringPool {
     strings: Vec<String>,
@@ -16,7 +14,7 @@ impl StringPool {
     pub fn new() -> Self {
         Self {
             strings: Vec::new(),
-            map: HashMap::new()
+            map: HashMap::new(),
         }
     }
 
@@ -29,7 +27,7 @@ impl StringPool {
         self.map.insert(s.to_string(), id);
         id
     }
-    
+
     pub fn resolve(&self, id: StringId) -> &str {
         &self.strings[id.0 as usize]
     }

@@ -5,7 +5,8 @@ use testa_core::{diagnostics::Diagnostic, utils::Span};
 use testa_interpreter::evaluator::context::OutputFormat;
 
 use crate::commands::{
-    check::check_command, compile::compile_module, generate::generate_command, info::info_command, init::init_command
+    check::check_command, compile::compile_module, generate::generate_command, info::info_command,
+    init::init_command,
 };
 
 #[derive(Parser)]
@@ -27,9 +28,7 @@ impl Cli {
                     .try_into()
                     .map_err(|err| vec![Diagnostic::error(Span::default(), err)])?,
             ),
-            Command::Compile { input, output } => {
-                compile_module(input, output)
-            },
+            Command::Compile { input, output } => compile_module(input, output),
             Command::Check {
                 files,
                 syntax_only,

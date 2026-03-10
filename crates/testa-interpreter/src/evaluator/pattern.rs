@@ -1,10 +1,20 @@
 use rand::Rng;
 use testa_core::ast::{PatternChar, PatternElement};
 
-use crate::{evaluator::{context::{Context, State}, error::EvalError, expression::evaluate_expression}, object::Object};
+use crate::{
+    evaluator::{
+        context::{Context, State},
+        error::EvalError,
+        expression::evaluate_expression,
+    },
+    object::Object,
+};
 
-
-pub(crate) fn evaluate_string_pattern(ctx: &Context, state: &mut State, elements: &[PatternElement]) -> Result<Object, EvalError> {
+pub(crate) fn evaluate_string_pattern(
+    ctx: &Context,
+    state: &mut State,
+    elements: &[PatternElement],
+) -> Result<Object, EvalError> {
     let mut result = String::new();
     for element in elements {
         match element {
@@ -13,7 +23,7 @@ pub(crate) fn evaluate_string_pattern(ctx: &Context, state: &mut State, elements
                 ch,
                 count,
                 count_expression,
-                span
+                span,
             } => {
                 let mut total_count = *count;
                 if let Some(expression) = count_expression {
@@ -24,7 +34,7 @@ pub(crate) fn evaluate_string_pattern(ctx: &Context, state: &mut State, elements
                             } else {
                                 Err(EvalError::MiscellaneousError(
                                     "expected int to be positive".to_owned(),
-                                    *span
+                                    *span,
                                 ))
                             }
                         }

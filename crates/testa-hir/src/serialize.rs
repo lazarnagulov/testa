@@ -1,7 +1,9 @@
-use std::{fs::File, io::{Read as _, Write}};
+use std::{
+    fs::File,
+    io::{Read as _, Write},
+};
 
 use crate::Module;
-
 
 impl Module {
     pub fn save(&self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -10,7 +12,7 @@ impl Module {
         file.write_all(&encoded)?;
         Ok(())
     }
-    
+
     pub fn load(path: &std::path::Path) -> Result<Self, Box<dyn std::error::Error>> {
         let mut file = File::open(path)?;
         let mut buffer = Vec::new();

@@ -2,7 +2,8 @@ use crate::{
     evaluator::{
         context::{Context, State},
         error::EvalError,
-        identifier::{evaluate_data_type, evaluate_identifier}, pattern::evaluate_string_pattern,
+        identifier::{evaluate_data_type, evaluate_identifier},
+        pattern::evaluate_string_pattern,
     },
     object::Object,
 };
@@ -53,7 +54,9 @@ pub fn evaluate_expression(
         }
         ExpressionKind::Type(data_type) => evaluate_data_type(ctx, state, data_type),
         ExpressionKind::List(_) => todo!("implement list expression evaluation"),
-        ExpressionKind::StringPattern(pattern_elements) => evaluate_string_pattern(ctx, state, pattern_elements),
+        ExpressionKind::StringPattern(pattern_elements) => {
+            evaluate_string_pattern(ctx, state, pattern_elements)
+        }
         ExpressionKind::FuncCall { .. } => todo!(),
     }
 }
