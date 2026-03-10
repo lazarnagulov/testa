@@ -1,6 +1,7 @@
 mod helpers;
 
 use std::{
+    collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
     path::PathBuf,
 };
@@ -40,14 +41,24 @@ impl AstLowering {
         }
     }
 
-    pub fn lower(mut self, ast: &Program, analysis: &AnalysisResult, source_text: &str) -> Module {
+    pub fn lower(
+        mut self,
+        ast: &Program,
+        analysis: &AnalysisResult,
+        source_text: &str,
+        imported: &HashMap<String, &Module>,
+    ) -> Module {
         for stmt in &ast.0 {
-            self.lower_statement(stmt, analysis);
+            self.lower_statement(stmt, analysis, imported);
         }
 
         let mut hasher = DefaultHasher::new();
         source_text.hash(&mut hasher);
         let source_hash = hasher.finish();
+        let imports = imported
+            .keys()
+            .map(|name| self.string_pool.intern(name))
+            .collect();
 
         Module {
             metadata: ModuleMetadata {
@@ -65,13 +76,19 @@ impl AstLowering {
                     .unwrap()
                     .as_secs(),
             },
+            imports,
             string_pool: self.string_pool,
             items: self.items,
             source_map: self.source_map_builder.build(),
         }
     }
 
-    fn lower_statement(&mut self, stmt: &Statement, analysis: &AnalysisResult) {
+    fn lower_statement(
+        &mut self,
+        stmt: &Statement,
+        analysis: &AnalysisResult,
+        imported: &HashMap<String, &Module>,
+    ) {
         match stmt {
             Statement::Template {
                 parent_name,
@@ -82,7 +99,7 @@ impl AstLowering {
                 span,
                 ..
             } => {
-                let template = self.lower_template(name, parent_name, body, attributes);
+                let template = self.lower_template(name, parent_name, body, attributes, imported);
                 self.register_item(Item::Template(template), *span, *name_span);
             }
 
@@ -105,7 +122,8 @@ impl AstLowering {
                 span,
                 ..
             } => {
-                let type_alias = self.lower_type_alias(name, data_type, attributes, analysis);
+                let type_alias =
+                    self.lower_type_alias(name, data_type, attributes, analysis, imported);
                 self.register_item(Item::TypeAlias(type_alias), *span, *name_span);
             }
 
@@ -119,18 +137,19 @@ impl AstLowering {
         parent_name: &Option<String>,
         body: &[Field],
         attributes: &[Attribute],
+        imported: &HashMap<String, &Module>,
     ) -> Template {
         let id = self.next_item_id();
         let name_id = self.string_pool.intern(name);
 
         let parent = parent_name
             .as_ref()
-            .and_then(|p| self.find_item_id_by_name(p));
+            .and_then(|p| self.find_item_ref_by_name(p, imported));
 
         let fields = body
             .iter()
             .enumerate()
-            .map(|(idx, field)| self.lower_field(field, idx))
+            .map(|(idx, field)| self.lower_field(field, idx, imported))
             .collect();
 
         let attrs = attributes
@@ -182,11 +201,12 @@ impl AstLowering {
         data_type: &Expression,
         attributes: &[Attribute],
         analysis: &AnalysisResult,
+        imported: &HashMap<String, &Module>,
     ) -> TypeAlias {
         let id = self.next_item_id();
         let name_id = self.string_pool.intern(name);
 
-        let target_type = self.lower_type_from_expr(data_type, analysis);
+        let target_type = self.lower_type_from_expr(data_type, analysis, imported);
 
         let constraints = self.extract_constraints(data_type);
 
@@ -204,7 +224,12 @@ impl AstLowering {
         }
     }
 
-    fn lower_field(&mut self, field: &Field, idx: usize) -> crate::module::Field {
+    fn lower_field(
+        &mut self,
+        field: &Field,
+        idx: usize,
+        imported: &HashMap<String, &Module>,
+    ) -> crate::module::Field {
         let field_id = FieldId(idx as u32);
         let name_id = self.string_pool.intern(&field.name);
 
@@ -216,7 +241,7 @@ impl AstLowering {
         crate::module::Field {
             id: field_id,
             name: name_id,
-            ty: self.lower_type(&field.value),
+            ty: self.lower_type(&field.value, imported),
             default_value: None, // Could be extracted from field.value if it's a literal
             attributes: field
                 .attributes
@@ -250,22 +275,18 @@ impl AstLowering {
         }
     }
 
-    fn lower_type(&mut self, expr: &Expression) -> Type {
+    fn lower_type(&mut self, expr: &Expression, imported: &HashMap<String, &Module>) -> Type {
         match &expr.kind {
             ExpressionKind::Identifier(name) => match name.as_str() {
                 "int" => Type::Int,
                 "string" => Type::String,
                 "bool" => Type::Bool,
                 "float" => Type::Float,
-                _ => {
-                    if let Some(item_id) = self.find_item_id_by_name(name) {
-                        Type::UserDefined(item_id)
-                    } else {
-                        Type::Int
-                    }
-                }
+                _ => self
+                    .find_item_ref_by_name(name, imported)
+                    .map(Type::UserDefined)
+                    .unwrap_or(Type::Int),
             },
-
             ExpressionKind::Type(data_type) => match &data_type.kind {
                 DataTypeKind::Int => Type::Int,
                 DataTypeKind::Str => Type::String,
@@ -276,34 +297,35 @@ impl AstLowering {
                         kind: ExpressionKind::Type(*inner.clone()),
                         span: expr.span,
                     };
-                    Type::List(Box::new(self.lower_type(&inner_expr)))
+                    Type::List(Box::new(self.lower_type(&inner_expr, imported)))
                 }
-                DataTypeKind::Custom(name) => {
-                    if let Some(item_id) = self.find_item_id_by_name(name) {
-                        Type::UserDefined(item_id)
-                    } else {
-                        Type::Int
-                    }
-                }
+                DataTypeKind::Custom(name) => self
+                    .find_item_ref_by_name(name, imported)
+                    .map(Type::UserDefined)
+                    .unwrap_or(Type::Int),
             },
-
             _ => Type::Int,
         }
     }
 
-    fn lower_type_from_expr(&mut self, expr: &Expression, analysis: &AnalysisResult) -> Type {
+    fn lower_type_from_expr(
+        &mut self,
+        expr: &Expression,
+        analysis: &AnalysisResult,
+        imported: &HashMap<String, &Module>,
+    ) -> Type {
         if let ExpressionKind::Identifier(name) = &expr.kind {
             if let Some(checker_type) = analysis.type_map.get(name) {
                 return match checker_type {
                     type_checker::types::Type::Custom(name) => self
-                        .find_item_id_by_name(name)
+                        .find_item_ref_by_name(name, imported)
                         .map(Type::UserDefined)
                         .unwrap_or(Type::Int),
                     other => Type::from(other),
                 };
             }
         }
-        self.lower_type(expr)
+        self.lower_type(expr, imported)
     }
 
     fn lower_expr(&mut self, expr: &Expression) -> Expr {

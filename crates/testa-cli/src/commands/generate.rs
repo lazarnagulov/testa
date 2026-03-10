@@ -33,12 +33,12 @@ impl TryFrom<Command> for GenerateOptions {
 }
 
 pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>> {
-    let (program, symbol_table) = compile_file(&options.input)?;
-    let context = Context::new(symbol_table);
+    let unit= compile_file(&options.input)?;
+    let context = Context::new(unit.analysis.symbol_table);
     let mut evaluator = Evaluator::new(context, options.seed);
 
     evaluator
-        .evaluate_directives(&program)
+        .evaluate_directives(&unit.program)
         .map_err(|err| vec![err.to_diagnostic()])?;
     let (format, config, path) = evaluator.output_config();
 
@@ -49,7 +49,7 @@ pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>>
 
     let mut record_generator = RecordGenerator::new(&mut evaluator);
     record_generator
-        .generate_infos(&program)
+        .generate_infos(&unit.program)
         .map_err(|err| vec![err.to_diagnostic()])?;
     record_generator
         .write_records(file_generator, output_path)

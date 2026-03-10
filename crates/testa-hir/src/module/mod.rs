@@ -1,6 +1,9 @@
+pub mod error;
+pub mod resolver;
 pub mod serialize;
 
 use crate::{StringPool, source_map::SourceMap};
+use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use testa_core::{self, analyser::type_checker};
@@ -10,6 +13,12 @@ pub struct StringId(pub u32);
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ItemId(pub u32);
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ItemRef {
+    Local(ItemId),
+    Imported { module: StringId, item: ItemId },
+}
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FieldId(pub u32);
@@ -43,7 +52,7 @@ impl Item {
 pub struct Template {
     pub id: ItemId,
     pub name: StringId,
-    pub parent: Option<ItemId>,
+    pub parent: Option<ItemRef>,
     pub fields: Vec<Field>,
     pub attributes: Vec<Attribute>,
 }
@@ -88,7 +97,7 @@ pub enum Type {
     Float,
     Optional(Box<Type>),
     List(Box<Type>),
-    UserDefined(ItemId),
+    UserDefined(ItemRef),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -152,6 +161,7 @@ pub enum Expr {
 pub struct Module {
     pub metadata: ModuleMetadata,
     pub string_pool: StringPool,
+    pub imports: Vec<StringId>,
     pub items: Vec<Item>,
     pub source_map: SourceMap,
 }
@@ -246,6 +256,15 @@ impl Enum {
     }
 }
 
+impl fmt::Display for ItemRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ItemRef::Local(item_id) => write!(f, "{}", item_id),
+            ItemRef::Imported { module, item } => write!(f, "{}::{}", module, item),
+        }
+    }
+}
+
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -255,7 +274,7 @@ impl std::fmt::Display for Type {
             Type::Float => write!(f, "float"),
             Type::Optional(inner) => write!(f, "?{}", inner),
             Type::List(inner) => write!(f, "[{}]", inner),
-            Type::UserDefined(id) => write!(f, "UserDefined({})", id.0),
+            Type::UserDefined(item_ref) => write!(f, "UserDefined({})", item_ref),
         }
     }
 }
