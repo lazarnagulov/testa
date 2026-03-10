@@ -454,6 +454,26 @@ fn test_parse_output_directive() {
 }
 
 #[test]
+fn test_parse_import_directive() {
+    let import_span = span(0, 1, 1, 3, 1, 4);
+    // @import std;
+    let mut parser = parser_from_tokens(
+        vec![
+            Ok(token(TokenKind::Import)),
+            Ok(identifier(import_span)),
+            Ok(token(TokenKind::Semicolon)),
+        ],
+        "std",
+    );
+    let program = parser.parse().expect("parse failed");
+    assert_eq!(program.0.len(), 1);
+    let Statement::ImportDirective { argument, .. } = &program.0[0] else {
+        panic!("expected first statement to be import directive");
+    };
+    assert_eq!(argument, &String::from("std"));
+}
+
+#[test]
 fn test_parse_output_path_directive() {
     let output_path_span = span(0, 1, 1, 10, 1, 11);
     // @output_path "test.csv";

@@ -1,0 +1,5 @@
+template User {
+    id = int;
+    name = string_pattern "${A}" + string; 
+    surname = string_pattern "${A}" + string;
+}

@@ -77,6 +77,10 @@ pub trait Visitor: Sized {
         // Default: do nothing
     }
 
+    fn visit_import_directive(&mut self, _argument: &str, _span: Span) {
+        // Default: do nothing
+    }
+
     fn visit_output_path_directive(&mut self, _path: &std::path::Path, _span: Span) {
         // Default: do nothing
     }
@@ -171,6 +175,9 @@ pub fn walk_statement<V: Visitor>(visitor: &mut V, stmt: &Statement) {
             ..
         } => {
             visitor.visit_output_directive(argument, options, *span);
+        }
+        Statement::ImportDirective { argument, span } => {
+            visitor.visit_import_directive(argument, *span)
         }
         Statement::OutputPathDirective { argument, span, .. } => {
             visitor.visit_output_path_directive(argument, *span);

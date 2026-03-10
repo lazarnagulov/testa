@@ -1,6 +1,9 @@
 use testa_core::ast::{CompletionContext, detect_completion_context};
 use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, Documentation, InsertTextFormat};
+use tower_lsp::lsp_types::{
+    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, Documentation,
+    InsertTextFormat,
+};
 
 use crate::lsp::backend::Backend;
 
@@ -11,7 +14,7 @@ pub(crate) async fn handle_completion(
     let uri = params.text_document_position.text_document.uri;
     let document = backend.get_document(&uri).await?;
     let lsp_position = params.text_document_position.position;
-    
+
     let line = lsp_position.line;
     let column = lsp_position.character;
 
@@ -21,7 +24,7 @@ pub(crate) async fn handle_completion(
         CompletionContext::TemplateBody => generate_field_completions(),
         CompletionContext::Directive => generate_directive_completions(),
         CompletionContext::Expression => generate_expression_completions(),
-        _ => generate_generic_completions()
+        _ => generate_generic_completions(),
     };
 
     Ok(Some(CompletionResponse::Array(items)))
@@ -36,7 +39,7 @@ fn generate_top_level_completions() -> Vec<CompletionItem> {
             insert_text: Some("type ${1:Name} = ${2:int};".to_string()),
             insert_text_format: Some(InsertTextFormat::SNIPPET),
             documentation: Some(Documentation::String(
-                "Define a type alias with optional constraints".to_string()
+                "Define a type alias with optional constraints".to_string(),
             )),
             ..Default::default()
         },
@@ -47,7 +50,7 @@ fn generate_top_level_completions() -> Vec<CompletionItem> {
             insert_text: Some("enum ${1:Name} {\n\t${2:Variant} => ${3:Weight};\n}".to_string()),
             insert_text_format: Some(InsertTextFormat::SNIPPET),
             documentation: Some(Documentation::String(
-                "Define an enumeration with variants".to_string()
+                "Define an enumeration with variants".to_string(),
             )),
             ..Default::default()
         },
@@ -58,7 +61,7 @@ fn generate_top_level_completions() -> Vec<CompletionItem> {
             insert_text: Some("template ${1:Name} {\n\t${2:field} = ${3:type};\n}".to_string()),
             insert_text_format: Some(InsertTextFormat::SNIPPET),
             documentation: Some(Documentation::String(
-                "Define a data template for generation".to_string()
+                "Define a data template for generation".to_string(),
             )),
             ..Default::default()
         },
@@ -68,25 +71,21 @@ fn generate_top_level_completions() -> Vec<CompletionItem> {
             detail: Some("Struct definition".to_string()),
             insert_text: Some("struct ${1:Name} {\n\t${2:field} = ${3:type};\n}".to_string()),
             insert_text_format: Some(InsertTextFormat::SNIPPET),
-            documentation: Some(Documentation::String(
-                "Define a struct".to_string()
-            )),
+            documentation: Some(Documentation::String("Define a struct".to_string())),
             ..Default::default()
         },
     ]
 }
 
 fn generate_field_completions() -> Vec<CompletionItem> {
-    vec![
-        CompletionItem {
-            label: "field".to_string(),
-            kind: Some(CompletionItemKind::PROPERTY),
-            detail: Some("Field declaration".to_string()),
-            insert_text: Some("${1:name} = ${2:type};".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..Default::default()
-        }   
-    ]
+    vec![CompletionItem {
+        label: "field".to_string(),
+        kind: Some(CompletionItemKind::PROPERTY),
+        detail: Some("Field declaration".to_string()),
+        insert_text: Some("${1:name} = ${2:type};".to_string()),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
+        ..Default::default()
+    }]
 }
 
 fn generate_builtin_type_completions() -> Vec<CompletionItem> {
@@ -96,7 +95,7 @@ fn generate_builtin_type_completions() -> Vec<CompletionItem> {
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("Integer type".to_string()),
             documentation: Some(Documentation::String(
-                "Built-in integer type. Can have constraints like [range=1..10]".to_string()
+                "Built-in integer type. Can have constraints like [range=1..10]".to_string(),
             )),
             ..Default::default()
         },
@@ -105,7 +104,7 @@ fn generate_builtin_type_completions() -> Vec<CompletionItem> {
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("String type".to_string()),
             documentation: Some(Documentation::String(
-                "Built-in string type. Can have constraints like [length=5..20]".to_string()
+                "Built-in string type. Can have constraints like [length=5..20]".to_string(),
             )),
             ..Default::default()
         },
@@ -114,7 +113,7 @@ fn generate_builtin_type_completions() -> Vec<CompletionItem> {
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("Float type".to_string()),
             documentation: Some(Documentation::String(
-                "Built-in floating point number type".to_string()
+                "Built-in floating point number type".to_string(),
             )),
             ..Default::default()
         },
@@ -123,7 +122,7 @@ fn generate_builtin_type_completions() -> Vec<CompletionItem> {
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("Boolean type".to_string()),
             documentation: Some(Documentation::String(
-                "Built-in boolean type (true/false)".to_string()
+                "Built-in boolean type (true/false)".to_string(),
             )),
             ..Default::default()
         },
@@ -134,7 +133,7 @@ fn generate_builtin_type_completions() -> Vec<CompletionItem> {
             insert_text: Some("string_pattern \"${1:pattern}\"".to_string()),
             insert_text_format: Some(InsertTextFormat::SNIPPET),
             documentation: Some(Documentation::String(
-                "Generate strings based on a pattern. Example: \"ID_${#[3]}\"".to_string()
+                "Generate strings based on a pattern. Example: \"ID_${#[3]}\"".to_string(),
             )),
             ..Default::default()
         },
@@ -186,7 +185,6 @@ fn generate_directive_completions() -> Vec<CompletionItem> {
         },
     ]
 }
-
 
 fn generate_generic_completions() -> Vec<CompletionItem> {
     let mut items = generate_top_level_completions();

@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    analyser::{reference_tracker::Reference, symbol_table::SymbolTable},
+    analyser::{
+        reference_tracker::Reference, symbol_table::SymbolTable, type_checker::types::Type,
+    },
     diagnostics::{Diagnostic, Severity},
 };
 
@@ -9,6 +11,7 @@ use crate::{
 pub struct AnalysisResult {
     pub symbol_table: SymbolTable,
     pub references: HashMap<String, Vec<Reference>>,
+    pub type_map: HashMap<String, Type>,
     pub diagnostics: Vec<Diagnostic>,
 }
 

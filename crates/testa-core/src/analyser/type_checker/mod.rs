@@ -19,7 +19,7 @@ mod prefix;
 pub struct TypeChecker<'a> {
     symbol_table: &'a SymbolTable,
     errors: Vec<SemanticError>,
-    type_cache: HashMap<String, Type>,
+    type_map: HashMap<String, Type>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -27,15 +27,14 @@ impl<'a> TypeChecker<'a> {
         Self {
             symbol_table,
             errors: Vec::new(),
-            type_cache: HashMap::new(),
+            type_map: HashMap::new(),
         }
     }
 
-    pub fn check(mut self, program: &Program) -> Result<(), Vec<SemanticError>> {
+    pub fn check(mut self, program: &Program) -> Result<HashMap<String, Type>, Vec<SemanticError>> {
         self.visit_program(program);
-
         if self.errors.is_empty() {
-            Ok(())
+            Ok(self.type_map)
         } else {
             Err(self.errors)
         }
@@ -53,13 +52,26 @@ impl<'a> Visitor for TypeChecker<'a> {
         walk_field(self, field);
     }
 
+    fn visit_type_decl(
+        &mut self,
+        name: &str,
+        data_type: &Expression,
+        _attributes: &[Attribute],
+        _span: Span,
+    ) {
+        let ty = self.infer_type(data_type);
+        self.type_map.insert(name.to_string(), ty);
+    }
+
     fn visit_enum(
         &mut self,
-        _name: &str,
+        name: &str,
         variants: &[Variant],
         _attributes: &[Attribute],
         _span: Span,
     ) {
+        self.type_map
+            .insert(name.to_string(), Type::Custom(name.to_string()));
         for variant in variants {
             self.visit_variant(variant);
         }
@@ -112,7 +124,9 @@ impl<'a> Visitor for TypeChecker<'a> {
         }
     }
 
-    fn visit_struct(&mut self, _name: &str, body: &[Field], _span: Span) {
+    fn visit_struct(&mut self, name: &str, body: &[Field], _span: Span) {
+        self.type_map
+            .insert(name.to_string(), Type::Custom(name.to_string()));
         for field in body {
             walk_field(self, field);
         }

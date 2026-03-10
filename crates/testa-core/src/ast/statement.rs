@@ -28,6 +28,10 @@ pub enum Statement {
         options: Vec<Field>,
         span: Span,
     },
+    ImportDirective {
+        argument: String,
+        span: Span,
+    },
     OutputPathDirective {
         argument: PathBuf,
         span: Span,

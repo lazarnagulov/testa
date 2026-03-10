@@ -3,6 +3,8 @@ members = [
     "crates/testa-core",
     "crates/testa-interpreter",
     "crates/testa-generation",
-    "crates/testa-cli", "crates/testa-lsp",
+    "crates/testa-cli", 
+    "crates/testa-lsp", 
+    "crates/testa-hir",
 ]
 resolver = "2"

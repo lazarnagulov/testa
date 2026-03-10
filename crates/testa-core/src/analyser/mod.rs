@@ -43,6 +43,7 @@ impl<'a> SemanticAnalyser<'a> {
                 return AnalysisResult {
                     symbol_table: SymbolTable::default(),
                     references: HashMap::new(),
+                    type_map: HashMap::new(),
                     diagnostics: self
                         .errors
                         .iter()
@@ -66,13 +67,18 @@ impl<'a> SemanticAnalyser<'a> {
             }
         };
 
-        if let Err(errs) = TypeChecker::new(&symbol_table).check(self.program) {
-            self.errors.extend(errs);
-        }
+        let type_map = match TypeChecker::new(&symbol_table).check(self.program) {
+            Ok(map) => map,
+            Err(errs) => {
+                self.errors.extend(errs);
+                HashMap::new()
+            }
+        };
 
         AnalysisResult {
             symbol_table,
             references,
+            type_map,
             diagnostics: self
                 .errors
                 .iter()
