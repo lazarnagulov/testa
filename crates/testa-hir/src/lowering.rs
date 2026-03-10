@@ -133,15 +133,15 @@ impl AstLowering {
         for item in &self.items {
             let item_name = match item {
                 Item::Template(t) => self.string_pool.resolve(t.name),
-                //     Item::Enum(e) => self.string_pool.resolve(e.name),
-                //     Item::TypeAlias(t) => self.string_pool.resolve(t.name),
+                Item::Enum(e) => self.string_pool.resolve(e.name),
+                Item::TypeAlias(t) => self.string_pool.resolve(t.name),
             };
 
             if item_name == name {
                 return Some(match item {
                     Item::Template(t) => t.id,
-                    //     Item::Enum(e) => e.id,
-                    //     Item::TypeAlias(t) => t.id,
+                    Item::Enum(e) => e.id,
+                    Item::TypeAlias(t) => t.id,
                 });
             }
         }

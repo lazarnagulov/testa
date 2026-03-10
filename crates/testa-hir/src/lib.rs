@@ -1,6 +1,5 @@
 pub mod lowering;
 pub mod module;
-pub mod serialize;
 pub mod source_map;
 pub mod string_pool;
 
