@@ -1,21 +1,20 @@
 use std::{collections::HashMap, fs, path::Path};
 
 use testa_core::{
-    analyser::{SemanticAnalyser, result::AnalysisResult},
+    analyser::SemanticAnalyser,
     ast::{Program, Statement},
     diagnostics::{Diagnostic, DiagnosticCode},
     lexer::Lexer,
     parser::Parser,
     utils::Span,
 };
-use testa_hir::{Module, module::resolver::ModuleResolver};
+use testa_hir::{AstLowering, Module, module::resolver::ModuleResolver};
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct CompiledUnit {
-    pub program: Program,
-    pub analysis: AnalysisResult,
+    pub module: Module,
     pub imported: HashMap<String, Module>,
-    pub source: String,
 }
 
 pub fn parse_file(path: &Path) -> Result<Program, Vec<Diagnostic>> {
@@ -49,7 +48,7 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
         .parse()
         .map_err(|errors| errors.iter().map(|e| e.to_diagnostic()).collect::<Vec<_>>())?;
 
-    let import_names: Vec<String> = program
+    let import_names= program
         .0
         .iter()
         .filter_map(|stmt| {
@@ -59,7 +58,7 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
                 None
             }
         })
-        .collect();
+        .collect::<Vec<_>>();
 
     let mut resolver = ModuleResolver::with_defaults(path);
     let imported = resolver.resolve_all(&import_names, path).map_err(|err| {
@@ -71,6 +70,7 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
             .with_code(DiagnosticCode::IOError),
         ]
     })?;
+
     let imported_tables = imported
         .values()
         .map(|m| m.to_symbol_table())
@@ -81,10 +81,11 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
         return Err(analysis.diagnostics);
     }
 
-    Ok(CompiledUnit {
-        source,
-        program,
-        analysis,
-        imported,
-    })
+    let imported_refs: HashMap<String, &Module> =
+        imported.iter().map(|(k, v)| (k.clone(), v)).collect();
+
+    let module =
+        AstLowering::new(path.to_path_buf()).lower(&program, &analysis, &source, &imported_refs);
+
+    Ok(CompiledUnit { module, imported })
 }

@@ -85,7 +85,7 @@ pub struct Field {
     pub id: FieldId,
     pub name: StringId,
     pub ty: Type,
-    pub default_value: Option<Expr>,
+    pub value: Expr, 
     pub attributes: Vec<Attribute>,
 }
 
@@ -149,12 +149,58 @@ pub enum Expr {
     Float(f64),
     String(StringId),
     Bool(bool),
+    Type(Type),
+    Identifier(ItemRef),
+    StringPattern(Vec<PatternPart>),
+    Infix {
+        left: Box<Expr>,
+        right: Box<Expr>,
+        op: InfixOp,
+    },
+    Prefix {
+        op: PrefixOp,
+        expr: Box<Expr>,
+    },
     List(Vec<Expr>),
     Range {
         start: Box<Expr>,
         end: Box<Expr>,
         inclusive: bool,
     },
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum PatternPart {
+    Literal(StringId),
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum PrefixOp {
+    Neg,
+    Not,
+    BitNeg,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum InfixOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitLShift,
+    BitRShift,
+    Equal,
+    And,
+    Or,
+    NotEqual,
+    LessThen,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

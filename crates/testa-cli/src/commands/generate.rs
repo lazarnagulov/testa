@@ -1,13 +1,7 @@
-use std::path::PathBuf;
-use testa_core::diagnostics::{Diagnostic, DiagnosticCode};
-use testa_core::utils::Span;
-use testa_generation::generator::create_file_generator;
+use testa_core::diagnostics::Diagnostic;
 use testa_interpreter::evaluator::context::GenerateOptions;
-use testa_interpreter::evaluator::{Evaluator, context::Context};
-use testa_interpreter::generator::RecordGenerator;
 
 use crate::cli::Command;
-use crate::compiler::compile_file;
 
 impl TryFrom<Command> for GenerateOptions {
     type Error = &'static str;
@@ -32,38 +26,35 @@ impl TryFrom<Command> for GenerateOptions {
     }
 }
 
-pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>> {
-    let unit = compile_file(&options.input)?;
-    
-    let mut symbol_table = unit.analysis.symbol_table;
-    for module in unit.imported.values() {
-        symbol_table.merge(module.to_symbol_table());
-    }
+pub fn generate_command(_options: GenerateOptions) -> Result<(), Vec<Diagnostic>> {
+    todo!()
+    // let unit = compile_file(&options.input)?;
 
-    let context = Context::new(symbol_table);
-    let mut evaluator = Evaluator::new(context, options.seed);
+    // let symbol_table = unit.analysis.symbol_table;
+    // let context = Context::new(symbol_table);
+    // let mut evaluator = Evaluator::new(context, options.seed);
 
-    evaluator
-        .evaluate_directives(&unit.program)
-        .map_err(|err| vec![err.to_diagnostic()])?;
-    let (format, config, path) = evaluator.output_config();
+    // evaluator
+    //     .evaluate_directives(&unit.program)
+    //     .map_err(|err| vec![err.to_diagnostic()])?;
+    // let (format, config, path) = evaluator.output_config();
 
-    let file_generator = create_file_generator(format, config);
-    let output_path = path
-        .clone()
-        .unwrap_or_else(|| PathBuf::from(format!("output.{}", format.extension())));
+    // let file_generator = create_file_generator(format, config);
+    // let output_path = path
+    //     .clone()
+    //     .unwrap_or_else(|| PathBuf::from(format!("output.{}", format.extension())));
 
-    let mut record_generator = RecordGenerator::new(&mut evaluator);
-    record_generator
-        .generate_infos(&unit.program)
-        .map_err(|err| vec![err.to_diagnostic()])?;
-    record_generator
-        .write_records(file_generator, output_path)
-        .map_err(|err| {
-            vec![
-                Diagnostic::error(Span::default(), err.to_string())
-                    .with_code(DiagnosticCode::IOError),
-            ]
-        })?;
-    Ok(())
+    // let mut record_generator = RecordGenerator::new(&mut evaluator);
+    // record_generator
+    //     .generate_infos(&unit.program)
+    //     .map_err(|err| vec![err.to_diagnostic()])?;
+    // record_generator
+    //     .write_records(file_generator, output_path)
+    //     .map_err(|err| {
+    //         vec![
+    //             Diagnostic::error(Span::default(), err.to_string())
+    //                 .with_code(DiagnosticCode::IOError),
+    //         ]
+    //     })?;
+    // Ok(())
 }

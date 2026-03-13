@@ -262,7 +262,8 @@ impl SymbolTable {
         for scope in other.scopes {
             if scope.parent.is_none() {
                 for (name, symbol) in scope.symbols {
-                    if self.get_scope_mut(self.global_scope)
+                    if self
+                        .get_scope_mut(self.global_scope)
                         .map(|s| !s.symbols.contains_key(&name))
                         .unwrap_or(false)
                     {

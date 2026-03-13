@@ -4,7 +4,11 @@ use std::{
     path::Path,
 };
 
-use testa_core::{analyser::symbol_table::SymbolTable, ast::{DataTypeKind, Expression}, utils::Span};
+use testa_core::{
+    analyser::symbol_table::SymbolTable,
+    ast::{DataTypeKind, Expression},
+    utils::Span,
+};
 
 use crate::{
     Item, Module,
@@ -75,16 +79,18 @@ impl Module {
                     for field in &t.fields {
                         let field_name = self.string_pool.resolve(field.name).to_string();
                         let expr = self.type_to_expression(&field.ty);
-                        
-                        table.insert(
-                            field_name.clone(),
-                            SymbolKind::Field {
-                                template_name: name.clone(),
-                                is_override: false,
-                                expression: expr,
-                            },
-                            Span::default(),
-                        ).ok();
+
+                        table
+                            .insert(
+                                field_name.clone(),
+                                SymbolKind::Field {
+                                    template_name: name.clone(),
+                                    is_override: false,
+                                    expression: expr,
+                                },
+                                Span::default(),
+                            )
+                            .ok();
                     }
                     table.exit_scope();
                 }
@@ -225,14 +231,18 @@ impl Module {
                     ItemRef::Local(id) => *id,
                     ItemRef::Imported { item, .. } => *item,
                 };
-                let type_name = self.get_item(id)
+                let type_name = self
+                    .get_item(id)
                     .map(|i| self.string_pool.resolve(i.name()).to_string())
                     .unwrap_or_default();
                 ExpressionKind::Identifier(type_name)
             }
         };
 
-        Expression { kind, span: Span::default() }
+        Expression {
+            kind,
+            span: Span::default(),
+        }
     }
 
     fn data_type_kind_from_type(&self, ty: &Type) -> DataTypeKind {
@@ -246,7 +256,8 @@ impl Module {
                     ItemRef::Local(id) => *id,
                     ItemRef::Imported { item, .. } => *item,
                 };
-                let type_name = self.get_item(id)
+                let type_name = self
+                    .get_item(id)
                     .map(|i| self.string_pool.resolve(i.name()).to_string())
                     .unwrap_or_default();
                 DataTypeKind::Custom(type_name)

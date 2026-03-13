@@ -62,7 +62,7 @@ impl AstLowering {
                 for constraint_expr in constraint_exprs {
                     use testa_core::ast::ConstraintKind as AstConstraintKind;
 
-                    let value = self.lower_expr(&constraint_expr.expression);
+                    let value = self.lower_expr(&constraint_expr.expression, &HashMap::new());
 
                     let kind = match constraint_expr.kind {
                         AstConstraintKind::Range => {
@@ -70,8 +70,8 @@ impl AstLowering {
                                 &constraint_expr.expression.kind
                             {
                                 ConstraintKind::Range {
-                                    min: self.lower_expr(left),
-                                    max: self.lower_expr(right),
+                                    min: self.lower_expr(left, &HashMap::new()),
+                                    max: self.lower_expr(right, &HashMap::new()),
                                 }
                             } else {
                                 ConstraintKind::Range {

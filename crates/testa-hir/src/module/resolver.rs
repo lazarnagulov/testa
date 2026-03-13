@@ -45,7 +45,7 @@ impl ModuleResolver {
 
         let module = Module::load(&path)?;
 
-        let transitive= module
+        let transitive = module
             .imports
             .iter()
             .map(|id| module.string_pool.resolve(*id).to_string())
