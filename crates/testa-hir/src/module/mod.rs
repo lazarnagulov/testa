@@ -28,6 +28,7 @@ pub enum Item {
     Template(Template),
     Enum(Enum),
     TypeAlias(TypeAlias),
+    Struct(Struct),
 }
 
 impl Item {
@@ -35,6 +36,7 @@ impl Item {
         match self {
             Item::Template(t) => t.id,
             Item::Enum(e) => e.id,
+            Item::Struct(s) => s.id,
             Item::TypeAlias(t) => t.id,
         }
     }
@@ -42,6 +44,7 @@ impl Item {
     pub fn name(&self) -> StringId {
         match self {
             Item::Template(t) => t.name,
+            Item::Struct(s) => s.name,
             Item::Enum(e) => e.name,
             Item::TypeAlias(t) => t.name,
         }
@@ -55,6 +58,13 @@ pub struct Template {
     pub parent: Option<ItemRef>,
     pub fields: Vec<Field>,
     pub attributes: Vec<Attribute>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Struct {
+    pub id: ItemId,
+    pub name: StringId,
+    pub fields: Vec<Field>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,7 +95,7 @@ pub struct Field {
     pub id: FieldId,
     pub name: StringId,
     pub ty: Type,
-    pub value: Expr, 
+    pub value: Expr,
     pub attributes: Vec<Attribute>,
 }
 
@@ -227,6 +237,7 @@ impl Module {
             Item::Template(t) => t.id == id,
             Item::Enum(e) => e.id == id,
             Item::TypeAlias(t) => t.id == id,
+            Item::Struct(s) => s.id == id,
         })
     }
 
@@ -236,6 +247,7 @@ impl Module {
                 Item::Template(t) => self.string_pool.resolve(t.name),
                 Item::Enum(e) => self.string_pool.resolve(e.name),
                 Item::TypeAlias(t) => self.string_pool.resolve(t.name),
+                Item::Struct(s) => self.string_pool.resolve(s.name),
             };
             item_name == name
         })

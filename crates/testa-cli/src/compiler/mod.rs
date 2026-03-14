@@ -48,7 +48,7 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
         .parse()
         .map_err(|errors| errors.iter().map(|e| e.to_diagnostic()).collect::<Vec<_>>())?;
 
-    let import_names= program
+    let import_names = program
         .0
         .iter()
         .filter_map(|stmt| {

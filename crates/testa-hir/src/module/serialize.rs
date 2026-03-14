@@ -5,14 +5,17 @@ use std::{
 };
 
 use testa_core::{
-    analyser::symbol_table::SymbolTable,
-    ast::{DataTypeKind, Expression},
+    analyser::symbol_table::{
+        SymbolTable,
+        symbol::{ScopeKind, SymbolKind, VariantInfo},
+    },
+    ast::{DataType, DataTypeKind, Expression, ExpressionKind},
     utils::Span,
 };
 
 use crate::{
     Item, Module,
-    module::{ItemRef, Type, error::ResolveError},
+    module::{Enum, Field, ItemRef, Template, Type, TypeAlias, Variant, error::ResolveError},
 };
 
 impl Module {
@@ -36,233 +39,163 @@ impl Module {
     }
 
     pub fn to_symbol_table(&self) -> SymbolTable {
-        use testa_core::{
-            analyser::symbol_table::symbol::{ScopeKind, SymbolKind, VariantInfo},
-            ast::{DataType, DataTypeKind, Expression, ExpressionKind},
-            utils::Span,
-        };
-
         let mut table = SymbolTable::new();
 
         for item in &self.items {
             match item {
-                Item::Template(t) => {
-                    let name = self.string_pool.resolve(t.name).to_string();
-                    let parent = t.parent.as_ref().and_then(|item_ref| {
-                        let parent_id = match item_ref {
-                            ItemRef::Local(id) => *id,
-                            ItemRef::Imported { item, .. } => *item,
-                        };
-                        self.get_item(parent_id)
-                            .map(|item| self.string_pool.resolve(item.name()).to_string())
-                    });
-
-                    let fields = t
-                        .fields
-                        .iter()
-                        .map(|f| self.string_pool.resolve(f.name).to_string())
-                        .collect();
-
-                    table
-                        .insert(
-                            name.clone(),
-                            SymbolKind::Template {
-                                fields,
-                                parent,
-                                attributes: vec![],
-                            },
-                            Span::default(),
-                        )
-                        .ok();
-
-                    table.enter_scope(ScopeKind::Template { name: name.clone() });
-                    for field in &t.fields {
-                        let field_name = self.string_pool.resolve(field.name).to_string();
-                        let expr = self.type_to_expression(&field.ty);
-
-                        table
-                            .insert(
-                                field_name.clone(),
-                                SymbolKind::Field {
-                                    template_name: name.clone(),
-                                    is_override: false,
-                                    expression: expr,
-                                },
-                                Span::default(),
-                            )
-                            .ok();
-                    }
-                    table.exit_scope();
-                }
-
-                Item::Enum(e) => {
-                    let name = self.string_pool.resolve(e.name).to_string();
-
-                    let variants = e
-                        .variants
-                        .iter()
-                        .map(|v| VariantInfo {
-                            name: self.string_pool.resolve(v.name).to_string(),
-                            weight: None,
-                        })
-                        .collect();
-
-                    table
-                        .insert(
-                            name.clone(),
-                            SymbolKind::Enum {
-                                variants,
-                                attributes: vec![],
-                            },
-                            Span::default(),
-                        )
-                        .ok();
-
-                    table.enter_scope(ScopeKind::Enum { name: name.clone() });
-                    for variant in &e.variants {
-                        let variant_name = self.string_pool.resolve(variant.name).to_string();
-                        table
-                            .insert(
-                                variant_name,
-                                SymbolKind::Variant {
-                                    enum_name: name.clone(),
-                                },
-                                Span::default(),
-                            )
-                            .ok();
-                    }
-                    table.exit_scope();
-                }
-
-                Item::TypeAlias(t) => {
-                    let name = self.string_pool.resolve(t.name).to_string();
-
-                    let data_type_kind = match &t.target_type {
-                        Type::Int => DataTypeKind::Int,
-                        Type::String => DataTypeKind::Str,
-                        Type::Bool => DataTypeKind::Boolean,
-                        Type::Float => DataTypeKind::Float,
-                        Type::List(_) => DataTypeKind::List(Box::new(DataType {
-                            kind: DataTypeKind::Int,
-                            constraints: None,
-                            span: Span::default(),
-                        })),
-                        Type::Optional(_) => DataTypeKind::Int,
-                        Type::UserDefined(item_ref) => {
-                            let id = match item_ref {
-                                ItemRef::Local(id) => *id,
-                                ItemRef::Imported { item, .. } => *item,
-                            };
-                            let type_name = self
-                                .get_item(id)
-                                .map(|i| self.string_pool.resolve(i.name()).to_string())
-                                .unwrap_or_default();
-                            DataTypeKind::Custom(type_name)
-                        }
-                    };
-
-                    let expr = Expression {
-                        kind: ExpressionKind::Type(DataType {
-                            kind: data_type_kind,
-                            constraints: None,
-                            span: Span::default(),
-                        }),
-                        span: Span::default(),
-                    };
-
-                    table
-                        .insert(
-                            name.clone(),
-                            SymbolKind::TypeAlias {
-                                name: name.clone(),
-                                data_type: expr,
-                                attributes: vec![],
-                            },
-                            Span::default(),
-                        )
-                        .ok();
-                }
+                Item::Template(t) => self.restore_template(t, &mut table),
+                Item::Enum(e) => self.restore_enum(e, &mut table),
+                Item::TypeAlias(t) => self.restore_type_alias(t, &mut table),
+                Item::Struct(_) => {},
             }
         }
 
         table
     }
 
-    fn type_to_expression(&self, ty: &Type) -> Expression {
-        use testa_core::ast::{DataType, DataTypeKind, Expression, ExpressionKind};
+    fn restore_template(&self, template: &Template, table: &mut SymbolTable) {
+        let name = self.string_pool.resolve(template.name).to_string();
+        let parent = template
+            .parent
+            .as_ref()
+            .map(|item_ref| self.resolve_item_ref_name(item_ref));
+        let fields = template
+            .fields
+            .iter()
+            .map(|f| self.string_pool.resolve(f.name).to_string())
+            .collect();
 
-        let kind = match ty {
-            Type::Int => ExpressionKind::Type(DataType {
-                kind: DataTypeKind::Int,
-                constraints: None,
-                span: Span::default(),
-            }),
-            Type::String => ExpressionKind::Type(DataType {
-                kind: DataTypeKind::Str,
-                constraints: None,
-                span: Span::default(),
-            }),
-            Type::Bool => ExpressionKind::Type(DataType {
-                kind: DataTypeKind::Boolean,
-                constraints: None,
-                span: Span::default(),
-            }),
-            Type::Float => ExpressionKind::Type(DataType {
-                kind: DataTypeKind::Float,
-                constraints: None,
-                span: Span::default(),
-            }),
-            Type::List(inner) => ExpressionKind::Type(DataType {
-                kind: DataTypeKind::List(Box::new(DataType {
-                    kind: self.data_type_kind_from_type(inner),
-                    constraints: None,
-                    span: Span::default(),
-                })),
-                constraints: None,
-                span: Span::default(),
-            }),
-            Type::Optional(inner) => ExpressionKind::Type(DataType {
-                kind: self.data_type_kind_from_type(inner),
-                constraints: None,
-                span: Span::default(),
-            }),
-            Type::UserDefined(item_ref) => {
-                let id = match item_ref {
-                    ItemRef::Local(id) => *id,
-                    ItemRef::Imported { item, .. } => *item,
-                };
-                let type_name = self
-                    .get_item(id)
-                    .map(|i| self.string_pool.resolve(i.name()).to_string())
-                    .unwrap_or_default();
-                ExpressionKind::Identifier(type_name)
-            }
-        };
+        table
+            .insert(
+                name.clone(),
+                SymbolKind::Template {
+                    fields,
+                    parent,
+                    attributes: vec![],
+                },
+                Span::default(),
+            )
+            .ok();
 
-        Expression {
-            kind,
-            span: Span::default(),
+        table.enter_scope(ScopeKind::Template { name: name.clone() });
+        self.restore_fields(&template.fields, &name, table);
+        table.exit_scope();
+    }
+
+    fn restore_type_alias(&self, ty: &TypeAlias, table: &mut SymbolTable) {
+        let name = self.string_pool.resolve(ty.name).to_string();
+        let expr = self.type_to_expression(&ty.target_type); 
+
+        table
+            .insert(
+                name.clone(),
+                SymbolKind::TypeAlias {
+                    name: name.clone(),
+                    data_type: expr,
+                    attributes: vec![],
+                },
+                Span::default(),
+            )
+            .ok();
+    }
+
+    fn restore_enum(&self, enumeration: &Enum, table: &mut SymbolTable) {
+        let name = self.string_pool.resolve(enumeration.name).to_string();
+        let variants = enumeration
+            .variants
+            .iter()
+            .map(|v| VariantInfo {
+                name: self.string_pool.resolve(v.name).to_string(),
+                weight: None,
+            })
+            .collect();
+
+        table
+            .insert(
+                name.clone(),
+                SymbolKind::Enum {
+                    variants,
+                    attributes: vec![],
+                },
+                Span::default(),
+            )
+            .ok();
+
+        table.enter_scope(ScopeKind::Enum { name: name.clone() });
+        self.restore_variants(&enumeration.variants, &name, table);
+        table.exit_scope();
+    }
+
+    fn restore_variants(&self, variants: &[Variant], name: &str, table: &mut SymbolTable) {
+        for variant in variants {
+            let variant_name = self.string_pool.resolve(variant.name).to_string();
+            table
+                .insert(
+                    variant_name,
+                    SymbolKind::Variant {
+                        enum_name: name.to_string(),
+                    },
+                    Span::default(),
+                )
+                .ok();
         }
     }
 
-    fn data_type_kind_from_type(&self, ty: &Type) -> DataTypeKind {
+    fn restore_fields(&self, fields: &[Field], name: &str, table: &mut SymbolTable) {
+        for field in fields {
+            let field_name = self.string_pool.resolve(field.name).to_string();
+            let expr = self.type_to_expression(&field.ty);
+
+            table
+                .insert(
+                    field_name.clone(),
+                    SymbolKind::Field {
+                        template_name: name.to_string(),
+                        is_override: false,
+                        expression: expr,
+                    },
+                    Span::default(),
+                )
+                .ok();
+        }
+    }
+
+    fn type_to_data_type_kind(&self, ty: &Type) -> DataTypeKind {
         match ty {
             Type::Int => DataTypeKind::Int,
             Type::String => DataTypeKind::Str,
             Type::Bool => DataTypeKind::Boolean,
             Type::Float => DataTypeKind::Float,
-            Type::UserDefined(item_ref) => {
-                let id = match item_ref {
-                    ItemRef::Local(id) => *id,
-                    ItemRef::Imported { item, .. } => *item,
-                };
-                let type_name = self
-                    .get_item(id)
-                    .map(|i| self.string_pool.resolve(i.name()).to_string())
-                    .unwrap_or_default();
-                DataTypeKind::Custom(type_name)
-            }
-            _ => DataTypeKind::Int,
+            Type::List(inner) => DataTypeKind::List(Box::new(DataType {
+                kind: self.type_to_data_type_kind(inner),
+                constraints: None,
+                span: Span::default(),
+            })),
+            Type::Optional(inner) => self.type_to_data_type_kind(inner),
+            Type::UserDefined(item_ref) => DataTypeKind::Custom(self.resolve_item_ref_name(item_ref)),
         }
+    }
+
+    fn type_to_expression(&self, ty: &Type) -> Expression {
+        Expression {
+            kind: ExpressionKind::Type(DataType {
+                kind: self.type_to_data_type_kind(ty),
+                constraints: None,
+                span: Span::default(),
+            }),
+            span: Span::default(),
+        }
+    }
+
+    fn resolve_item_ref_name(&self, item_ref: &ItemRef) -> String {
+        let id = match item_ref {
+            ItemRef::Local(id) => *id,
+            // NOTE: for imported items we only have the item ID, not the module.
+            // This is sufficient for reference checking but not for cross-module resolution.
+            ItemRef::Imported { item, .. } => *item,
+        };
+        self.get_item(id)
+            .map(|i| self.string_pool.resolve(i.name()).to_string())
+            .unwrap_or_default()
     }
 }

@@ -16,8 +16,8 @@ use testa_core::{
 use crate::{
     FieldId, Item, Module, ModuleMetadata, StringPool,
     module::{
-        Attribute as HirAttribute, Enum, Expr, InfixOp, PatternPart, PrefixOp, Template, Type,
-        TypeAlias, Variant as HirVariant, attribute_kind,
+        Attribute as HirAttribute, Enum, Expr, InfixOp, PatternPart, PrefixOp, Struct, Template,
+        Type, TypeAlias, Variant as HirVariant, attribute_kind,
     },
     source_map::SourceMapBuilder,
 };
@@ -102,7 +102,6 @@ impl AstLowering {
                 let template = self.lower_template(name, parent_name, body, attributes, imported);
                 self.register_item(Item::Template(template), *span, *name_span);
             }
-
             Statement::Enum {
                 name,
                 name_span,
@@ -113,7 +112,15 @@ impl AstLowering {
                 let enum_item = self.lower_enum(name, variants, attributes);
                 self.register_item(Item::Enum(enum_item), *span, *name_span);
             }
-
+            Statement::Struct {
+                name,
+                name_span,
+                body,
+                span,
+            } => {
+                let struct_item = self.lower_struct(name, body, imported);
+                self.register_item(Item::Struct(struct_item), *span, Some(*name_span));
+            }
             Statement::TypeDecl {
                 name,
                 name_span,
@@ -126,7 +133,6 @@ impl AstLowering {
                     self.lower_type_alias(name, data_type, attributes, analysis, imported);
                 self.register_item(Item::TypeAlias(type_alias), *span, *name_span);
             }
-
             _ => {}
         }
     }
@@ -163,6 +169,28 @@ impl AstLowering {
             parent,
             fields,
             attributes: attrs,
+        }
+    }
+
+    fn lower_struct(
+        &mut self,
+        name: &str,
+        body: &[Field],
+        imported: &HashMap<String, &Module>,
+    ) -> Struct {
+        let id = self.next_item_id();
+        let name_id = self.string_pool.intern(name);
+
+        let fields = body
+            .iter()
+            .enumerate()
+            .map(|(idx, field)| self.lower_field(field, idx, imported))
+            .collect();
+
+        Struct {
+            id,
+            name: name_id,
+            fields,
         }
     }
 
@@ -336,16 +364,12 @@ impl AstLowering {
 
         match &expr.kind {
             ExpressionKind::IntLiteral(n) => Expr::Int(*n as i64),
-
             ExpressionKind::FloatLiteral(f) => f
                 .parse::<f64>()
                 .map(Expr::Float)
                 .unwrap_or(Expr::Float(0.0)),
-
             ExpressionKind::StringLiteral(s) => Expr::String(self.string_pool.intern(s)),
-
             ExpressionKind::BooleanLiteral(b) => Expr::Bool(*b),
-
             ExpressionKind::StringPattern(elements) => {
                 let parts = elements
                     .iter()
@@ -358,7 +382,6 @@ impl AstLowering {
                     .collect();
                 Expr::StringPattern(parts)
             }
-
             ExpressionKind::Identifier(name) => match name.as_str() {
                 "int" => Expr::Type(Type::Int),
                 "string" => Expr::Type(Type::String),
@@ -369,9 +392,7 @@ impl AstLowering {
                     .map(Expr::Identifier)
                     .unwrap_or(Expr::Int(0)),
             },
-
             ExpressionKind::Type(_) => Expr::Type(self.lower_type(expr, imported)),
-
             ExpressionKind::List(elements) => {
                 let exprs = elements
                     .iter()
@@ -379,7 +400,6 @@ impl AstLowering {
                     .collect();
                 Expr::List(exprs)
             }
-
             ExpressionKind::Infix {
                 left,
                 operator,
@@ -486,7 +506,6 @@ impl AstLowering {
                     op: InfixOp::GreaterThanOrEqual,
                 },
             },
-
             ExpressionKind::Prefix {
                 operator,
                 expression,
