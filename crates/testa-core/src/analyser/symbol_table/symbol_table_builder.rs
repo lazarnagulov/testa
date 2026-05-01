@@ -176,6 +176,13 @@ impl Visitor for SymbolTableBuilder {
         attributes: &[Attribute],
         span: Span,
     ) {
+        if variants.is_empty() {
+            self.errors.push(SemanticError::EmptyEnum {
+                span,
+                message: format!("Enum '{}' must have at least one variant", name),
+            });
+        }
+
         let variant_infos = variants
             .iter()
             .map(|v| VariantInfo {
