@@ -1,11 +1,10 @@
-use crate::{
-    lexer::{
-        error::LexerError,
-        token::{Token, TokenKind},
-    },
-    parser::Parser,
-    utils::{Location, Span},
-};
+use crate::{lexer::{error::LexerError, token::{Token, TokenKind}}, parser::Parser, utils::{Location, Span}};
+
+mod enumeration;
+mod data_type;
+mod template;
+mod directive;
+mod error;
 
 pub fn loc(offset: usize, line: u32, col: u32) -> Location {
     Location::new(offset, line, col)
