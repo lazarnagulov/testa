@@ -2,11 +2,7 @@ use indexmap::{IndexMap, IndexSet};
 use std::io::Write;
 use std::{collections::HashMap, fmt, fs::File, path::PathBuf};
 
-use testa_core::{
-    analyser::symbol_table::symbol::SymbolKind,
-    ast::{Field, Program, Statement},
-    utils::Span,
-};
+use testa_hir::module::{Directive, Expr, ItemRef};
 
 use crate::{
     evaluator::{
@@ -38,12 +34,10 @@ pub trait FileGenerator: fmt::Debug {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct GenerateInfo {
-    template_name: Option<String>,
-    body: Vec<Field>,
+    template_ref: ItemRef,
     total_count: usize,
-    span: Span,
 }
 
 pub struct RecordGenerator<'a> {
@@ -79,132 +73,68 @@ impl<'a> RecordGenerator<'a> {
         let mut names = IndexSet::new();
 
         for info in &self.generate_infos {
-            match &info.template_name {
-                Some(template_name) => {
-                    self.collect_template_field_names(template_name, info.span, &mut names)?;
-                }
-                None => {
-                    for field in &info.body {
-                        names.insert(field.name.clone());
-                    }
-                }
-            }
+            self.collect_field_names(&info.template_ref, &mut names)?;
         }
 
         Ok(names.into_iter().collect())
     }
 
-    fn collect_template_field_names(
+    fn collect_field_names(
         &self,
-        template_name: &str,
-        span: Span,
+        item_ref: &ItemRef,
         out: &mut IndexSet<String>,
     ) -> Result<(), EvalError> {
-        let symbol = self
-            .evaluator
-            .context
-            .symbol_table
-            .lookup(template_name)
-            .ok_or_else(|| EvalError::NotDefined(template_name.to_string(), span))?;
+        let ctx = &self.evaluator.context;
+        let template = ctx
+            .resolve_template(item_ref)
+            .ok_or_else(|| EvalError::NotDefined(format!("{}", item_ref), Default::default()))?;
 
-        let (parent, fields) = match &symbol.kind {
-            SymbolKind::Template { parent, fields, .. } => (parent, fields),
-            kind => {
-                return Err(EvalError::TypeMismatch {
-                    expected: "template".to_string(),
-                    got: kind.to_string(),
-                    span: symbol.span,
-                });
-            }
-        };
-
-        if let Some(parent_name) = parent {
-            self.collect_template_field_names(parent_name, span, out)?;
+        if let Some(parent_ref) = &template.parent {
+            self.collect_field_names(parent_ref, out)?;
         }
 
-        for field_name in fields {
-            out.insert(field_name.clone());
+        let module = ctx.module_for(item_ref);
+        for field in &template.fields {
+            out.insert(module.string_pool.resolve(field.name).to_string());
         }
 
         Ok(())
     }
 
-    pub fn generate_infos(&mut self, program: &Program) -> Result<(), EvalError> {
-        for stmt in &program.0 {
-            if let Statement::Generate {
-                template_name,
-                body,
-                count,
-                span,
-                ..
-            } = stmt
-            {
-                let count_value = self.evaluator.evaluate_expression(count)?;
+    pub fn generate_infos(&mut self) -> Result<(), EvalError> {
+        for directive in self.evaluator.context.module.directives.clone() {
+            if let Directive::Generate { template, count } = directive {
+                let count_value = evaluate_expression(
+                    &self.evaluator.context,
+                    &mut self.evaluator.state,
+                    &count,
+                )?;
 
                 let total_count = match count_value {
                     Object::Int(n) if n > 0 => n as usize,
                     Object::Int(n) => {
                         return Err(EvalError::InvalidCount {
                             value: n,
-                            span: count.span,
+                            span: Default::default(),
                         });
                     }
                     other => {
                         return Err(EvalError::TypeMismatch {
                             expected: "positive integer".to_string(),
                             got: format!("{}", other),
-                            span: count.span,
+                            span: Default::default(),
                         });
                     }
                 };
 
                 self.generate_infos.push(GenerateInfo {
-                    template_name: template_name.clone(),
-                    body: body.clone(),
+                    template_ref: template,
                     total_count,
-                    span: *span,
                 });
             }
         }
 
         Ok(())
-    }
-
-    fn generate_from_template_parts(
-        ctx: &Context,
-        state: &mut State,
-        name: &str,
-        parent: &Option<String>,
-        field_names: &Vec<String>,
-        span: Span,
-    ) -> Result<Record, EvalError> {
-        let mut record = IndexMap::new();
-
-        if let Some(parent_name) = parent {
-            let parent_record = Self::generate_record(ctx, state, Some(parent_name), None, span)?;
-            record.extend(parent_record);
-        }
-
-        let template_scope = ctx
-            .find_template_scope(name)
-            .ok_or_else(|| EvalError::MiscellaneousError("Invalid scope".into(), span))?;
-
-        for field_name in field_names {
-            let field_symbol = template_scope
-                .symbols
-                .get(field_name)
-                .ok_or_else(|| EvalError::NotDefined(field_name.to_string(), span))?;
-
-            let expression = match &field_symbol.kind {
-                SymbolKind::Field { expression, .. } => expression,
-                _ => return Err(EvalError::NotDefined(field_name.to_string(), span)),
-            };
-
-            let value = evaluate_expression(ctx, state, expression)?;
-            record.insert(field_name.clone(), value);
-        }
-
-        Ok(record)
     }
 
     pub fn write_records(
@@ -214,6 +144,7 @@ impl<'a> RecordGenerator<'a> {
     ) -> Result<(), GeneratorError> {
         let mut file = File::create(&path)
             .map_err(|err| GeneratorError::SerializationError(err.to_string()))?;
+
         let field_names = self
             .get_field_names()
             .map_err(|err| GeneratorError::EvaluationError(err.to_string()))?;
@@ -253,66 +184,41 @@ impl<'a> RecordGenerator<'a> {
         }
 
         println!("Generated {} records to {:?}", count, path);
-
         Ok(())
     }
 
-    fn generate_record(
+    pub(crate) fn generate_record(
         ctx: &Context,
         state: &mut State,
-        name: Option<&str>,
-        body: Option<&[Field]>,
-        span: Span,
+        item_ref: &ItemRef,
     ) -> Result<Record, EvalError> {
-        match (name, body) {
-            (Some(template_or_struct), _) => {
-                let symbol = ctx
-                    .symbol_table
-                    .lookup(template_or_struct)
-                    .ok_or_else(|| EvalError::NotDefined(template_or_struct.to_string(), span))?;
+        let template = ctx
+            .resolve_template(item_ref)
+            .ok_or_else(|| EvalError::NotDefined(format!("{}", item_ref), Default::default()))?;
 
-                match &symbol.kind {
-                    SymbolKind::Template { parent, fields, .. } => {
-                        Self::generate_from_template_parts(
-                            ctx,
-                            state,
-                            template_or_struct,
-                            parent,
-                            fields,
-                            span,
-                        )
-                    }
+        let mut record = IndexMap::new();
 
-                    SymbolKind::Struct { fields, .. } => {
-                        let mut record = IndexMap::new();
-                        for field in fields {
-                            let value = evaluate_expression(ctx, state, &field.value)?;
-                            record.insert(field.name.clone(), value);
-                        }
-                        Ok(record)
-                    }
-
-                    kind => Err(EvalError::TypeMismatch {
-                        expected: "template or struct".to_string(),
-                        got: kind.to_string(),
-                        span: symbol.span,
-                    }),
-                }
-            }
-
-            (None, Some(body)) => {
-                let mut record = IndexMap::new();
-                for field in body {
-                    let value = evaluate_expression(ctx, state, &field.value)?;
-                    record.insert(field.name.clone(), value);
-                }
-                Ok(record)
-            }
-
-            _ => Err(EvalError::MiscellaneousError(
-                "Invalid generate target".into(),
-                span,
-            )),
+        if let Some(parent_ref) = template.parent.clone() {
+            let parent_record = Self::generate_record(ctx, state, &parent_ref)?;
+            record.extend(parent_record);
         }
+
+        let module = ctx.module_for(item_ref);
+
+        let fields: Vec<(String, Expr)> = template
+            .fields
+            .iter()
+            .map(|field| {
+                let name = module.string_pool.resolve(field.name).to_string();
+                (name, field.value.clone())
+            })
+            .collect();
+
+        for (name, value_expr) in fields {
+            let value = evaluate_expression(ctx, state, &value_expr)?;
+            record.insert(name, value);
+        }
+
+        Ok(record)
     }
 }

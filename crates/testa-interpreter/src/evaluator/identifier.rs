@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
 use rand::Rng;
-use testa_core::{
-    analyser::symbol_table::symbol::SymbolKind,
-    ast::{Attribute, DataType, DataTypeKind, Expression, ExpressionKind, Field},
-    utils::Span,
+use testa_hir::{
+    Item,
+    module::{ItemRef, Type},
 };
 
 use crate::{
@@ -19,91 +16,84 @@ use crate::{
     util::generate_random_string,
 };
 
-pub(crate) fn evaluate_data_type(
+pub(crate) fn evaluate_hir_type(
     ctx: &Context,
     state: &mut State,
-    data_type: &DataType,
+    ty: &Type,
 ) -> Result<Object, EvalError> {
-    if let Some(constraints) = &data_type.constraints {
-        return evaluate_constrained_type(ctx, state, &data_type.kind, constraints, data_type.span);
-    }
-    match &data_type.kind {
-        DataTypeKind::Int => Ok(Object::new(state.rng.random::<i32>() as isize)),
-        DataTypeKind::Float => Ok(Object::new(state.rng.random::<f32>())),
-        DataTypeKind::Boolean => Ok(Object::new(state.rng.random_bool(0.5))),
-        DataTypeKind::Str => {
+    match ty {
+        Type::Int => Ok(Object::new(state.rng.random::<i32>() as isize)),
+        Type::Float => Ok(Object::new(state.rng.random::<f32>())),
+        Type::Bool => Ok(Object::new(state.rng.random_bool(0.5))),
+        Type::String => {
             let size = state.rng.random_range(6..=20);
             Ok(Object::new(generate_random_string(&mut state.rng, size)))
         }
-        DataTypeKind::List(inner) => evaluate_list(ctx, state, inner),
-        DataTypeKind::Custom(name) => evaluate_identifier(ctx, state, name, data_type.span),
+        Type::List(inner) => {
+            let count = state.rng.random_range(0..=16);
+            let values = (0..count)
+                .map(|_| evaluate_hir_type(ctx, state, inner))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Object::new(values))
+        }
+        Type::Optional(inner) => {
+            if state.rng.random_bool(0.5) {
+                evaluate_hir_type(ctx, state, inner)
+            } else {
+                Ok(Object::NoReturn)
+            }
+        }
+        Type::UserDefined(item_ref) => evaluate_item_ref(ctx, state, item_ref),
     }
 }
 
-pub(crate) fn evaluate_list(
+pub(crate) fn evaluate_item_ref(
     ctx: &Context,
     state: &mut State,
-    data_type: &DataType,
+    item_ref: &ItemRef,
 ) -> Result<Object, EvalError> {
-    let count = state.rng.random_range(0..=16);
-    let values = (0..count)
-        .map(|_| evaluate_data_type(ctx, state, data_type))
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(Object::new(values))
-}
+    let item = ctx
+        .resolve_item(item_ref)
+        .ok_or_else(|| EvalError::NotDefined(format!("{}", item_ref), Default::default()))?;
 
-pub(crate) fn evaluate_identifier(
-    ctx: &Context,
-    state: &mut State,
-    name: &str,
-    span: Span,
-) -> Result<Object, EvalError> {
-    let symbol = ctx
-        .symbol_table
-        .lookup(name)
-        .ok_or_else(|| EvalError::NotDefined(name.to_string(), span))?;
-
-    match &symbol.kind {
-        SymbolKind::Enum { variants, .. } => evaluate_enum(ctx, state, variants),
-        SymbolKind::Struct { name, fields } => evaluate_struct(ctx, state, name, fields),
-        SymbolKind::TypeAlias {
-            name,
-            data_type,
-            attributes,
-        } => evaluate_type_alias(ctx, state, data_type, name, attributes),
-        _ => Err(EvalError::NotDefined(name.to_string(), span)),
+    match item {
+        Item::Enum(e) => evaluate_enum(ctx, state, e, item_ref),
+        Item::TypeAlias(t) => {
+            if t.constraints.is_empty() {
+                evaluate_hir_type(ctx, state, &t.target_type)
+            } else {
+                evaluate_constrained_type(ctx, state, &t.target_type, &t.constraints)
+            }
+        }
+        Item::Template(t) => {
+            let module = ctx.module_for(item_ref);
+            let fields = t
+                .fields
+                .iter()
+                .map(|field| {
+                    let name = module.string_pool.resolve(field.name).to_string();
+                    let value = evaluate_expression(ctx, state, &field.value)?;
+                    Ok((name, value))
+                })
+                .collect::<Result<_, EvalError>>()?;
+            Ok(Object::Struct(
+                module.string_pool.resolve(t.name).to_string(),
+                fields,
+            ))
+        }
+        Item::Struct(s) => {
+            let module = ctx.module_for(item_ref);
+            s.fields
+                .iter()
+                .map(|field| {
+                    let name = module.string_pool.resolve(field.name).to_string();
+                    let value = evaluate_expression(ctx, state, &field.value)?;
+                    Ok((name, value))
+                })
+                .collect::<Result<_, EvalError>>()
+                .map(|fields| {
+                    Object::Struct(module.string_pool.resolve(s.name).to_string(), fields)
+                })
+        }
     }
-}
-
-fn evaluate_struct(
-    ctx: &Context,
-    state: &mut State,
-    name: &str,
-    fields: &[Field],
-) -> Result<Object, EvalError> {
-    let objects: HashMap<_, _> = fields
-        .iter()
-        .map(|field| {
-            let value = evaluate_expression(ctx, state, &field.value)?;
-            Ok((field.name.clone(), value))
-        })
-        .collect::<Result<_, _>>()?;
-
-    Ok(Object::Struct(name.to_owned(), objects))
-}
-
-fn evaluate_type_alias(
-    ctx: &Context,
-    state: &mut State,
-    data_type: &Expression,
-    _name: &str,
-    _attributes: &[Attribute],
-) -> Result<Object, EvalError> {
-    let ExpressionKind::Type(data_type) = &data_type.kind else {
-        return Err(EvalError::MiscellaneousError(
-            "Expected DataType".to_string(),
-            data_type.span,
-        ));
-    };
-    evaluate_data_type(ctx, state, data_type)
 }

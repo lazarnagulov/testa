@@ -16,8 +16,7 @@ use testa_core::{
 use crate::{
     FieldId, Item, Module, ModuleMetadata, StringPool,
     module::{
-        Attribute as HirAttribute, Enum, Expr, InfixOp, PatternPart, PrefixOp, Struct, Template,
-        Type, TypeAlias, Variant as HirVariant, attribute_kind,
+        Attribute as HirAttribute, Directive, Enum, Expr, InfixOp, ItemRef, PatternChar, PatternPart, PrefixOp, Struct, Template, Type, TypeAlias, Variant as HirVariant, attribute_kind
     },
     source_map::SourceMapBuilder,
 };
@@ -26,6 +25,7 @@ pub struct AstLowering {
     string_pool: StringPool,
     next_item_id: u32,
     source_map_builder: SourceMapBuilder,
+    directives: Vec<Directive>,
     source_file: PathBuf,
     items: Vec<Item>,
 }
@@ -35,6 +35,7 @@ impl AstLowering {
         Self {
             string_pool: StringPool::new(),
             next_item_id: 0,
+            directives: Vec::new(),
             items: Vec::new(),
             source_map_builder: SourceMapBuilder::new(),
             source_file,
@@ -77,6 +78,7 @@ impl AstLowering {
                     .as_secs(),
             },
             imports,
+            directives: self.directives,
             string_pool: self.string_pool,
             items: self.items,
             source_map: self.source_map_builder.build(),
@@ -133,6 +135,70 @@ impl AstLowering {
                     self.lower_type_alias(name, data_type, attributes, analysis, imported);
                 self.register_item(Item::TypeAlias(type_alias), *span, *name_span);
             }
+            Statement::OutputDirective {
+                argument, options, ..
+            } => {
+                let format_id = self.string_pool.intern(argument);
+                let opts = options
+                    .iter()
+                    .map(|field| {
+                        let name = self.string_pool.intern(&field.name);
+                        let value = self.lower_expr(&field.value, imported);
+                        (name, value)
+                    })
+                    .collect();
+                self.directives.push(Directive::Output {
+                    format: format_id,
+                    options: opts,
+                });
+            }
+
+            Statement::OutputPathDirective { argument, .. } => {
+                let path_id = self
+                    .string_pool
+                    .intern(argument.to_str().unwrap_or_default());
+                self.directives.push(Directive::OutputPath(path_id));
+            }
+
+            Statement::Generate {
+                template_name,
+                body,
+                count,
+                ..
+            } => {
+                let count_expr = self.lower_expr(count, imported);
+
+                let template_ref = if let Some(name) = template_name {
+                    self.find_item_ref_by_name(name, imported)
+                } else if !body.is_empty() {
+                    let id = self.next_item_id();
+                    let name_id = self.string_pool.intern("_");
+                    let fields = body
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, field)| self.lower_field(field, idx, imported))
+                        .collect();
+                    let template = Template {
+                        id,
+                        name: name_id,
+                        parent: None,
+                        fields,
+                        attributes: vec![],
+                    };
+                    self.items.push(Item::Template(template));
+                    Some(ItemRef::Local(id))
+                } else {
+                    None
+                };
+
+                if let Some(template_ref) = template_ref {
+                    self.directives.push(Directive::Generate {
+                        template: template_ref,
+                        count: count_expr,
+                    });
+                }
+            }
+            Statement::ImportDirective { .. } => {} // consumed at compile time, skip
             _ => {}
         }
     }
@@ -360,7 +426,7 @@ impl AstLowering {
     }
 
     fn lower_expr(&mut self, expr: &Expression, imported: &HashMap<String, &Module>) -> Expr {
-        use testa_core::ast::{InfixOperator, PatternElement, PrefixOperator};
+        use testa_core::ast::{InfixOperator, PrefixOperator};
 
         match &expr.kind {
             ExpressionKind::IntLiteral(n) => Expr::Int(*n as i64),
@@ -370,14 +436,53 @@ impl AstLowering {
                 .unwrap_or(Expr::Float(0.0)),
             ExpressionKind::StringLiteral(s) => Expr::String(self.string_pool.intern(s)),
             ExpressionKind::BooleanLiteral(b) => Expr::Bool(*b),
+            ExpressionKind::Type(data_type) => {
+                if data_type.constraints.is_some() {
+                    let ty = self.lower_type(expr, imported);
+                    let constraints = self.extract_constraints(expr);
+                    Expr::ConstrainedType { ty, constraints }
+                } else {
+                    Expr::Type(self.lower_type(expr, imported))
+                }
+            }
             ExpressionKind::StringPattern(elements) => {
+                use testa_core::ast::{PatternChar as AstPatternChar, PatternElement};
+
                 let parts = elements
                     .iter()
                     .map(|elem| match elem {
                         PatternElement::Literal(s, _) => {
                             PatternPart::Literal(self.string_pool.intern(s))
                         }
-                        _ => todo!("PatternElement"),
+                        PatternElement::RepeatChar {
+                            ch,
+                            count,
+                            count_expression,
+                            ..
+                        } => PatternPart::RepeatChar {
+                            ch: match ch {
+                                AstPatternChar::Lowercase => PatternChar::Lowercase,
+                                AstPatternChar::Uppercase => PatternChar::Uppercase,
+                                AstPatternChar::Digit => PatternChar::Digit,
+                            },
+                            count: *count,
+                            count_expr: count_expression
+                                .as_ref()
+                                .map(|e| Box::new(self.lower_expr(e, imported))),
+                        },
+                        PatternElement::RepeatGroup { chars, count, .. } => {
+                            PatternPart::RepeatGroup {
+                                chars: chars
+                                    .iter()
+                                    .map(|ch| match ch {
+                                        AstPatternChar::Lowercase => PatternChar::Lowercase,
+                                        AstPatternChar::Uppercase => PatternChar::Uppercase,
+                                        AstPatternChar::Digit => PatternChar::Digit,
+                                    })
+                                    .collect(),
+                                count: Box::new(self.lower_expr(count, imported)),
+                            }
+                        }
                     })
                     .collect();
                 Expr::StringPattern(parts)
@@ -392,7 +497,6 @@ impl AstLowering {
                     .map(Expr::Identifier)
                     .unwrap_or(Expr::Int(0)),
             },
-            ExpressionKind::Type(_) => Expr::Type(self.lower_type(expr, imported)),
             ExpressionKind::List(elements) => {
                 let exprs = elements
                     .iter()

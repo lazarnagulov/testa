@@ -46,7 +46,7 @@ impl Module {
                 Item::Template(t) => self.restore_template(t, &mut table),
                 Item::Enum(e) => self.restore_enum(e, &mut table),
                 Item::TypeAlias(t) => self.restore_type_alias(t, &mut table),
-                Item::Struct(_) => {},
+                Item::Struct(_) => {}
             }
         }
 
@@ -84,7 +84,7 @@ impl Module {
 
     fn restore_type_alias(&self, ty: &TypeAlias, table: &mut SymbolTable) {
         let name = self.string_pool.resolve(ty.name).to_string();
-        let expr = self.type_to_expression(&ty.target_type); 
+        let expr = self.type_to_expression(&ty.target_type);
 
         table
             .insert(
@@ -172,7 +172,9 @@ impl Module {
                 span: Span::default(),
             })),
             Type::Optional(inner) => self.type_to_data_type_kind(inner),
-            Type::UserDefined(item_ref) => DataTypeKind::Custom(self.resolve_item_ref_name(item_ref)),
+            Type::UserDefined(item_ref) => {
+                DataTypeKind::Custom(self.resolve_item_ref_name(item_ref))
+            }
         }
     }
 

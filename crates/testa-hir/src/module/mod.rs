@@ -20,6 +20,20 @@ pub enum ItemRef {
     Imported { module: StringId, item: ItemId },
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Directive {
+    Output {
+        format: StringId,
+        options: Vec<(StringId, Expr)>,
+    },
+    OutputPath(StringId),
+    Generate {
+        template: ItemRef,
+        count: Expr,
+    },
+    Import(StringId),
+}
+
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FieldId(pub u32);
 
@@ -177,11 +191,31 @@ pub enum Expr {
         end: Box<Expr>,
         inclusive: bool,
     },
+    ConstrainedType {
+        ty: Type,
+        constraints: Vec<Constraint>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PatternPart {
+    Literal(StringId),
+    RepeatChar {
+        ch: PatternChar,
+        count: usize,
+        count_expr: Option<Box<Expr>>,
+    },
+    RepeatGroup {
+        chars: Vec<PatternChar>,
+        count: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub enum PatternPart {
-    Literal(StringId),
+pub enum PatternChar {
+    Lowercase,
+    Uppercase,
+    Digit,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -189,6 +223,16 @@ pub enum PrefixOp {
     Neg,
     Not,
     BitNeg,
+}
+
+impl fmt::Display for PrefixOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PrefixOp::Neg => write!(f, "-"),
+            PrefixOp::Not => write!(f, "!"),
+            PrefixOp::BitNeg => write!(f, "~"),
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -211,6 +255,35 @@ pub enum InfixOp {
     LessThanOrEqual,
     GreaterThan,
     GreaterThanOrEqual,
+    ExclusiveRange,
+    InclusiveRange,
+}
+
+impl fmt::Display for InfixOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InfixOp::Add => write!(f, "+"),
+            InfixOp::Sub => write!(f, "-"),
+            InfixOp::Div => write!(f, "/"),
+            InfixOp::Mod => write!(f, "%"),
+            InfixOp::Mul => write!(f, "*"),
+            InfixOp::BitAnd => write!(f, "&"),
+            InfixOp::BitOr => write!(f, "|"),
+            InfixOp::BitXor => write!(f, "^"),
+            InfixOp::BitLShift => write!(f, "<<"),
+            InfixOp::BitRShift => write!(f, ">>"),
+            InfixOp::Equal => write!(f, "="),
+            InfixOp::And => write!(f, "&&"),
+            InfixOp::Or => write!(f, "||"),
+            InfixOp::NotEqual => write!(f, "!="),
+            InfixOp::LessThen => write!(f, "<"),
+            InfixOp::GreaterThan => write!(f, ">"),
+            InfixOp::LessThanOrEqual => write!(f, "<="),
+            InfixOp::GreaterThanOrEqual => write!(f, ">="),
+            InfixOp::ExclusiveRange => write!(f, "exclusive range"),
+            InfixOp::InclusiveRange => write!(f, "inclusive range"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -218,6 +291,7 @@ pub struct Module {
     pub metadata: ModuleMetadata,
     pub string_pool: StringPool,
     pub imports: Vec<StringId>,
+    pub directives: Vec<Directive>,
     pub items: Vec<Item>,
     pub source_map: SourceMap,
 }
@@ -232,6 +306,23 @@ pub struct ModuleMetadata {
 }
 
 impl Module {
+    pub fn empty(name: &str) -> Self {
+        Self {
+            metadata: ModuleMetadata {
+                version: 1,
+                name: name.to_string(),
+                source_file: PathBuf::from(format!("{}.testa", name)),
+                source_hash: 0,
+                compiled_at: 0,
+            },
+            string_pool: StringPool::new(),
+            imports: Vec::new(),
+            items: Vec::new(),
+            directives: Vec::new(),
+            source_map: SourceMap::new(Vec::new(), Vec::new(), Vec::new()),
+        }
+    }
+
     pub fn get_item(&self, id: ItemId) -> Option<&Item> {
         self.items.iter().find(|item| match item {
             Item::Template(t) => t.id == id,

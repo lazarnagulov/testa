@@ -1,50 +1,31 @@
-use std::collections::HashMap;
+use std::path::PathBuf;
 
-use testa_core::ast::{Field, Program, Statement};
+use testa_hir::module::Directive;
 
-use crate::{
-    evaluator::{
-        Evaluator, context::OutputFormat, error::EvalError, expression::evaluate_expression,
-    },
-    object::Object,
-};
+use crate::evaluator::{Evaluator, error::EvalError, expression::evaluate_expression};
 
 impl Evaluator {
-    pub fn evaluate_directives(&mut self, program: &Program) -> Result<(), EvalError> {
-        for statement in &program.0 {
-            match statement {
-                Statement::OutputDirective {
-                    argument,
-                    options,
-                    span,
-                } => {
-                    self.context.output_format = argument
-                        .parse::<OutputFormat>()
-                        .map_err(|_| EvalError::InvalidTarget(argument.clone(), *span))?;
-                    self.context.output_options = self.evaluate_output_options(options)?;
+    pub fn evaluate_directives(&mut self) -> Result<(), EvalError> {
+        for directive in &self.context.module.directives.clone() {
+            match directive {
+                Directive::Output { format, options } => {
+                    let format_str = self.context.resolve_local_string(*format);
+                    self.context.output_format = format_str.parse().map_err(|_| {
+                        EvalError::InvalidTarget(format_str.to_string(), Default::default())
+                    })?;
+                    for (key, val_expr) in options {
+                        let key = self.context.resolve_local_string(*key).to_string();
+                        let val = evaluate_expression(&self.context, &mut self.state, val_expr)?;
+                        self.context.output_options.insert(key, val);
+                    }
                 }
-                Statement::OutputPathDirective { argument, .. } => {
-                    self.context.output_path = Some(argument.clone());
+                Directive::OutputPath(path_id) => {
+                    let path = self.context.resolve_local_string(*path_id);
+                    self.context.output_path = Some(PathBuf::from(path));
                 }
                 _ => {}
             }
         }
         Ok(())
-    }
-
-    fn evaluate_output_options(
-        &mut self,
-        fields: &[Field],
-    ) -> Result<HashMap<String, Object>, EvalError> {
-        let mut result = HashMap::new();
-        for field in fields {
-            let name = field.name.clone();
-            result.insert(
-                name,
-                evaluate_expression(&self.context, &mut self.state, &field.value)?,
-            );
-        }
-
-        Ok(result)
     }
 }
