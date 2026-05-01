@@ -3,6 +3,9 @@ name = "testa-hir"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+test-utils = []
+
 [dependencies]
 testa-core = { path = "../testa-core" }
 serde = { version = "1", features = ["derive"] }

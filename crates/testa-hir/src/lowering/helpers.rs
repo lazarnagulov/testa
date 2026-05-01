@@ -1,15 +1,39 @@
+use std::collections::HashMap;
+
 use testa_core::{
     ast::{Expression, ExpressionKind},
     utils::Span,
 };
 
 use crate::{
-    AstLowering, Item, ItemId,
-    module::{Constraint, ConstraintKind, Expr},
+    AstLowering, Item, ItemId, Module,
+    module::{Constraint, ConstraintKind, Expr, ItemRef},
 };
 
 impl AstLowering {
-    pub(super) fn find_item_id_by_name(&self, name: &str) -> Option<ItemId> {
+    pub(super) fn find_item_ref_by_name(
+        &mut self,
+        name: &str,
+        imported: &HashMap<String, &Module>,
+    ) -> Option<ItemRef> {
+        if let Some(id) = self.find_local_item_id_by_name(name) {
+            return Some(ItemRef::Local(id));
+        }
+
+        for (module_name, module) in imported {
+            if let Some(item) = module.get_item_by_name(name) {
+                let module_id = self.string_pool.intern(module_name);
+                return Some(ItemRef::Imported {
+                    module: module_id,
+                    item: item.id(),
+                });
+            }
+        }
+
+        None
+    }
+
+    pub(super) fn find_local_item_id_by_name(&self, name: &str) -> Option<ItemId> {
         self.items
             .iter()
             .find(|item| self.string_pool.resolve(item.name()) == name)
@@ -38,7 +62,7 @@ impl AstLowering {
                 for constraint_expr in constraint_exprs {
                     use testa_core::ast::ConstraintKind as AstConstraintKind;
 
-                    let value = self.lower_expr(&constraint_expr.expression);
+                    let value = self.lower_expr(&constraint_expr.expression, &HashMap::new());
 
                     let kind = match constraint_expr.kind {
                         AstConstraintKind::Range => {
@@ -46,8 +70,8 @@ impl AstLowering {
                                 &constraint_expr.expression.kind
                             {
                                 ConstraintKind::Range {
-                                    min: self.lower_expr(left),
-                                    max: self.lower_expr(right),
+                                    min: self.lower_expr(left, &HashMap::new()),
+                                    max: self.lower_expr(right, &HashMap::new()),
                                 }
                             } else {
                                 ConstraintKind::Range {

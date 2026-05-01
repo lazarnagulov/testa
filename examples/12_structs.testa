@@ -1,14 +1,23 @@
 @output json { pretty = true; }
 @output_path "example12.json";
 
+type Lat = float [range=-90..=90]; 
+type Lon = float [range=-180..=180];
+
 struct GeoLocation {
-    lat = float [range=-90..=90];
-    lon = float [range=-180..=180];
+    lat = Lat;
+    lon = Lon;
+}
+
+enum VehicleModel {
+    A3        => 2; A4      => 3; A6       => 4;
+    Silverado => 2; Equinox => 3; Malibu   => 4;
+    F150      => 2; Mustang => 3; Explorer => 4;
 }
 
 template Vehicle {
     id = int;
-    model = string [length=5];
+    model = VehicleModel;
     location = GeoLocation;
 }
 

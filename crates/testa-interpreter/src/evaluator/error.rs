@@ -2,17 +2,17 @@ use core::fmt;
 use std::error::Error;
 
 use testa_core::{
-    ast::{InfixOperator, PrefixOperator},
     diagnostics::{Diagnostic, DiagnosticCode},
     utils::Span,
 };
+use testa_hir::module::{InfixOp, PrefixOp};
 
 use crate::object::Object;
 
 #[derive(Debug)]
 pub enum EvalError {
     UnsupportedPrefixOperator {
-        operator: PrefixOperator,
+        operator: PrefixOp,
         object: Box<Object>,
         span: Span,
     },
@@ -27,7 +27,7 @@ pub enum EvalError {
     },
     UnsupportedInfixOperand {
         left: Box<Object>,
-        operator: InfixOperator,
+        operator: InfixOp,
         right: Box<Object>,
         span: Span,
     },
@@ -51,10 +51,7 @@ pub enum EvalError {
 }
 
 impl EvalError {
-    pub fn unsupported_prefix_operator<T: Into<Object>>(
-        operator: PrefixOperator,
-        object: T,
-    ) -> Self {
+    pub fn unsupported_prefix_operator<T: Into<Object>>(operator: PrefixOp, object: T) -> Self {
         EvalError::UnsupportedPrefixOperator {
             operator,
             object: Box::new(object.into()),
@@ -70,7 +67,7 @@ impl EvalError {
         }
     }
 
-    pub fn unsupported_infix_operator<L, R>(left: L, operator: InfixOperator, right: R) -> Self
+    pub fn unsupported_infix_operator<L, R>(left: L, operator: InfixOp, right: R) -> Self
     where
         L: Into<Object>,
         R: Into<Object>,

@@ -28,6 +28,7 @@ pub enum ReferenceKind {
 pub struct ReferenceTracker<'a> {
     references: HashMap<String, Vec<Reference>>,
     symbol_table: &'a SymbolTable,
+    imported: &'a [&'a SymbolTable],
     errors: Vec<SemanticError>,
 }
 
@@ -35,6 +36,16 @@ impl<'a> ReferenceTracker<'a> {
     pub fn new(symbol_table: &'a SymbolTable) -> Self {
         Self {
             symbol_table,
+            references: HashMap::new(),
+            errors: Vec::new(),
+            imported: &[],
+        }
+    }
+
+    pub fn with_imports(symbol_table: &'a SymbolTable, imported: &'a [&'a SymbolTable]) -> Self {
+        Self {
+            symbol_table,
+            imported,
             references: HashMap::new(),
             errors: Vec::new(),
         }
@@ -53,8 +64,13 @@ impl<'a> ReferenceTracker<'a> {
         }
     }
 
+    fn lookup(&self, name: &str) -> bool {
+        self.symbol_table.lookup(name).is_some()
+            || self.imported.iter().any(|st| st.lookup(name).is_some())
+    }
+
     fn add_reference(&mut self, name: String, span: Span, kind: ReferenceKind) {
-        let is_resolved = self.symbol_table.lookup(&name).is_some();
+        let is_resolved = self.lookup(&name);
 
         if !is_resolved {
             self.errors.push(SemanticError::UnknownIdentifier {
@@ -63,14 +79,15 @@ impl<'a> ReferenceTracker<'a> {
             });
         }
 
-        let reference = Reference {
-            name: name.clone(),
-            span,
-            kind,
-            is_resolved,
-        };
-
-        self.references.entry(name).or_default().push(reference);
+        self.references
+            .entry(name.clone())
+            .or_default()
+            .push(Reference {
+                name,
+                span,
+                kind,
+                is_resolved,
+            });
     }
 
     pub fn take_errors(&mut self) -> Vec<SemanticError> {

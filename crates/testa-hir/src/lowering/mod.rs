@@ -1,6 +1,7 @@
 mod helpers;
 
 use std::{
+    collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
     path::PathBuf,
 };
@@ -15,7 +16,8 @@ use testa_core::{
 use crate::{
     FieldId, Item, Module, ModuleMetadata, StringPool,
     module::{
-        Attribute as HirAttribute, Enum, Expr, Template, Type, TypeAlias, Variant as HirVariant,
+        Attribute as HirAttribute, Directive, Enum, Expr, InfixOp, ItemRef, PatternChar,
+        PatternPart, PrefixOp, Struct, Template, Type, TypeAlias, Variant as HirVariant,
         attribute_kind,
     },
     source_map::SourceMapBuilder,
@@ -25,6 +27,7 @@ pub struct AstLowering {
     string_pool: StringPool,
     next_item_id: u32,
     source_map_builder: SourceMapBuilder,
+    directives: Vec<Directive>,
     source_file: PathBuf,
     items: Vec<Item>,
 }
@@ -34,20 +37,31 @@ impl AstLowering {
         Self {
             string_pool: StringPool::new(),
             next_item_id: 0,
+            directives: Vec::new(),
             items: Vec::new(),
             source_map_builder: SourceMapBuilder::new(),
             source_file,
         }
     }
 
-    pub fn lower(mut self, ast: &Program, analysis: &AnalysisResult, source_text: &str) -> Module {
+    pub fn lower(
+        mut self,
+        ast: &Program,
+        analysis: &AnalysisResult,
+        source_text: &str,
+        imported: &HashMap<String, &Module>,
+    ) -> Module {
         for stmt in &ast.0 {
-            self.lower_statement(stmt, analysis);
+            self.lower_statement(stmt, analysis, imported);
         }
 
         let mut hasher = DefaultHasher::new();
         source_text.hash(&mut hasher);
         let source_hash = hasher.finish();
+        let imports = imported
+            .keys()
+            .map(|name| self.string_pool.intern(name))
+            .collect();
 
         Module {
             metadata: ModuleMetadata {
@@ -65,13 +79,20 @@ impl AstLowering {
                     .unwrap()
                     .as_secs(),
             },
+            imports,
+            directives: self.directives,
             string_pool: self.string_pool,
             items: self.items,
             source_map: self.source_map_builder.build(),
         }
     }
 
-    fn lower_statement(&mut self, stmt: &Statement, analysis: &AnalysisResult) {
+    fn lower_statement(
+        &mut self,
+        stmt: &Statement,
+        analysis: &AnalysisResult,
+        imported: &HashMap<String, &Module>,
+    ) {
         match stmt {
             Statement::Template {
                 parent_name,
@@ -82,10 +103,9 @@ impl AstLowering {
                 span,
                 ..
             } => {
-                let template = self.lower_template(name, parent_name, body, attributes);
+                let template = self.lower_template(name, parent_name, body, attributes, imported);
                 self.register_item(Item::Template(template), *span, *name_span);
             }
-
             Statement::Enum {
                 name,
                 name_span,
@@ -96,7 +116,15 @@ impl AstLowering {
                 let enum_item = self.lower_enum(name, variants, attributes);
                 self.register_item(Item::Enum(enum_item), *span, *name_span);
             }
-
+            Statement::Struct {
+                name,
+                name_span,
+                body,
+                span,
+            } => {
+                let struct_item = self.lower_struct(name, body, imported);
+                self.register_item(Item::Struct(struct_item), *span, Some(*name_span));
+            }
             Statement::TypeDecl {
                 name,
                 name_span,
@@ -105,10 +133,74 @@ impl AstLowering {
                 span,
                 ..
             } => {
-                let type_alias = self.lower_type_alias(name, data_type, attributes, analysis);
+                let type_alias =
+                    self.lower_type_alias(name, data_type, attributes, analysis, imported);
                 self.register_item(Item::TypeAlias(type_alias), *span, *name_span);
             }
+            Statement::OutputDirective {
+                argument, options, ..
+            } => {
+                let format_id = self.string_pool.intern(argument);
+                let opts = options
+                    .iter()
+                    .map(|field| {
+                        let name = self.string_pool.intern(&field.name);
+                        let value = self.lower_expr(&field.value, imported);
+                        (name, value)
+                    })
+                    .collect();
+                self.directives.push(Directive::Output {
+                    format: format_id,
+                    options: opts,
+                });
+            }
 
+            Statement::OutputPathDirective { argument, .. } => {
+                let path_id = self
+                    .string_pool
+                    .intern(argument.to_str().unwrap_or_default());
+                self.directives.push(Directive::OutputPath(path_id));
+            }
+
+            Statement::Generate {
+                template_name,
+                body,
+                count,
+                ..
+            } => {
+                let count_expr = self.lower_expr(count, imported);
+
+                let template_ref = if let Some(name) = template_name {
+                    self.find_item_ref_by_name(name, imported)
+                } else if !body.is_empty() {
+                    let id = self.next_item_id();
+                    let name_id = self.string_pool.intern("_");
+                    let fields = body
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, field)| self.lower_field(field, idx, imported))
+                        .collect();
+                    let template = Template {
+                        id,
+                        name: name_id,
+                        parent: None,
+                        fields,
+                        attributes: vec![],
+                    };
+                    self.items.push(Item::Template(template));
+                    Some(ItemRef::Local(id))
+                } else {
+                    None
+                };
+
+                if let Some(template_ref) = template_ref {
+                    self.directives.push(Directive::Generate {
+                        template: template_ref,
+                        count: count_expr,
+                    });
+                }
+            }
+            Statement::ImportDirective { .. } => {} // consumed at compile time, skip
             _ => {}
         }
     }
@@ -119,18 +211,19 @@ impl AstLowering {
         parent_name: &Option<String>,
         body: &[Field],
         attributes: &[Attribute],
+        imported: &HashMap<String, &Module>,
     ) -> Template {
         let id = self.next_item_id();
         let name_id = self.string_pool.intern(name);
 
         let parent = parent_name
             .as_ref()
-            .and_then(|p| self.find_item_id_by_name(p));
+            .and_then(|p| self.find_item_ref_by_name(p, imported));
 
         let fields = body
             .iter()
             .enumerate()
-            .map(|(idx, field)| self.lower_field(field, idx))
+            .map(|(idx, field)| self.lower_field(field, idx, imported))
             .collect();
 
         let attrs = attributes
@@ -144,6 +237,28 @@ impl AstLowering {
             parent,
             fields,
             attributes: attrs,
+        }
+    }
+
+    fn lower_struct(
+        &mut self,
+        name: &str,
+        body: &[Field],
+        imported: &HashMap<String, &Module>,
+    ) -> Struct {
+        let id = self.next_item_id();
+        let name_id = self.string_pool.intern(name);
+
+        let fields = body
+            .iter()
+            .enumerate()
+            .map(|(idx, field)| self.lower_field(field, idx, imported))
+            .collect();
+
+        Struct {
+            id,
+            name: name_id,
+            fields,
         }
     }
 
@@ -168,7 +283,10 @@ impl AstLowering {
 
     fn lower_variant(&mut self, variant: &Variant) -> HirVariant {
         let name_id = self.string_pool.intern(&variant.name);
-        let weight = variant.weight.as_ref().map(|w| self.lower_expr(w));
+        let weight = variant
+            .weight
+            .as_ref()
+            .map(|w| self.lower_expr(w, &HashMap::new()));
 
         HirVariant {
             name: name_id,
@@ -182,11 +300,12 @@ impl AstLowering {
         data_type: &Expression,
         attributes: &[Attribute],
         analysis: &AnalysisResult,
+        imported: &HashMap<String, &Module>,
     ) -> TypeAlias {
         let id = self.next_item_id();
         let name_id = self.string_pool.intern(name);
 
-        let target_type = self.lower_type_from_expr(data_type, analysis);
+        let target_type = self.lower_type_from_expr(data_type, analysis, imported);
 
         let constraints = self.extract_constraints(data_type);
 
@@ -204,7 +323,12 @@ impl AstLowering {
         }
     }
 
-    fn lower_field(&mut self, field: &Field, idx: usize) -> crate::module::Field {
+    fn lower_field(
+        &mut self,
+        field: &Field,
+        idx: usize,
+        imported: &HashMap<String, &Module>,
+    ) -> crate::module::Field {
         let field_id = FieldId(idx as u32);
         let name_id = self.string_pool.intern(&field.name);
 
@@ -216,8 +340,8 @@ impl AstLowering {
         crate::module::Field {
             id: field_id,
             name: name_id,
-            ty: self.lower_type(&field.value),
-            default_value: None, // Could be extracted from field.value if it's a literal
+            ty: self.lower_type(&field.value, imported),
+            value: self.lower_expr(&field.value, imported),
             attributes: field
                 .attributes
                 .iter()
@@ -250,22 +374,18 @@ impl AstLowering {
         }
     }
 
-    fn lower_type(&mut self, expr: &Expression) -> Type {
+    fn lower_type(&mut self, expr: &Expression, imported: &HashMap<String, &Module>) -> Type {
         match &expr.kind {
             ExpressionKind::Identifier(name) => match name.as_str() {
                 "int" => Type::Int,
                 "string" => Type::String,
                 "bool" => Type::Bool,
                 "float" => Type::Float,
-                _ => {
-                    if let Some(item_id) = self.find_item_id_by_name(name) {
-                        Type::UserDefined(item_id)
-                    } else {
-                        Type::Int
-                    }
-                }
+                _ => self
+                    .find_item_ref_by_name(name, imported)
+                    .map(Type::UserDefined)
+                    .unwrap_or(Type::Int),
             },
-
             ExpressionKind::Type(data_type) => match &data_type.kind {
                 DataTypeKind::Int => Type::Int,
                 DataTypeKind::Str => Type::String,
@@ -276,73 +396,238 @@ impl AstLowering {
                         kind: ExpressionKind::Type(*inner.clone()),
                         span: expr.span,
                     };
-                    Type::List(Box::new(self.lower_type(&inner_expr)))
+                    Type::List(Box::new(self.lower_type(&inner_expr, imported)))
                 }
-                DataTypeKind::Custom(name) => {
-                    if let Some(item_id) = self.find_item_id_by_name(name) {
-                        Type::UserDefined(item_id)
-                    } else {
-                        Type::Int
-                    }
-                }
+                DataTypeKind::Custom(name) => self
+                    .find_item_ref_by_name(name, imported)
+                    .map(Type::UserDefined)
+                    .unwrap_or(Type::Int),
             },
-
             _ => Type::Int,
         }
     }
 
-    fn lower_type_from_expr(&mut self, expr: &Expression, analysis: &AnalysisResult) -> Type {
+    fn lower_type_from_expr(
+        &mut self,
+        expr: &Expression,
+        analysis: &AnalysisResult,
+        imported: &HashMap<String, &Module>,
+    ) -> Type {
         if let ExpressionKind::Identifier(name) = &expr.kind {
             if let Some(checker_type) = analysis.type_map.get(name) {
                 return match checker_type {
                     type_checker::types::Type::Custom(name) => self
-                        .find_item_id_by_name(name)
+                        .find_item_ref_by_name(name, imported)
                         .map(Type::UserDefined)
                         .unwrap_or(Type::Int),
                     other => Type::from(other),
                 };
             }
         }
-        self.lower_type(expr)
+        self.lower_type(expr, imported)
     }
 
-    fn lower_expr(&mut self, expr: &Expression) -> Expr {
+    fn lower_expr(&mut self, expr: &Expression, imported: &HashMap<String, &Module>) -> Expr {
+        use testa_core::ast::{InfixOperator, PrefixOperator};
+
         match &expr.kind {
             ExpressionKind::IntLiteral(n) => Expr::Int(*n as i64),
-
             ExpressionKind::FloatLiteral(f) => f
                 .parse::<f64>()
                 .map(Expr::Float)
                 .unwrap_or(Expr::Float(0.0)),
             ExpressionKind::StringLiteral(s) => Expr::String(self.string_pool.intern(s)),
             ExpressionKind::BooleanLiteral(b) => Expr::Bool(*b),
+            ExpressionKind::Type(data_type) => {
+                if data_type.constraints.is_some() {
+                    let ty = self.lower_type(expr, imported);
+                    let constraints = self.extract_constraints(expr);
+                    Expr::ConstrainedType { ty, constraints }
+                } else {
+                    Expr::Type(self.lower_type(expr, imported))
+                }
+            }
+            ExpressionKind::StringPattern(elements) => {
+                use testa_core::ast::{PatternChar as AstPatternChar, PatternElement};
+
+                let parts = elements
+                    .iter()
+                    .map(|elem| match elem {
+                        PatternElement::Literal(s, _) => {
+                            PatternPart::Literal(self.string_pool.intern(s))
+                        }
+                        PatternElement::RepeatChar {
+                            ch,
+                            count,
+                            count_expression,
+                            ..
+                        } => PatternPart::RepeatChar {
+                            ch: match ch {
+                                AstPatternChar::Lowercase => PatternChar::Lowercase,
+                                AstPatternChar::Uppercase => PatternChar::Uppercase,
+                                AstPatternChar::Digit => PatternChar::Digit,
+                            },
+                            count: *count,
+                            count_expr: count_expression
+                                .as_ref()
+                                .map(|e| Box::new(self.lower_expr(e, imported))),
+                        },
+                        PatternElement::RepeatGroup { chars, count, .. } => {
+                            PatternPart::RepeatGroup {
+                                chars: chars
+                                    .iter()
+                                    .map(|ch| match ch {
+                                        AstPatternChar::Lowercase => PatternChar::Lowercase,
+                                        AstPatternChar::Uppercase => PatternChar::Uppercase,
+                                        AstPatternChar::Digit => PatternChar::Digit,
+                                    })
+                                    .collect(),
+                                count: Box::new(self.lower_expr(count, imported)),
+                            }
+                        }
+                    })
+                    .collect();
+                Expr::StringPattern(parts)
+            }
+            ExpressionKind::Identifier(name) => match name.as_str() {
+                "int" => Expr::Type(Type::Int),
+                "string" => Expr::Type(Type::String),
+                "bool" => Expr::Type(Type::Bool),
+                "float" => Expr::Type(Type::Float),
+                _ => self
+                    .find_item_ref_by_name(name, imported)
+                    .map(Expr::Identifier)
+                    .unwrap_or(Expr::Int(0)),
+            },
             ExpressionKind::List(elements) => {
                 let exprs = elements
                     .iter()
-                    .map(|elem| self.lower_expr(&elem.value))
+                    .map(|elem| self.lower_expr(&elem.value, imported))
                     .collect();
                 Expr::List(exprs)
             }
-
             ExpressionKind::Infix {
                 left,
-                right,
                 operator,
-                ..
+                right,
+            } => match operator {
+                InfixOperator::ExclusiveRange => Expr::Range {
+                    start: Box::new(self.lower_expr(left, imported)),
+                    end: Box::new(self.lower_expr(right, imported)),
+                    inclusive: false,
+                },
+                InfixOperator::InclusiveRange => Expr::Range {
+                    start: Box::new(self.lower_expr(left, imported)),
+                    end: Box::new(self.lower_expr(right, imported)),
+                    inclusive: true,
+                },
+                InfixOperator::Plus => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::Add,
+                },
+                InfixOperator::Minus => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::Sub,
+                },
+                InfixOperator::Multiply => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::Mul,
+                },
+                InfixOperator::Divide => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::Div,
+                },
+                InfixOperator::Mod => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::Mod,
+                },
+                InfixOperator::BitAnd => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::BitAnd,
+                },
+                InfixOperator::BitOr => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::BitOr,
+                },
+                InfixOperator::BitXor => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::BitXor,
+                },
+                InfixOperator::BitLShift => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::BitLShift,
+                },
+                InfixOperator::BitRShift => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::BitRShift,
+                },
+                InfixOperator::Equal => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::Equal,
+                },
+                InfixOperator::And => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::And,
+                },
+                InfixOperator::Or => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::Or,
+                },
+                InfixOperator::NotEqual => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::NotEqual,
+                },
+                InfixOperator::LessThan => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::LessThen,
+                },
+                InfixOperator::GreaterThan => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::GreaterThan,
+                },
+                InfixOperator::LessThanOrEqual => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::LessThanOrEqual,
+                },
+                InfixOperator::GreaterThanOrEqual => Expr::Infix {
+                    left: Box::new(self.lower_expr(left, imported)),
+                    right: Box::new(self.lower_expr(right, imported)),
+                    op: InfixOp::GreaterThanOrEqual,
+                },
+            },
+            ExpressionKind::Prefix {
+                operator,
+                expression,
             } => {
-                use testa_core::ast::InfixOperator;
-
-                match operator {
-                    InfixOperator::ExclusiveRange | InfixOperator::InclusiveRange => Expr::Range {
-                        start: Box::new(self.lower_expr(left)),
-                        end: Box::new(self.lower_expr(right)),
-                        inclusive: matches!(operator, InfixOperator::InclusiveRange),
-                    },
-                    _ => self.lower_expr(left),
+                let op = match operator {
+                    PrefixOperator::Negative => PrefixOp::Neg,
+                    PrefixOperator::LogicalNegate => PrefixOp::Not,
+                    PrefixOperator::BitNegate => PrefixOp::BitNeg,
+                };
+                Expr::Prefix {
+                    op,
+                    expr: Box::new(self.lower_expr(expression, imported)),
                 }
             }
 
-            _ => Expr::Int(0),
+            ExpressionKind::FuncCall { .. } => Expr::Int(0), // not implemented yet
         }
     }
 }
