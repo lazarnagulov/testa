@@ -11,7 +11,7 @@ use crate::lsp::{
     workspace::document::{Analysis, Document},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Workspace {
     documents: Arc<RwLock<HashMap<Url, Document>>>,
 }

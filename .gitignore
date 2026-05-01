@@ -71,3 +71,6 @@ build/
 
 node_modules
 out
+
+fixture_*.testa
+!generator.py
