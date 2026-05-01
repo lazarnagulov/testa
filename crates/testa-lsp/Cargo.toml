@@ -3,8 +3,18 @@ name = "testa-lsp"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "testa_lsp"
+path = "src/lib.rs"
+
+[[bench]]
+name = "lsp_performance"
+harness = false
+
 [dependencies]
 testa-core = { path = "../testa-core" }
 tower-lsp = "0.20.0" 
 tokio = { version = "1.48.0", features = ["full"] }
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["async_tokio"] }
