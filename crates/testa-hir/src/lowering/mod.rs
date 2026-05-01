@@ -16,7 +16,9 @@ use testa_core::{
 use crate::{
     FieldId, Item, Module, ModuleMetadata, StringPool,
     module::{
-        Attribute as HirAttribute, Directive, Enum, Expr, InfixOp, ItemRef, PatternChar, PatternPart, PrefixOp, Struct, Template, Type, TypeAlias, Variant as HirVariant, attribute_kind
+        Attribute as HirAttribute, Directive, Enum, Expr, InfixOp, ItemRef, PatternChar,
+        PatternPart, PrefixOp, Struct, Template, Type, TypeAlias, Variant as HirVariant,
+        attribute_kind,
     },
     source_map::SourceMapBuilder,
 };

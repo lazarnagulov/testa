@@ -1,6 +1,10 @@
 use crate::{
     evaluator::{
-        constrained_type::evaluate_constrained_type, context::{Context, State}, error::EvalError, identifier::{evaluate_hir_type, evaluate_item_ref}, pattern::evaluate_string_pattern
+        constrained_type::evaluate_constrained_type,
+        context::{Context, State},
+        error::EvalError,
+        identifier::{evaluate_hir_type, evaluate_item_ref},
+        pattern::evaluate_string_pattern,
     },
     object::Object,
 };
