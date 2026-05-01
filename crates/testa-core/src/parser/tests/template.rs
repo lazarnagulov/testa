@@ -1,4 +1,8 @@
-use crate::{ast::{DataTypeKind, ExpressionKind, Statement}, lexer::token::TokenKind, parser::tests::{identifier, int_literal, parser_from_tokens, span, string_literal, token}};
+use crate::{
+    ast::{DataTypeKind, ExpressionKind, Statement},
+    lexer::token::TokenKind,
+    parser::tests::{identifier, int_literal, parser_from_tokens, span, string_literal, token},
+};
 
 #[test]
 fn test_parse_template() {
@@ -135,7 +139,6 @@ fn test_parse_template_inheritance() {
     assert_eq!(body.len(), 1);
     assert!(body[0].overridable);
 }
-
 
 #[test]
 fn test_parse_struct() {

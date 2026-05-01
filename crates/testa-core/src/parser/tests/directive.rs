@@ -1,6 +1,10 @@
 use std::path::PathBuf;
 
-use crate::{ast::{Expression, ExpressionKind, Statement}, lexer::token::TokenKind, parser::tests::{identifier, parser_from_tokens, span, string_literal, token}};
+use crate::{
+    ast::{Expression, ExpressionKind, Statement},
+    lexer::token::TokenKind,
+    parser::tests::{identifier, parser_from_tokens, span, string_literal, token},
+};
 
 #[test]
 fn test_parse_output_directive() {

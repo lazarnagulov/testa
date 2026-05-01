@@ -5,6 +5,9 @@ use crate::ast::*;
 use crate::utils::Span;
 use std::collections::HashMap;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Clone)]
 pub struct Reference {
     pub name: String,

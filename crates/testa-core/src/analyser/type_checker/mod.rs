@@ -11,6 +11,9 @@ use crate::{
 
 pub mod types;
 
+#[cfg(test)]
+mod tests;
+
 mod constraint;
 mod inference;
 mod infix;

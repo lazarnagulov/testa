@@ -1,4 +1,8 @@
-use crate::{ast::{ConstraintKind, DataTypeKind, Expression, ExpressionKind, InfixOperator, Statement}, lexer::token::TokenKind, parser::tests::{identifier, int_literal, parser_from_tokens, span, token}};
+use crate::{
+    ast::{ConstraintKind, DataTypeKind, Expression, ExpressionKind, InfixOperator, Statement},
+    lexer::token::TokenKind,
+    parser::tests::{identifier, int_literal, parser_from_tokens, span, token},
+};
 
 #[test]
 fn test_parse_type_declaration() {

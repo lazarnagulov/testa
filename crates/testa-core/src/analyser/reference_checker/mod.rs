@@ -10,6 +10,9 @@ use crate::{
     utils::Span,
 };
 
+#[cfg(test)]
+mod tests;
+
 // TODO: Should not allow template references in template and structs.
 pub struct ReferenceChecker<'a> {
     symbol_table: &'a SymbolTable,

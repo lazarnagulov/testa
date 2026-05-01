@@ -1,7 +1,10 @@
 use crate::{
     ast::{Expression, ExpressionKind, Statement},
     lexer::token::TokenKind,
-    parser::{error::ParserError, tests::{int_literal, parser_from_tokens, span, token}},
+    parser::{
+        error::ParserError,
+        tests::{int_literal, parser_from_tokens, span, token},
+    },
     utils::Span,
 };
 

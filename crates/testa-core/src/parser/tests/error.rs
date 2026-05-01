@@ -1,4 +1,10 @@
-use crate::{lexer::token::TokenKind, parser::{error::ParserError, tests::{parser_from_tokens, token}}};
+use crate::{
+    lexer::token::TokenKind,
+    parser::{
+        error::ParserError,
+        tests::{parser_from_tokens, token},
+    },
+};
 
 #[test]
 fn error_expected_identifier_after_type() {
@@ -83,10 +89,7 @@ fn error_invalid_attribute_position() {
 
     let err = parser.parse().unwrap_err();
 
-    assert!(matches!(
-        err[0],
-        ParserError::InvalidAttribute { .. }
-    ));
+    assert!(matches!(err[0], ParserError::InvalidAttribute { .. }));
 }
 
 #[test]
@@ -100,10 +103,7 @@ fn error_generic_syntax() {
 
     let err = parser.parse().unwrap_err();
 
-    assert!(matches!(
-        err[0],
-        ParserError::Syntax { .. }
-    ));
+    assert!(matches!(err[0], ParserError::Syntax { .. }));
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn error_multiple_errors() {
     let mut parser = parser_from_tokens(
         vec![
             Ok(token(TokenKind::Template)),
-            Ok(token(TokenKind::LBrace)), // missing identifier
+            Ok(token(TokenKind::LBrace)),    // missing identifier
             Ok(token(TokenKind::Semicolon)), // nonsense
         ],
         "",
