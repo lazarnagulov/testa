@@ -44,40 +44,42 @@ pub(crate) async fn handle_completion(
 fn symbols_to_completions(table: &SymbolTable, module_name: Option<&str>) -> Vec<CompletionItem> {
     use testa_core::analyser::symbol_table::symbol::SymbolKind;
 
-    table.get_all_symbols().iter().filter_map(|symbol| {
-        let (kind, detail) = match &symbol.kind {
-            SymbolKind::Template { fields, .. } => (
-                CompletionItemKind::CLASS,
-                format!("template ({} fields)", fields.len()),
-            ),
-            SymbolKind::Struct { fields, .. } => (
-                CompletionItemKind::CLASS,
-                format!("struct ({} fields)", fields.len()),
-            ),
-            SymbolKind::Enum { variants, .. } => (
-                CompletionItemKind::ENUM,
-                format!("enum ({} variants)", variants.len()),
-            ),
-            SymbolKind::TypeAlias { .. } => (
-                CompletionItemKind::TYPE_PARAMETER,
-                "type alias".to_string(),
-            ),
-            _ => return None,
-        };
+    table
+        .get_all_symbols()
+        .iter()
+        .filter_map(|symbol| {
+            let (kind, detail) = match &symbol.kind {
+                SymbolKind::Template { fields, .. } => (
+                    CompletionItemKind::CLASS,
+                    format!("template ({} fields)", fields.len()),
+                ),
+                SymbolKind::Struct { fields, .. } => (
+                    CompletionItemKind::CLASS,
+                    format!("struct ({} fields)", fields.len()),
+                ),
+                SymbolKind::Enum { variants, .. } => (
+                    CompletionItemKind::ENUM,
+                    format!("enum ({} variants)", variants.len()),
+                ),
+                SymbolKind::TypeAlias { .. } => {
+                    (CompletionItemKind::TYPE_PARAMETER, "type alias".to_string())
+                }
+                _ => return None,
+            };
 
-        let detail = module_name
-            .map(|m| format!("{} (from {})", detail, m))
-            .unwrap_or(detail);
+            let detail = module_name
+                .map(|m| format!("{} (from {})", detail, m))
+                .unwrap_or(detail);
 
-        Some(CompletionItem {
-            label: symbol.name.clone(),
-            kind: Some(kind),
-            detail: Some(detail),
-            ..Default::default()
+            Some(CompletionItem {
+                label: symbol.name.clone(),
+                kind: Some(kind),
+                detail: Some(detail),
+                ..Default::default()
+            })
         })
-    }).collect()
+        .collect()
 }
-
 
 fn generate_top_level_completions() -> Vec<CompletionItem> {
     vec![

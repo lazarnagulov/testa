@@ -22,9 +22,10 @@ impl ModuleResolver {
         let mut paths = Vec::new();
 
         if let Ok(exe) = std::env::current_exe()
-            && let Some(dir) = exe.parent() {
-                paths.push(dir.join("std"));
-            }
+            && let Some(dir) = exe.parent()
+        {
+            paths.push(dir.join("std"));
+        }
 
         if let Some(parent) = relative_to.parent() {
             paths.push(parent.to_path_buf());

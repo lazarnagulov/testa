@@ -65,9 +65,10 @@ impl SymbolTable {
 
     pub fn exit_scope(&mut self) {
         if let Some(scope) = self.get_scope(self.current_scope)
-            && let Some(parent) = scope.parent {
-                self.current_scope = parent;
-            }
+            && let Some(parent) = scope.parent
+        {
+            self.current_scope = parent;
+        }
     }
 
     fn get_scope(&self, id: ScopeId) -> Option<&Scope> {
@@ -265,9 +266,10 @@ impl SymbolTable {
                         .get_scope_mut(self.global_scope)
                         .map(|s| !s.symbols.contains_key(&name))
                         .unwrap_or(false)
-                        && let Some(global) = self.get_scope_mut(self.global_scope) {
-                            global.symbols.insert(name, symbol);
-                        }
+                        && let Some(global) = self.get_scope_mut(self.global_scope)
+                    {
+                        global.symbols.insert(name, symbol);
+                    }
                 }
             } else {
                 self.scopes.push(scope);

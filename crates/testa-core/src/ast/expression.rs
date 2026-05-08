@@ -52,9 +52,10 @@ impl fmt::Display for ExpressionKind {
             ExpressionKind::Type(data_type) => {
                 let base = data_type.kind.to_string();
                 if let Some(constraints) = &data_type.constraints
-                    && !constraints.is_empty() {
-                        return write!(f, "{} [{} constraints]", base, constraints.len());
-                    }
+                    && !constraints.is_empty()
+                {
+                    return write!(f, "{} [{} constraints]", base, constraints.len());
+                }
                 write!(f, "{}", base)
             }
             ExpressionKind::List(elements) => {

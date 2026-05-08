@@ -34,13 +34,9 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub fn check(mut self, program: &Program) -> Result<HashMap<String, Type>, Vec<SemanticError>> {
+    pub fn check(mut self, program: &Program) -> (HashMap<String, Type>, Vec<SemanticError>) {
         self.visit_program(program);
-        if self.errors.is_empty() {
-            Ok(self.type_map)
-        } else {
-            Err(self.errors)
-        }
+        (self.type_map, self.errors)
     }
 }
 

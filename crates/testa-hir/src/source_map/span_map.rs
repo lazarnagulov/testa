@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::OnceLock};
 
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +9,7 @@ pub struct SpanMap<K, V> {
     entries: Vec<(K, V)>,
 
     #[serde(skip)]
-    cache: Option<HashMap<K, V>>,
+    cache: OnceLock<HashMap<K, V>>,
 }
 
 impl<K, V> SpanMap<K, V>
@@ -20,19 +20,19 @@ where
     pub fn new(entries: Vec<(K, V)>) -> Self {
         Self {
             entries,
-            cache: None,
+            cache: OnceLock::new(),
         }
     }
-    pub fn get(&mut self, key: &K) -> Option<V> {
+
+    pub fn get(&self, key: &K) -> Option<V> {
         if self.entries.len() < HASHMAP_THRESHOLD {
             return self.entries.iter().find(|(k, _)| k == key).map(|(_, v)| *v);
         }
 
-        if self.cache.is_none() {
-            self.cache = Some(self.entries.iter().copied().collect());
-        }
-
-        self.cache.as_ref().unwrap().get(key).copied()
+        self.cache
+            .get_or_init(|| self.entries.iter().copied().collect())
+            .get(key)
+            .copied()
     }
 
     pub fn len(&self) -> usize {

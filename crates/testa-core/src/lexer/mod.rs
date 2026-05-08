@@ -290,12 +290,13 @@ impl<'src> Lexer<'src> {
         }
 
         if let Some((_, c)) = self.peek()
-            && !matches!(c, ' ' | ';' | ',' | ']' | ')') {
-                return Err(LexerError::InvalidNumberLiteral {
-                    span: Span::new(start_location, end_location),
-                    value: c.to_string(),
-                });
-            }
+            && !matches!(c, ' ' | ';' | ',' | ']' | ')')
+        {
+            return Err(LexerError::InvalidNumberLiteral {
+                span: Span::new(start_location, end_location),
+                value: c.to_string(),
+            });
+        }
         Ok(Token::new(
             if is_float {
                 TokenKind::FloatLiteral

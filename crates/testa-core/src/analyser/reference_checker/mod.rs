@@ -85,12 +85,13 @@ impl<'a> Visitor for ReferenceChecker<'a> {
                 ..
             }) => {
                 if let DataTypeKind::Custom(custom_type) = &list_type.kind
-                    && !self.lookup(custom_type) {
-                        self.errors.push(SemanticError::UnknownIdentifier {
-                            name: custom_type.clone(),
-                            span: list_type.span,
-                        });
-                    }
+                    && !self.lookup(custom_type)
+                {
+                    self.errors.push(SemanticError::UnknownIdentifier {
+                        name: custom_type.clone(),
+                        span: list_type.span,
+                    });
+                }
             }
             _ => walk_expression(self, expression),
         }

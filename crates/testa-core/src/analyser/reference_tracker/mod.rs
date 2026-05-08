@@ -57,14 +57,9 @@ impl<'a> ReferenceTracker<'a> {
     pub fn track_references(
         mut self,
         program: &Program,
-    ) -> Result<HashMap<String, Vec<Reference>>, Vec<SemanticError>> {
+    ) -> (HashMap<String, Vec<Reference>>, Vec<SemanticError>) {
         self.visit_program(program);
-
-        if self.errors.is_empty() {
-            Ok(self.references)
-        } else {
-            Err(self.errors)
-        }
+        (self.references, self.errors)
     }
 
     fn lookup(&self, name: &str) -> bool {
