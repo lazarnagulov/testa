@@ -32,9 +32,8 @@ pub(crate) async fn handle_completion(
         if let Some(symbol_table) = &analysis.symbol_table {
             items.extend(symbols_to_completions(symbol_table, None));
         }
-        for (module_name, module) in &analysis.imported_modules {
-            let table = module.to_symbol_table();
-            items.extend(symbols_to_completions(&table, Some(module_name)));
+        for (module_name, table) in &analysis.imported_tables {
+            items.extend(symbols_to_completions(table, Some(module_name)));
         }
     }
 

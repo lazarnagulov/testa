@@ -12,11 +12,11 @@ use crate::lsp::workspace::document::Analysis;
 
 struct ResolvedUnit {
     pub modules: HashMap<String, Module>,
-    pub tables: Vec<SymbolTable>,
+    pub tables: HashMap<String, SymbolTable>,
 }
 
 impl ResolvedUnit {
-    pub fn new(modules: HashMap<String, Module>, tables: Vec<SymbolTable>) -> Self {
+    pub fn new(modules: HashMap<String, Module>, tables: HashMap<String, SymbolTable>) -> Self {
         Self { modules, tables }
     }
 }
@@ -37,13 +37,16 @@ impl AnalysisEngine {
                     diagnostics: errors.into_iter().map(|e| e.to_diagnostic()).collect(),
                     symbol_table: None,
                     imported_modules: HashMap::new(),
+                    imported_tables: HashMap::new(),
                 };
             }
         };
 
         let unit = AnalysisEngine::resolve_imports(&ast, file_path);
-        let mut analiser = SemanticAnalyser::new(&ast);
-        let analysis = analiser.analyse_with_imports(&unit.tables);
+        let mut analyser = SemanticAnalyser::new(&ast);
+
+        let imported = unit.tables.values().collect::<Vec<&SymbolTable>>();
+        let analysis = analyser.analyse_with_imports(&imported);
 
         Analysis {
             ast: Some(ast),
@@ -51,35 +54,37 @@ impl AnalysisEngine {
             symbol_table: Some(analysis.symbol_table),
             references: analysis.references,
             imported_modules: unit.modules,
+            imported_tables: unit.tables,
         }
     }
 
     fn resolve_imports(ast: &Program, file_path: Option<&Path>) -> ResolvedUnit {
-        if let Some(path) = file_path {
-            let import_names: Vec<String> = ast
-                .0
-                .iter()
-                .filter_map(|stmt| {
-                    if let Statement::ImportDirective { argument, .. } = stmt {
-                        Some(argument.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            let mut resolver = ModuleResolver::with_defaults(path);
-            match resolver.resolve_all(&import_names, path) {
-                Ok(modules) => {
-                    let tables = modules
-                        .values()
-                        .map(|m| m.to_symbol_table())
-                        .collect::<Vec<_>>();
-                    ResolvedUnit::new(modules, tables)
+        let Some(path) = file_path else {
+            return ResolvedUnit::new(HashMap::new(), HashMap::new());
+        };
+
+        let import_names: Vec<String> = ast
+            .0
+            .iter()
+            .filter_map(|stmt| {
+                if let Statement::ImportDirective { argument, .. } = stmt {
+                    Some(argument.clone())
+                } else {
+                    None
                 }
-                Err(_) => ResolvedUnit::new(HashMap::new(), Vec::new()),
+            })
+            .collect();
+
+        let mut resolver = ModuleResolver::with_defaults(path);
+        match resolver.resolve_all(&import_names, path) {
+            Ok(modules) => {
+                let tables = modules
+                    .iter()
+                    .map(|(name, module)| (name.clone(), module.to_symbol_table()))
+                    .collect();
+                ResolvedUnit::new(modules, tables)
             }
-        } else {
-            ResolvedUnit::new(HashMap::new(), Vec::new())
+            Err(_) => ResolvedUnit::new(HashMap::new(), HashMap::new()),
         }
     }
 }

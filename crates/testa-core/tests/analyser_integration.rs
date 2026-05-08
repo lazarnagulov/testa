@@ -120,6 +120,6 @@ fn test_integration_with_imports() {
 
     let main_src = "template User : BaseTemplate { name = string; }";
     SemanticTestHarness::new(main_src)
-        .with_imports(vec![lib_result.symbol_table])
+        .with_imports(&[&lib_result.symbol_table])
         .assert_ok();
 }

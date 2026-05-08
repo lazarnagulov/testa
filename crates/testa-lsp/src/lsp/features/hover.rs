@@ -42,8 +42,7 @@ fn resolve_symbol_at_position(
         return Some((symbol.clone(), reference));
     }
 
-    for module in analysis.imported_modules.values() {
-        let table = module.to_symbol_table();
+    for table in analysis.imported_tables.values() {
         if let Some(symbol) = table.lookup(&reference.name) {
             return Some((symbol.clone(), reference));
         }

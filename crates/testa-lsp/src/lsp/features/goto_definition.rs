@@ -38,7 +38,7 @@ fn find_definition(
     }
 
     for module in analysis.imported_modules.values() {
-        let table = module.to_symbol_table();
+        let table = analysis.imported_tables.get(&module.metadata.name)?;
         if let Some(span) = table.get_definition_span(name)
             && let Ok(uri) = Url::from_file_path(&module.metadata.source_file)
         {

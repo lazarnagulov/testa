@@ -6,18 +6,15 @@ use testa_core::{
 
 pub struct SemanticTestHarness<'a> {
     src: &'a str,
-    imports: Vec<SymbolTable>,
+    imports: &'a [&'a SymbolTable],
 }
 
 impl<'a> SemanticTestHarness<'a> {
     pub fn new(src: &'a str) -> Self {
-        Self {
-            src,
-            imports: vec![],
-        }
+        Self { src, imports: &[] }
     }
 
-    pub fn with_imports(mut self, imports: Vec<SymbolTable>) -> Self {
+    pub fn with_imports(mut self, imports: &'a [&'a SymbolTable]) -> Self {
         self.imports = imports;
         self
     }
@@ -31,7 +28,7 @@ impl<'a> SemanticTestHarness<'a> {
         });
 
         let mut analyser = SemanticAnalyser::new(&program);
-        analyser.analyse_with_imports(&self.imports)
+        analyser.analyse_with_imports(self.imports)
     }
 
     pub fn assert_ok(&self) {

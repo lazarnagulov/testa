@@ -52,6 +52,7 @@ impl Workspace {
                     symbol_table: Some(symbols),
                     diagnostics: result.diagnostics.clone(),
                     imported_modules: result.imported_modules,
+                    imported_tables: result.imported_tables,
                 })
             }
             _ => Document::new(uri.clone(), text, version),

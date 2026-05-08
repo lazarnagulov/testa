@@ -18,6 +18,7 @@ pub struct Analysis {
     pub references: HashMap<String, Vec<Reference>>,
     pub diagnostics: Vec<Diagnostic>,
     pub imported_modules: HashMap<String, Module>,
+    pub imported_tables: HashMap<String, SymbolTable>,
 }
 
 impl Analysis {
