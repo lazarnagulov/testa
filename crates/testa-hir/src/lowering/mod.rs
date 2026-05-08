@@ -413,16 +413,16 @@ impl AstLowering {
         analysis: &AnalysisResult,
         imported: &HashMap<String, &Module>,
     ) -> Type {
-        if let ExpressionKind::Identifier(name) = &expr.kind {
-            if let Some(checker_type) = analysis.type_map.get(name) {
-                return match checker_type {
-                    type_checker::types::Type::Custom(name) => self
-                        .find_item_ref_by_name(name, imported)
-                        .map(Type::UserDefined)
-                        .unwrap_or(Type::Int),
-                    other => Type::from(other),
-                };
-            }
+        if let ExpressionKind::Identifier(name) = &expr.kind
+            && let Some(checker_type) = analysis.type_map.get(name)
+        {
+            return match checker_type {
+                type_checker::types::Type::Custom(name) => self
+                    .find_item_ref_by_name(name, imported)
+                    .map(Type::UserDefined)
+                    .unwrap_or(Type::Int),
+                other => Type::from(other),
+            };
         }
         self.lower_type(expr, imported)
     }

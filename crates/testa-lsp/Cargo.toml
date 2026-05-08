@@ -13,6 +13,7 @@ harness = false
 
 [dependencies]
 testa-core = { path = "../testa-core" }
+testa-hir = { path = "../testa-hir" }
 tower-lsp = "0.20.0" 
 tokio = { version = "1.48.0", features = ["full"] }
 

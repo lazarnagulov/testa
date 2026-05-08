@@ -57,39 +57,39 @@ impl AstLowering {
     pub(super) fn extract_constraints(&mut self, expr: &Expression) -> Vec<Constraint> {
         let mut constraints = Vec::new();
 
-        if let ExpressionKind::Type(data_type) = &expr.kind {
-            if let Some(constraint_exprs) = &data_type.constraints {
-                for constraint_expr in constraint_exprs {
-                    use testa_core::ast::ConstraintKind as AstConstraintKind;
+        if let ExpressionKind::Type(data_type) = &expr.kind
+            && let Some(constraint_exprs) = &data_type.constraints
+        {
+            for constraint_expr in constraint_exprs {
+                use testa_core::ast::ConstraintKind as AstConstraintKind;
 
-                    let value = self.lower_expr(&constraint_expr.expression, &HashMap::new());
+                let value = self.lower_expr(&constraint_expr.expression, &HashMap::new());
 
-                    let kind = match constraint_expr.kind {
-                        AstConstraintKind::Range => {
-                            if let ExpressionKind::Infix { left, right, .. } =
-                                &constraint_expr.expression.kind
-                            {
-                                ConstraintKind::Range {
-                                    min: self.lower_expr(left, &HashMap::new()),
-                                    max: self.lower_expr(right, &HashMap::new()),
-                                }
-                            } else {
-                                ConstraintKind::Range {
-                                    min: Expr::Int(0),
-                                    max: value.clone(),
-                                }
+                let kind = match constraint_expr.kind {
+                    AstConstraintKind::Range => {
+                        if let ExpressionKind::Infix { left, right, .. } =
+                            &constraint_expr.expression.kind
+                        {
+                            ConstraintKind::Range {
+                                min: self.lower_expr(left, &HashMap::new()),
+                                max: self.lower_expr(right, &HashMap::new()),
+                            }
+                        } else {
+                            ConstraintKind::Range {
+                                min: Expr::Int(0),
+                                max: value.clone(),
                             }
                         }
-                        AstConstraintKind::Min => ConstraintKind::Min,
-                        AstConstraintKind::Max => ConstraintKind::Max,
-                        AstConstraintKind::Length => ConstraintKind::Length,
-                        AstConstraintKind::MultipleOf => ConstraintKind::MultipleOf,
-                        AstConstraintKind::Bias => ConstraintKind::Bias,
-                        _ => continue,
-                    };
+                    }
+                    AstConstraintKind::Min => ConstraintKind::Min,
+                    AstConstraintKind::Max => ConstraintKind::Max,
+                    AstConstraintKind::Length => ConstraintKind::Length,
+                    AstConstraintKind::MultipleOf => ConstraintKind::MultipleOf,
+                    AstConstraintKind::Bias => ConstraintKind::Bias,
+                    _ => continue,
+                };
 
-                    constraints.push(Constraint { kind, value });
-                }
+                constraints.push(Constraint { kind, value });
             }
         }
 

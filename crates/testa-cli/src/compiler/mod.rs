@@ -76,16 +76,21 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
         .map(|m| m.to_symbol_table())
         .collect::<Vec<_>>();
 
-    let analysis = SemanticAnalyser::new(&program).analyse_with_imports(&imported_tables);
+    let imported_refs = imported_tables.iter().collect::<Vec<_>>();
+    let analysis = SemanticAnalyser::new(&program).analyse_with_imports(&imported_refs);
     if !analysis.diagnostics.is_empty() {
         return Err(analysis.diagnostics);
     }
 
-    let imported_refs: HashMap<String, &Module> =
+    let imported_module_refs: HashMap<String, &Module> =
         imported.iter().map(|(k, v)| (k.clone(), v)).collect();
 
-    let module =
-        AstLowering::new(path.to_path_buf()).lower(&program, &analysis, &source, &imported_refs);
+    let module = AstLowering::new(path.to_path_buf()).lower(
+        &program,
+        &analysis,
+        &source,
+        &imported_module_refs,
+    );
 
     Ok(CompiledUnit { module, imported })
 }

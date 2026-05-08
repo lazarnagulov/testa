@@ -32,15 +32,16 @@ impl Module {
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)
             .map_err(|err| ResolveError::Io("Failed to read file at {path}".to_string(), err))?;
-        let module = rmp_serde::from_slice(&buffer).map_err(|err| {
+        let mut module = rmp_serde::from_slice::<Module>(&buffer).map_err(|err| {
             ResolveError::Deserialize("Failed to deserialize".to_string(), Box::new(err))
         })?;
+
+        module.metadata.source_file = path.with_extension("testa");
         Ok(module)
     }
 
     pub fn to_symbol_table(&self) -> SymbolTable {
         let mut table = SymbolTable::new();
-
         for item in &self.items {
             match item {
                 Item::Template(t) => self.restore_template(t, &mut table),
@@ -64,6 +65,11 @@ impl Module {
             .iter()
             .map(|f| self.string_pool.resolve(f.name).to_string())
             .collect();
+        let span = self
+            .source_map
+            .item_spans
+            .get(&template.id)
+            .unwrap_or_default();
 
         table
             .insert(
@@ -73,7 +79,7 @@ impl Module {
                     parent,
                     attributes: vec![],
                 },
-                Span::default(),
+                span,
             )
             .ok();
 
@@ -85,6 +91,7 @@ impl Module {
     fn restore_type_alias(&self, ty: &TypeAlias, table: &mut SymbolTable) {
         let name = self.string_pool.resolve(ty.name).to_string();
         let expr = self.type_to_expression(&ty.target_type);
+        let span = self.source_map.item_spans.get(&ty.id).unwrap_or_default();
 
         table
             .insert(
@@ -94,7 +101,7 @@ impl Module {
                     data_type: expr,
                     attributes: vec![],
                 },
-                Span::default(),
+                span,
             )
             .ok();
     }
@@ -109,6 +116,11 @@ impl Module {
                 weight: None,
             })
             .collect();
+        let span = self
+            .source_map
+            .item_spans
+            .get(&enumeration.id)
+            .unwrap_or_default();
 
         table
             .insert(
@@ -117,7 +129,7 @@ impl Module {
                     variants,
                     attributes: vec![],
                 },
-                Span::default(),
+                span,
             )
             .ok();
 
@@ -129,6 +141,7 @@ impl Module {
     fn restore_variants(&self, variants: &[Variant], name: &str, table: &mut SymbolTable) {
         for variant in variants {
             let variant_name = self.string_pool.resolve(variant.name).to_string();
+
             table
                 .insert(
                     variant_name,

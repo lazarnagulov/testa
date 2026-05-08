@@ -35,9 +35,8 @@ fn test_successful_reference_resolution() {
         "Expected no semantic errors for known identifiers"
     );
 
-    let refs = tracker.track_references(&Program(Vec::new())).unwrap(); // Assuming empty program for the final call
+    let (refs, _) = tracker.track_references(&Program(Vec::new()));
 
-    // Verify the reference was tracked and resolved
     let struct_refs = refs
         .get("KnownStruct")
         .expect("Expected 'KnownStruct' to be tracked");

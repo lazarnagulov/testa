@@ -33,11 +33,22 @@ fn resolve_symbol_at_position(
     analysis: &Analysis,
     line: u32,
     column: u32,
-) -> Option<(&Symbol, &Reference)> {
+) -> Option<(Symbol, &Reference)> {
     let reference = analysis.find_reference_at(line, column)?;
-    let symbol_table = analysis.symbol_table.as_ref()?;
-    let symbol = symbol_table.lookup(&reference.name)?;
-    Some((symbol, reference))
+
+    if let Some(table) = &analysis.symbol_table
+        && let Some(symbol) = table.lookup(&reference.name)
+    {
+        return Some((symbol.clone(), reference));
+    }
+
+    for table in analysis.imported_tables.values() {
+        if let Some(symbol) = table.lookup(&reference.name) {
+            return Some((symbol.clone(), reference));
+        }
+    }
+
+    None
 }
 
 fn generate_hover_content(name: &str, kind: &SymbolKind) -> String {
