@@ -21,11 +21,10 @@ impl ModuleResolver {
     pub fn with_defaults(relative_to: &Path) -> Self {
         let mut paths = Vec::new();
 
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
+        if let Ok(exe) = std::env::current_exe()
+            && let Some(dir) = exe.parent() {
                 paths.push(dir.join("std"));
             }
-        }
 
         if let Some(parent) = relative_to.parent() {
             paths.push(parent.to_path_buf());

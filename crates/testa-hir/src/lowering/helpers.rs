@@ -57,8 +57,8 @@ impl AstLowering {
     pub(super) fn extract_constraints(&mut self, expr: &Expression) -> Vec<Constraint> {
         let mut constraints = Vec::new();
 
-        if let ExpressionKind::Type(data_type) = &expr.kind {
-            if let Some(constraint_exprs) = &data_type.constraints {
+        if let ExpressionKind::Type(data_type) = &expr.kind
+            && let Some(constraint_exprs) = &data_type.constraints {
                 for constraint_expr in constraint_exprs {
                     use testa_core::ast::ConstraintKind as AstConstraintKind;
 
@@ -91,7 +91,6 @@ impl AstLowering {
                     constraints.push(Constraint { kind, value });
                 }
             }
-        }
 
         constraints
     }

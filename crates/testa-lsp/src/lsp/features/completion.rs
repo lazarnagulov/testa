@@ -1,3 +1,4 @@
+use testa_core::analyser::symbol_table::SymbolTable;
 use testa_core::ast::{CompletionContext, detect_completion_context};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
@@ -19,7 +20,7 @@ pub(crate) async fn handle_completion(
     let column = lsp_position.character;
 
     let context = detect_completion_context(&document.text, line, column);
-    let items = match context {
+    let mut items = match context {
         CompletionContext::TopLevel => generate_top_level_completions(),
         CompletionContext::TemplateBody => generate_field_completions(),
         CompletionContext::Directive => generate_directive_completions(),
@@ -27,8 +28,56 @@ pub(crate) async fn handle_completion(
         _ => generate_generic_completions(),
     };
 
+    if let Ok(analysis) = document.get_analysis() {
+        if let Some(symbol_table) = &analysis.symbol_table {
+            items.extend(symbols_to_completions(symbol_table, None));
+        }
+        for (module_name, module) in &analysis.imported_modules {
+            let table = module.to_symbol_table();
+            items.extend(symbols_to_completions(&table, Some(module_name)));
+        }
+    }
+
     Ok(Some(CompletionResponse::Array(items)))
 }
+
+fn symbols_to_completions(table: &SymbolTable, module_name: Option<&str>) -> Vec<CompletionItem> {
+    use testa_core::analyser::symbol_table::symbol::SymbolKind;
+
+    table.get_all_symbols().iter().filter_map(|symbol| {
+        let (kind, detail) = match &symbol.kind {
+            SymbolKind::Template { fields, .. } => (
+                CompletionItemKind::CLASS,
+                format!("template ({} fields)", fields.len()),
+            ),
+            SymbolKind::Struct { fields, .. } => (
+                CompletionItemKind::CLASS,
+                format!("struct ({} fields)", fields.len()),
+            ),
+            SymbolKind::Enum { variants, .. } => (
+                CompletionItemKind::ENUM,
+                format!("enum ({} variants)", variants.len()),
+            ),
+            SymbolKind::TypeAlias { .. } => (
+                CompletionItemKind::TYPE_PARAMETER,
+                "type alias".to_string(),
+            ),
+            _ => return None,
+        };
+
+        let detail = module_name
+            .map(|m| format!("{} (from {})", detail, m))
+            .unwrap_or(detail);
+
+        Some(CompletionItem {
+            label: symbol.name.clone(),
+            kind: Some(kind),
+            detail: Some(detail),
+            ..Default::default()
+        })
+    }).collect()
+}
+
 
 fn generate_top_level_completions() -> Vec<CompletionItem> {
     vec![
