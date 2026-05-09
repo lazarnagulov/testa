@@ -506,6 +506,7 @@ impl AstLowering {
                     .collect();
                 Expr::List(exprs)
             }
+            ExpressionKind::Reference { template, field } => todo!("lower {template}.{field}"),
             ExpressionKind::Infix {
                 left,
                 operator,

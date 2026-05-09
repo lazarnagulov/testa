@@ -88,6 +88,7 @@ where
     pub(super) fn parse_primary_expression(&mut self) -> Result<Expression, ParserError> {
         match &self.token_stream.peek_kind() {
             Int | Float | Str | Bool => Ok(self.parse_type()?),
+            Ref => Ok(self.parse_reference()?),
             LBracket => {
                 let kind = self.token_stream.peek_kind_n(2);
                 match kind {
@@ -115,6 +116,18 @@ where
                 span: Span::default(),
             }),
         }
+    }
+
+    pub(super) fn parse_reference(&mut self) -> Result<Expression, ParserError> {
+        let start = self.token_stream.consume_token()?;
+        let template = self.parse_identifier_as_string()?;
+        self.token_stream.expect_token(SinglePeriod)?;
+
+        let field = self.parse_identifier_as_string()?;
+        Ok(Expression::new(
+            ExpressionKind::Reference { template, field },
+            start.merge(self.token_stream.last_span()),
+        ))
     }
 
     pub(super) fn parse_group_expression(&mut self) -> Result<Expression, ParserError> {

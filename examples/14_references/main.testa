@@ -1,0 +1,10 @@
+@output json { pretty = true; }
+@import std;
+
+template Instructor {
+    id = int;
+    name = string;
+    course = ref Course;
+}
+
+@generate Instructor[10];

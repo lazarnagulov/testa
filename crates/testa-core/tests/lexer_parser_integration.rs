@@ -193,6 +193,27 @@ fn parse_missing_paren_template() {
 }
 
 #[test]
+fn parse_reference() {
+    let program = parse_ok("template Course { instructor = ref Instructor.id; }");
+
+    let Statement::Template { name, body, .. } = &program.0[0] else {
+        panic!("expected Template statement");
+    };
+
+    assert_eq!(name, "Course");
+    assert_eq!(body.len(), 1);
+    assert_eq!(body.first().unwrap().name, "instructor");
+    let field = body.first().unwrap();
+
+    let ExpressionKind::Reference { template, field } = &field.value.kind else {
+        panic!("expected reference expression");
+    };
+
+    assert_eq!(template, "Instructor");
+    assert_eq!(field, "id");
+}
+
+#[test]
 fn parse_generate() {
     let program = parse_ok("@generate User [10];");
 

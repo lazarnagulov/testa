@@ -1,0 +1,5 @@
+template Course {
+    id = int;
+    name = string;
+    semestar = int [range=1..=10];
+}
