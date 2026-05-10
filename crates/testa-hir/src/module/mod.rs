@@ -20,6 +20,26 @@ pub enum ItemRef {
     Imported { module: StringId, item: ItemId },
 }
 
+impl ItemRef {
+    pub fn item_id(&self) -> ItemId {
+        match self {
+            ItemRef::Local(id) => *id,
+            ItemRef::Imported { item, .. } => *item,
+        }
+    }
+
+    pub fn module_id(&self) -> Option<StringId> {
+        match self {
+            ItemRef::Local(_) => None,
+            ItemRef::Imported { module, .. } => Some(*module),
+        }
+    }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self, ItemRef::Local(_))
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Directive {
     Output {

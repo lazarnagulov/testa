@@ -1,7 +1,5 @@
 use rand::Rng;
 
-pub mod extract_object;
-
 pub struct ProgressReporter<I> {
     inner: I,
     total: usize,

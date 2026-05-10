@@ -203,12 +203,7 @@ impl Module {
     }
 
     fn resolve_item_ref_name(&self, item_ref: &ItemRef) -> String {
-        let id = match item_ref {
-            ItemRef::Local(id) => *id,
-            // NOTE: for imported items we only have the item ID, not the module.
-            // This is sufficient for reference checking but not for cross-module resolution.
-            ItemRef::Imported { item, .. } => *item,
-        };
+        let id = item_ref.item_id();
         self.get_item(id)
             .map(|i| self.string_pool.resolve(i.name()).to_string())
             .unwrap_or_default()
