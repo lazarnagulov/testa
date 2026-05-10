@@ -23,6 +23,16 @@ use crate::{
     source_map::SourceMapBuilder,
 };
 
+macro_rules! lower_infix {
+    ($self:expr, $left:expr, $right:expr, $analysis:expr, $imported:expr, $op:expr) => {
+        Expr::Infix {
+            left: Box::new($self.lower_expr($left, $analysis, $imported)),
+            right: Box::new($self.lower_expr($right, $analysis, $imported)),
+            op: $op,
+        }
+    };
+}
+
 pub struct AstLowering {
     string_pool: StringPool,
     next_item_id: u32,
@@ -103,7 +113,8 @@ impl AstLowering {
                 span,
                 ..
             } => {
-                let template = self.lower_template(name, parent_name, body, attributes, imported);
+                let template =
+                    self.lower_template(analysis, name, parent_name, body, attributes, imported);
                 self.register_item(Item::Template(template), *span, *name_span);
             }
             Statement::Enum {
@@ -113,7 +124,7 @@ impl AstLowering {
                 attributes,
                 span,
             } => {
-                let enum_item = self.lower_enum(name, variants, attributes);
+                let enum_item = self.lower_enum(analysis, name, variants, attributes);
                 self.register_item(Item::Enum(enum_item), *span, *name_span);
             }
             Statement::Struct {
@@ -122,7 +133,7 @@ impl AstLowering {
                 body,
                 span,
             } => {
-                let struct_item = self.lower_struct(name, body, imported);
+                let struct_item = self.lower_struct(analysis, name, body, imported);
                 self.register_item(Item::Struct(struct_item), *span, Some(*name_span));
             }
             Statement::TypeDecl {
@@ -145,7 +156,7 @@ impl AstLowering {
                     .iter()
                     .map(|field| {
                         let name = self.string_pool.intern(&field.name);
-                        let value = self.lower_expr(&field.value, imported);
+                        let value = self.lower_expr(&field.value, analysis, imported);
                         (name, value)
                     })
                     .collect();
@@ -168,7 +179,7 @@ impl AstLowering {
                 count,
                 ..
             } => {
-                let count_expr = self.lower_expr(count, imported);
+                let count_expr = self.lower_expr(count, analysis, imported);
 
                 let template_ref = if let Some(name) = template_name {
                     self.find_item_ref_by_name(name, imported)
@@ -178,7 +189,7 @@ impl AstLowering {
                     let fields = body
                         .iter()
                         .enumerate()
-                        .map(|(idx, field)| self.lower_field(field, idx, imported))
+                        .map(|(idx, field)| self.lower_field(analysis, field, idx, imported))
                         .collect();
                     let template = Template {
                         id,
@@ -207,6 +218,7 @@ impl AstLowering {
 
     fn lower_template(
         &mut self,
+        analysis: &AnalysisResult,
         name: &str,
         parent_name: &Option<String>,
         body: &[Field],
@@ -223,7 +235,7 @@ impl AstLowering {
         let fields = body
             .iter()
             .enumerate()
-            .map(|(idx, field)| self.lower_field(field, idx, imported))
+            .map(|(idx, field)| self.lower_field(analysis, field, idx, imported))
             .collect();
 
         let attrs = attributes
@@ -242,6 +254,7 @@ impl AstLowering {
 
     fn lower_struct(
         &mut self,
+        analysis: &AnalysisResult,
         name: &str,
         body: &[Field],
         imported: &HashMap<String, &Module>,
@@ -252,7 +265,7 @@ impl AstLowering {
         let fields = body
             .iter()
             .enumerate()
-            .map(|(idx, field)| self.lower_field(field, idx, imported))
+            .map(|(idx, field)| self.lower_field(analysis, field, idx, imported))
             .collect();
 
         Struct {
@@ -262,11 +275,20 @@ impl AstLowering {
         }
     }
 
-    fn lower_enum(&mut self, name: &str, variants: &[Variant], attributes: &[Attribute]) -> Enum {
+    fn lower_enum(
+        &mut self,
+        analysis: &AnalysisResult,
+        name: &str,
+        variants: &[Variant],
+        attributes: &[Attribute],
+    ) -> Enum {
         let id = self.next_item_id();
         let name_id = self.string_pool.intern(name);
 
-        let hir_variants = variants.iter().map(|v| self.lower_variant(v)).collect();
+        let hir_variants = variants
+            .iter()
+            .map(|v| self.lower_variant(analysis, v))
+            .collect();
 
         let attrs = attributes
             .iter()
@@ -281,12 +303,12 @@ impl AstLowering {
         }
     }
 
-    fn lower_variant(&mut self, variant: &Variant) -> HirVariant {
+    fn lower_variant(&mut self, analysis: &AnalysisResult, variant: &Variant) -> HirVariant {
         let name_id = self.string_pool.intern(&variant.name);
         let weight = variant
             .weight
             .as_ref()
-            .map(|w| self.lower_expr(w, &HashMap::new()));
+            .map(|w| self.lower_expr(w, analysis, &HashMap::new()));
 
         HirVariant {
             name: name_id,
@@ -307,7 +329,7 @@ impl AstLowering {
 
         let target_type = self.lower_type_from_expr(data_type, analysis, imported);
 
-        let constraints = self.extract_constraints(data_type);
+        let constraints = self.extract_constraints(analysis, data_type);
 
         let attrs = attributes
             .iter()
@@ -325,6 +347,7 @@ impl AstLowering {
 
     fn lower_field(
         &mut self,
+        analysis: &AnalysisResult,
         field: &Field,
         idx: usize,
         imported: &HashMap<String, &Module>,
@@ -341,7 +364,7 @@ impl AstLowering {
             id: field_id,
             name: name_id,
             ty: self.lower_type(&field.value, imported),
-            value: self.lower_expr(&field.value, imported),
+            value: self.lower_expr(&field.value, analysis, imported),
             attributes: field
                 .attributes
                 .iter()
@@ -427,7 +450,12 @@ impl AstLowering {
         self.lower_type(expr, imported)
     }
 
-    fn lower_expr(&mut self, expr: &Expression, imported: &HashMap<String, &Module>) -> Expr {
+    fn lower_expr(
+        &mut self,
+        expr: &Expression,
+        analysis: &AnalysisResult,
+        imported: &HashMap<String, &Module>,
+    ) -> Expr {
         use testa_core::ast::{InfixOperator, PrefixOperator};
 
         match &expr.kind {
@@ -441,7 +469,7 @@ impl AstLowering {
             ExpressionKind::Type(data_type) => {
                 if data_type.constraints.is_some() {
                     let ty = self.lower_type(expr, imported);
-                    let constraints = self.extract_constraints(expr);
+                    let constraints = self.extract_constraints(analysis, expr);
                     Expr::ConstrainedType { ty, constraints }
                 } else {
                     Expr::Type(self.lower_type(expr, imported))
@@ -470,7 +498,7 @@ impl AstLowering {
                             count: *count,
                             count_expr: count_expression
                                 .as_ref()
-                                .map(|e| Box::new(self.lower_expr(e, imported))),
+                                .map(|e| Box::new(self.lower_expr(e, analysis, imported))),
                         },
                         PatternElement::RepeatGroup { chars, count, .. } => {
                             PatternPart::RepeatGroup {
@@ -482,7 +510,7 @@ impl AstLowering {
                                         AstPatternChar::Digit => PatternChar::Digit,
                                     })
                                     .collect(),
-                                count: Box::new(self.lower_expr(count, imported)),
+                                count: Box::new(self.lower_expr(count, analysis, imported)),
                             }
                         }
                     })
@@ -502,116 +530,114 @@ impl AstLowering {
             ExpressionKind::List(elements) => {
                 let exprs = elements
                     .iter()
-                    .map(|elem| self.lower_expr(&elem.value, imported))
+                    .map(|elem| self.lower_expr(&elem.value, analysis, imported))
                     .collect();
                 Expr::List(exprs)
             }
-            ExpressionKind::Reference { template, field } => todo!("lower {template}.{field}"),
+            ExpressionKind::Reference { template, field } => {
+                if let Some(template_ref) = self.find_item_ref_by_name(template, imported) {
+                    let field_id = analysis.symbol_table
+                        .get_template(template)
+                        .and_then(|sym| {
+                            if let testa_core::analyser::symbol_table::symbol::SymbolKind::Template { fields, .. } = &sym.kind {
+                                fields.iter().position(|f| f == field).map(|i| FieldId(i as u32))
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(FieldId(0));
+
+                    Expr::Reference {
+                        template: template_ref,
+                        field: field_id,
+                    }
+                } else {
+                    Expr::Int(0)
+                }
+            }
             ExpressionKind::Infix {
                 left,
                 operator,
                 right,
             } => match operator {
                 InfixOperator::ExclusiveRange => Expr::Range {
-                    start: Box::new(self.lower_expr(left, imported)),
-                    end: Box::new(self.lower_expr(right, imported)),
+                    start: Box::new(self.lower_expr(left, analysis, imported)),
+                    end: Box::new(self.lower_expr(right, analysis, imported)),
                     inclusive: false,
                 },
                 InfixOperator::InclusiveRange => Expr::Range {
-                    start: Box::new(self.lower_expr(left, imported)),
-                    end: Box::new(self.lower_expr(right, imported)),
+                    start: Box::new(self.lower_expr(left, analysis, imported)),
+                    end: Box::new(self.lower_expr(right, analysis, imported)),
                     inclusive: true,
                 },
-                InfixOperator::Plus => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::Add,
-                },
-                InfixOperator::Minus => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::Sub,
-                },
-                InfixOperator::Multiply => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::Mul,
-                },
-                InfixOperator::Divide => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::Div,
-                },
-                InfixOperator::Mod => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::Mod,
-                },
-                InfixOperator::BitAnd => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::BitAnd,
-                },
-                InfixOperator::BitOr => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::BitOr,
-                },
-                InfixOperator::BitXor => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::BitXor,
-                },
-                InfixOperator::BitLShift => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::BitLShift,
-                },
-                InfixOperator::BitRShift => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::BitRShift,
-                },
-                InfixOperator::Equal => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::Equal,
-                },
-                InfixOperator::And => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::And,
-                },
-                InfixOperator::Or => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::Or,
-                },
-                InfixOperator::NotEqual => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::NotEqual,
-                },
-                InfixOperator::LessThan => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::LessThen,
-                },
-                InfixOperator::GreaterThan => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::GreaterThan,
-                },
-                InfixOperator::LessThanOrEqual => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::LessThanOrEqual,
-                },
-                InfixOperator::GreaterThanOrEqual => Expr::Infix {
-                    left: Box::new(self.lower_expr(left, imported)),
-                    right: Box::new(self.lower_expr(right, imported)),
-                    op: InfixOp::GreaterThanOrEqual,
-                },
+                InfixOperator::Plus => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::Add)
+                }
+                InfixOperator::Minus => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::Sub)
+                }
+                InfixOperator::Multiply => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::Mul)
+                }
+                InfixOperator::Divide => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::Div)
+                }
+                InfixOperator::Mod => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::Mod)
+                }
+                InfixOperator::BitAnd => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::BitAnd)
+                }
+                InfixOperator::BitOr => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::BitOr)
+                }
+                InfixOperator::BitXor => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::BitXor)
+                }
+                InfixOperator::BitLShift => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::BitLShift)
+                }
+                InfixOperator::BitRShift => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::BitRShift)
+                }
+                InfixOperator::Equal => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::Equal)
+                }
+                InfixOperator::And => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::And)
+                }
+                InfixOperator::Or => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::Or)
+                }
+                InfixOperator::NotEqual => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::NotEqual)
+                }
+                InfixOperator::LessThan => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::LessThen)
+                }
+                InfixOperator::GreaterThan => {
+                    lower_infix!(self, left, right, analysis, imported, InfixOp::GreaterThan)
+                }
+                InfixOperator::LessThanOrEqual => {
+                    lower_infix!(
+                        self,
+                        left,
+                        right,
+                        analysis,
+                        imported,
+                        InfixOp::LessThanOrEqual
+                    )
+                }
+                InfixOperator::GreaterThanOrEqual => {
+                    lower_infix!(
+                        self,
+                        left,
+                        right,
+                        analysis,
+                        imported,
+                        InfixOp::GreaterThanOrEqual
+                    )
+                }
             },
             ExpressionKind::Prefix {
                 operator,
@@ -624,7 +650,7 @@ impl AstLowering {
                 };
                 Expr::Prefix {
                     op,
-                    expr: Box::new(self.lower_expr(expression, imported)),
+                    expr: Box::new(self.lower_expr(expression, analysis, imported)),
                 }
             }
 

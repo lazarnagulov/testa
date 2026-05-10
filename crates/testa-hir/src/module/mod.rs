@@ -195,6 +195,10 @@ pub enum Expr {
         ty: Type,
         constraints: Vec<Constraint>,
     },
+    Reference {
+        template: ItemRef,
+        field: FieldId,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

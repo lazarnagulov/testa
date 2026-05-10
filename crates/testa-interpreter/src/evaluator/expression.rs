@@ -67,6 +67,7 @@ pub fn evaluate_expression(
             let val = evaluate_expression(ctx, state, expr)?;
             evaluate_prefix_expression(op, &val)
         }
+        Expr::Reference { template, field } => todo!("evaluate {template}.{field}"),
     }
 }
 

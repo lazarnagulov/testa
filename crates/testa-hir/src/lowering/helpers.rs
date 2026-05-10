@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use testa_core::{
+    analyser::result::AnalysisResult,
     ast::{Expression, ExpressionKind},
     utils::Span,
 };
@@ -54,7 +55,11 @@ impl AstLowering {
         self.items.push(item);
     }
 
-    pub(super) fn extract_constraints(&mut self, expr: &Expression) -> Vec<Constraint> {
+    pub(super) fn extract_constraints(
+        &mut self,
+        analysis: &AnalysisResult,
+        expr: &Expression,
+    ) -> Vec<Constraint> {
         let mut constraints = Vec::new();
 
         if let ExpressionKind::Type(data_type) = &expr.kind
@@ -63,7 +68,7 @@ impl AstLowering {
             for constraint_expr in constraint_exprs {
                 use testa_core::ast::ConstraintKind as AstConstraintKind;
 
-                let value = self.lower_expr(&constraint_expr.expression, &HashMap::new());
+                let value = self.lower_expr(&constraint_expr.expression, analysis, &HashMap::new());
 
                 let kind = match constraint_expr.kind {
                     AstConstraintKind::Range => {
@@ -71,8 +76,8 @@ impl AstLowering {
                             &constraint_expr.expression.kind
                         {
                             ConstraintKind::Range {
-                                min: self.lower_expr(left, &HashMap::new()),
-                                max: self.lower_expr(right, &HashMap::new()),
+                                min: self.lower_expr(left, analysis, &HashMap::new()),
+                                max: self.lower_expr(right, analysis, &HashMap::new()),
                             }
                         } else {
                             ConstraintKind::Range {
