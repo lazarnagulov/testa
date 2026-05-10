@@ -80,6 +80,29 @@ impl<'a> Visitor for ReferenceChecker<'a> {
                     span: expression.span,
                 });
             }
+            ExpressionKind::Reference { template, field } => match self.lookup_symbol(template) {
+                Some(SymbolKind::Template { fields, .. }) => {
+                    if !fields.iter().any(|f| f == field) {
+                        self.errors.push(SemanticError::UnknownIdentifier {
+                            name: field.clone(),
+                            span: expression.span,
+                        });
+                    }
+                }
+                Some(symbol) => {
+                    self.errors.push(SemanticError::TypeMismatch {
+                        expected: "template".to_string(),
+                        found: symbol.to_string(),
+                        span: expression.span,
+                    });
+                }
+                None => {
+                    self.errors.push(SemanticError::UnknownIdentifier {
+                        name: template.clone(),
+                        span: expression.span,
+                    });
+                }
+            },
             ExpressionKind::Type(DataType {
                 kind: DataTypeKind::List(list_type),
                 ..
