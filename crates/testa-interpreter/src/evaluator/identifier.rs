@@ -59,6 +59,10 @@ pub(crate) fn evaluate_item_ref(
     match item {
         Item::Enum(e) => evaluate_enum(ctx, state, e, item_ref),
         Item::TypeAlias(t) => {
+            if let Some(expr) = &t.expr {
+                return evaluate_expression(ctx, state, expr);
+            }
+
             if t.constraints.is_empty() {
                 evaluate_hir_type(ctx, state, &t.target_type)
             } else {

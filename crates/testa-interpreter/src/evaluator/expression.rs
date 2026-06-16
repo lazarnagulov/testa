@@ -71,9 +71,32 @@ pub fn evaluate_expression(
             .pool
             .sample(&mut state.rng, template, *field)
             .cloned()
-            .ok_or_else(|| EvalError::EmptyPool {
-                template: template.to_string(),
-                field: field.to_string(),
+            .ok_or_else(|| {
+                let template_name = ctx
+                    .resolve_item(template)
+                    .map(|item| {
+                        ctx.module_for(template)
+                            .string_pool
+                            .resolve(item.name())
+                            .to_string()
+                    })
+                    .unwrap_or_else(|| template.to_string());
+
+                let field_name = ctx
+                    .resolve_template(template)
+                    .and_then(|t| t.get_field(*field))
+                    .map(|f| {
+                        ctx.module_for(template)
+                            .string_pool
+                            .resolve(f.name)
+                            .to_string()
+                    })
+                    .unwrap_or_else(|| field.to_string());
+
+                EvalError::EmptyPool {
+                    template: template_name,
+                    field: field_name,
+                }
             }),
     }
 }

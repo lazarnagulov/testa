@@ -122,6 +122,7 @@ pub struct TypeAlias {
     pub target_type: Type,
     pub constraints: Vec<Constraint>,
     pub attributes: Vec<Attribute>,
+    pub expr: Option<Expr>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

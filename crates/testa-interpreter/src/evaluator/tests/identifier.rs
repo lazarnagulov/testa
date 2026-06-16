@@ -52,6 +52,7 @@ fn test_evaluate_type_alias() {
         target_type: Type::Int,
         constraints: vec![],
         attributes: vec![],
+        expr: None,
     })];
 
     let context = Context::new(module);

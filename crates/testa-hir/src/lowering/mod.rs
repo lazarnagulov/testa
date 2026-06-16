@@ -327,6 +327,13 @@ impl AstLowering {
         let id = self.next_item_id();
         let name_id = self.string_pool.intern(name);
 
+        let expr = match &data_type.kind {
+            ExpressionKind::StringPattern(_) => {
+                Some(self.lower_expr(data_type, analysis, imported))
+            }
+            _ => None,
+        };
+
         let target_type = self.lower_type_from_expr(data_type, analysis, imported);
 
         let constraints = self.extract_constraints(analysis, data_type);
@@ -342,6 +349,7 @@ impl AstLowering {
             target_type,
             constraints,
             attributes: attrs,
+            expr,
         }
     }
 
@@ -536,11 +544,15 @@ impl AstLowering {
             }
             ExpressionKind::Reference { template, field } => {
                 if let Some(template_ref) = self.find_item_ref_by_name(template, imported) {
-                    let field_id = analysis.symbol_table
+                    let field_id = analysis
+                        .symbol_table
                         .get_template(template)
                         .and_then(|sym| {
                             if let SymbolKind::Template { fields, .. } = &sym.kind {
-                                fields.iter().position(|f| f == field).map(|i| FieldId(i as u32))
+                                fields
+                                    .iter()
+                                    .position(|f| f == field)
+                                    .map(|i| FieldId(i as u32))
                             } else {
                                 None
                             }
@@ -552,10 +564,10 @@ impl AstLowering {
                                     Item::Template(t) => t,
                                     _ => return None,
                                 };
-                                t.fields.iter().position(|f| {
-                                    module.string_pool.resolve(f.name) == field
-                                })
-                                .map(|i| FieldId(i as u32))
+                                t.fields
+                                    .iter()
+                                    .position(|f| module.string_pool.resolve(f.name) == field)
+                                    .map(|i| FieldId(i as u32))
                             })
                         })
                         .unwrap_or(FieldId(0));
