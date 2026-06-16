@@ -1,7 +1,7 @@
 use indexmap::{IndexMap, IndexSet};
-use testa_hir::FieldId;
 use std::io::Write;
 use std::{collections::HashMap, fmt, fs::File, path::PathBuf};
+use testa_hir::FieldId;
 
 use testa_hir::module::{Directive, Expr, ItemRef};
 
@@ -205,7 +205,6 @@ impl<'a> RecordGenerator<'a> {
         }
 
         let module = ctx.module_for(item_ref);
-        let item_id = item_ref.item_id();
 
         let fields: Vec<(String, FieldId, Expr)> = template
             .fields
@@ -218,7 +217,7 @@ impl<'a> RecordGenerator<'a> {
 
         for (name, field_id, value_expr) in fields {
             let value = evaluate_expression(ctx, state, &value_expr)?;
-            state.pool.push(item_id, field_id, value.clone());
+            state.pool.push(item_ref, field_id, value.clone());
             record.insert(name, value);
         }
 

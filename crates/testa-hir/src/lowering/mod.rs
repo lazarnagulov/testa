@@ -7,7 +7,7 @@ use std::{
 };
 
 use testa_core::{
-    analyser::{result::AnalysisResult, type_checker},
+    analyser::{result::AnalysisResult, symbol_table::symbol::SymbolKind, type_checker},
     ast::{
         Attribute, DataTypeKind, Expression, ExpressionKind, Field, Program, Statement, Variant,
     },
@@ -539,14 +539,26 @@ impl AstLowering {
                     let field_id = analysis.symbol_table
                         .get_template(template)
                         .and_then(|sym| {
-                            if let testa_core::analyser::symbol_table::symbol::SymbolKind::Template { fields, .. } = &sym.kind {
+                            if let SymbolKind::Template { fields, .. } = &sym.kind {
                                 fields.iter().position(|f| f == field).map(|i| FieldId(i as u32))
                             } else {
                                 None
                             }
                         })
+                        .or_else(|| {
+                            imported.values().find_map(|module| {
+                                let item = module.get_item_by_name(template)?;
+                                let t = match item {
+                                    Item::Template(t) => t,
+                                    _ => return None,
+                                };
+                                t.fields.iter().position(|f| {
+                                    module.string_pool.resolve(f.name) == field
+                                })
+                                .map(|i| FieldId(i as u32))
+                            })
+                        })
                         .unwrap_or(FieldId(0));
-
                     Expr::Reference {
                         template: template_ref,
                         field: field_id,

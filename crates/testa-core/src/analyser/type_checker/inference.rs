@@ -45,8 +45,7 @@ impl<'a> TypeChecker<'a> {
                 // Functions not yet implemented
                 Type::Unknown
             }
-            _ => { Type::Unknown }
-            // ExpressionKind::Reference { template, field } => todo!("reference {template}.{field}"),
+            _ => Type::Unknown, // ExpressionKind::Reference { template, field } => todo!("reference {template}.{field}"),
         }
     }
 

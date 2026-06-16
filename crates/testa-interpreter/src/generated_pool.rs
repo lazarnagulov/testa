@@ -1,12 +1,18 @@
 use rand::Rng;
 use rand::rngs::StdRng;
 use std::collections::{HashMap, VecDeque};
-use testa_hir::module::{FieldId, ItemId};
+use testa_hir::module::{FieldId, ItemRef};
 
 use crate::object::Object;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct PoolKey {
+    item_ref: ItemRef,
+    field_id: FieldId,
+}
+
 pub struct GeneratedPool {
-    values: HashMap<ItemId, HashMap<FieldId, PoolBuffer>>,
+    values: HashMap<PoolKey, PoolBuffer>,
     capacity: usize,
 }
 
@@ -18,17 +24,28 @@ impl GeneratedPool {
         }
     }
 
-    pub fn push(&mut self, item_id: ItemId, field_id: FieldId, value: Object) {
+    pub fn push(&mut self, item_ref: &ItemRef, field_id: FieldId, value: Object) {
+        let key = PoolKey {
+            item_ref: item_ref.clone(),
+            field_id,
+        };
         self.values
-            .entry(item_id)
-            .or_default()
-            .entry(field_id)
+            .entry(key)
             .or_insert_with(|| PoolBuffer::new(self.capacity))
             .push(value);
     }
 
-    pub fn sample(&self, rng: &mut StdRng, item_id: ItemId, field_id: FieldId) -> Option<&Object> {
-        self.values.get(&item_id)?.get(&field_id)?.sample(rng)
+    pub fn sample(
+        &self,
+        rng: &mut StdRng,
+        item_ref: &ItemRef,
+        field_id: FieldId,
+    ) -> Option<&Object> {
+        let key = PoolKey {
+            item_ref: item_ref.clone(),
+            field_id,
+        };
+        self.values.get(&key)?.sample(rng)
     }
 }
 
