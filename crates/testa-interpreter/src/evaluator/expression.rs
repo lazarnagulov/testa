@@ -67,7 +67,17 @@ pub fn evaluate_expression(
             let val = evaluate_expression(ctx, state, expr)?;
             evaluate_prefix_expression(op, &val)
         }
-        Expr::Reference { template, field } => todo!("evaluate {template}.{field}"),
+        Expr::Reference { template, field } => {
+            let item_id = template.item_id();
+            state
+                .pool
+                .sample(&mut state.rng, item_id, *field)
+                .cloned()
+                .ok_or_else(|| EvalError::EmptyPool {
+                    template: template.to_string(),
+                    field: field.to_string(),
+                })
+        }
     }
 }
 

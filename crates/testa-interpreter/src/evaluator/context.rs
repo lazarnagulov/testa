@@ -6,7 +6,7 @@ use testa_hir::{
     module::{Enum, ItemRef, Template, TypeAlias},
 };
 
-use crate::object::Object;
+use crate::{generated_pool::GeneratedPool, object::Object};
 
 #[derive(Debug, Clone)]
 pub struct GenerateOptions {
@@ -28,6 +28,7 @@ pub struct Context {
 
 pub struct State {
     pub rng: StdRng,
+    pub pool: GeneratedPool,
 }
 
 impl State {
@@ -35,7 +36,10 @@ impl State {
         let rng = seed
             .map(StdRng::seed_from_u64)
             .unwrap_or_else(|| StdRng::from_rng(&mut rand::rng()));
-        Self { rng }
+        Self {
+            rng,
+            pool: GeneratedPool::default(),
+        }
     }
 }
 

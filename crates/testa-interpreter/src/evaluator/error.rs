@@ -39,6 +39,10 @@ pub enum EvalError {
     DivisionByZero {
         span: Span,
     },
+    EmptyPool {
+        template: String,
+        field: String,
+    },
     NotDefined(String, Span),
     UncompatibleConstraint {
         data_type: String,
@@ -162,6 +166,13 @@ impl fmt::Display for EvalError {
                     variant, value, span
                 )
             }
+            EvalError::EmptyPool { template, field } => {
+                write!(
+                    f,
+                    "'ref {}.{}' used before any '{}' records were generated",
+                    template, field, template
+                )
+            }
         }
     }
 }
@@ -190,6 +201,18 @@ impl EvalError {
             )
             .with_code(DiagnosticCode::UnsupportedInfixOperand)
             .with_hint("Verify that both operands support this operator"),
+            EvalError::EmptyPool { template, field } => Diagnostic::error(
+                Span::default(),
+                format!(
+                    "'ref {}.{}' used before any '{}' records were generated",
+                    template, field, template
+                ),
+            )
+            .with_code(DiagnosticCode::NotDefined)
+            .with_hint(format!(
+                "Ensure '@generate {}' appears before any template that references it",
+                template
+            )),
             EvalError::TypeMismatch {
                 expected,
                 got,

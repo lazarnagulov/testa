@@ -1,5 +1,5 @@
 template Course {
-    id = int;
+    id = int [range=1..=1024];
     name = string;
     semestar = int [range=1..=10];
 }

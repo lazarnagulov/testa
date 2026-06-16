@@ -1,10 +1,16 @@
 @output json { pretty = true; }
-@import std;
 
-template Instructor {
-    id = int;
+template Course {
+    id = int [range=1..=1024];
     name = string;
-    course = ref Course;
+    semestar = int [range=1..=10];
 }
 
+template Instructor {
+    id = int [range=1..=1024];
+    name = string;
+    course = ref Course.name;
+}
+
+@generate Course[10];
 @generate Instructor[10];
