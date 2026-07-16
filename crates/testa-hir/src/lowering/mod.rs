@@ -1,3 +1,4 @@
+pub mod context;
 mod helpers;
 
 use std::{
@@ -15,6 +16,7 @@ use testa_core::{
 
 use crate::{
     FieldId, Item, Module, ModuleMetadata, StringPool,
+    lowering::context::{ItemKind, LoweringContext},
     module::{
         Attribute as HirAttribute, Directive, Enum, Expr, InfixOp, ItemRef, PatternChar,
         PatternPart, PrefixOp, Struct, Template, Type, TypeAlias, Variant as HirVariant,
@@ -34,8 +36,11 @@ macro_rules! lower_infix {
 }
 
 pub struct AstLowering {
+    context: LoweringContext,
+
     string_pool: StringPool,
     next_item_id: u32,
+
     source_map_builder: SourceMapBuilder,
     directives: Vec<Directive>,
     source_file: PathBuf,
@@ -49,6 +54,7 @@ impl AstLowering {
             next_item_id: 0,
             directives: Vec::new(),
             items: Vec::new(),
+            context: LoweringContext::new(),
             source_map_builder: SourceMapBuilder::new(),
             source_file,
         }
@@ -61,6 +67,7 @@ impl AstLowering {
         source_text: &str,
         imported: &HashMap<String, &Module>,
     ) -> Module {
+        self.register_items(ast, imported);
         for stmt in &ast.0 {
             self.lower_statement(stmt, analysis, imported);
         }
@@ -94,6 +101,38 @@ impl AstLowering {
             string_pool: self.string_pool,
             items: self.items,
             source_map: self.source_map_builder.build(),
+        }
+    }
+
+    fn register_items(&mut self, ast: &Program, imported: &HashMap<String, &Module>) {
+        self.register_local_items(ast);
+        self.register_imported_items(imported);
+    }
+
+    fn register_local_items(&mut self, ast: &Program) {
+        for stmt in &ast.0 {
+            let (kind, name) = match stmt {
+                Statement::Template { name, .. } => (ItemKind::Template, name),
+                Statement::Struct { name, .. } => (ItemKind::Struct, name),
+                Statement::Enum { name, .. } => (ItemKind::Enum, name),
+                Statement::TypeDecl { name, .. } => (ItemKind::TypeAlias, name),
+                _ => continue,
+            };
+
+            let id = self.next_item_id();
+            self.context
+                .register_local(kind, self.string_pool.intern(name), id);
+        }
+    }
+
+    fn register_imported_items(&mut self, imported: &HashMap<String, &Module>) {
+        for (module_name, module) in imported {
+            let module_id = self.string_pool.intern(module_name);
+
+            for item in &module.items {
+                self.context
+                    .register_import(item.kind(), module_id, item.name(), item.id());
+            }
         }
     }
 
@@ -182,7 +221,7 @@ impl AstLowering {
                 let count_expr = self.lower_expr(count, analysis, imported);
 
                 let template_ref = if let Some(name) = template_name {
-                    self.find_item_ref_by_name(name, imported)
+                    self.resolve_item(ItemKind::Template, name)
                 } else if !body.is_empty() {
                     let id = self.next_item_id();
                     let name_id = self.string_pool.intern("_");
@@ -225,12 +264,11 @@ impl AstLowering {
         attributes: &[Attribute],
         imported: &HashMap<String, &Module>,
     ) -> Template {
-        let id = self.next_item_id();
-        let name_id = self.string_pool.intern(name);
+        let (id, name_id) = self.resolve_local_item(ItemKind::Template, name);
 
         let parent = parent_name
             .as_ref()
-            .and_then(|p| self.find_item_ref_by_name(p, imported));
+            .and_then(|p| self.resolve_item(ItemKind::Template, p));
 
         let fields = body
             .iter()
@@ -259,8 +297,7 @@ impl AstLowering {
         body: &[Field],
         imported: &HashMap<String, &Module>,
     ) -> Struct {
-        let id = self.next_item_id();
-        let name_id = self.string_pool.intern(name);
+        let (id, name_id) = self.resolve_local_item(ItemKind::Struct, name);
 
         let fields = body
             .iter()
@@ -282,8 +319,7 @@ impl AstLowering {
         variants: &[Variant],
         attributes: &[Attribute],
     ) -> Enum {
-        let id = self.next_item_id();
-        let name_id = self.string_pool.intern(name);
+        let (id, name_id) = self.resolve_local_item(ItemKind::Enum, name);
 
         let hir_variants = variants
             .iter()
@@ -324,8 +360,7 @@ impl AstLowering {
         analysis: &AnalysisResult,
         imported: &HashMap<String, &Module>,
     ) -> TypeAlias {
-        let id = self.next_item_id();
-        let name_id = self.string_pool.intern(name);
+        let (id, name_id) = self.resolve_local_item(ItemKind::TypeAlias, name);
 
         let expr = match &data_type.kind {
             ExpressionKind::StringPattern(_) => {
@@ -334,7 +369,7 @@ impl AstLowering {
             _ => None,
         };
 
-        let target_type = self.lower_type_from_expr(data_type, analysis, imported);
+        let target_type = self.lower_type_from_expr(data_type, analysis);
 
         let constraints = self.extract_constraints(analysis, data_type);
 
@@ -371,7 +406,7 @@ impl AstLowering {
         crate::module::Field {
             id: field_id,
             name: name_id,
-            ty: self.lower_type(&field.value, imported),
+            ty: self.lower_type(&field.value),
             value: self.lower_expr(&field.value, analysis, imported),
             attributes: field
                 .attributes
@@ -405,7 +440,7 @@ impl AstLowering {
         }
     }
 
-    fn lower_type(&mut self, expr: &Expression, imported: &HashMap<String, &Module>) -> Type {
+    fn lower_type(&mut self, expr: &Expression) -> Type {
         match &expr.kind {
             ExpressionKind::Identifier(name) => match name.as_str() {
                 "int" => Type::Int,
@@ -413,7 +448,7 @@ impl AstLowering {
                 "bool" => Type::Bool,
                 "float" => Type::Float,
                 _ => self
-                    .find_item_ref_by_name(name, imported)
+                    .resolve_item(ItemKind::TypeAlias, name)
                     .map(Type::UserDefined)
                     .unwrap_or(Type::Int),
             },
@@ -427,10 +462,10 @@ impl AstLowering {
                         kind: ExpressionKind::Type(*inner.clone()),
                         span: expr.span,
                     };
-                    Type::List(Box::new(self.lower_type(&inner_expr, imported)))
+                    Type::List(Box::new(self.lower_type(&inner_expr)))
                 }
                 DataTypeKind::Custom(name) => self
-                    .find_item_ref_by_name(name, imported)
+                    .resolve_item(ItemKind::TypeAlias, name)
                     .map(Type::UserDefined)
                     .unwrap_or(Type::Int),
             },
@@ -442,20 +477,19 @@ impl AstLowering {
         &mut self,
         expr: &Expression,
         analysis: &AnalysisResult,
-        imported: &HashMap<String, &Module>,
     ) -> Type {
         if let ExpressionKind::Identifier(name) = &expr.kind
             && let Some(checker_type) = analysis.type_map.get(name)
         {
             return match checker_type {
                 type_checker::types::Type::Custom(name) => self
-                    .find_item_ref_by_name(name, imported)
+                    .resolve_item(ItemKind::TypeAlias, name)
                     .map(Type::UserDefined)
                     .unwrap_or(Type::Int),
                 other => Type::from(other),
             };
         }
-        self.lower_type(expr, imported)
+        self.lower_type(expr)
     }
 
     fn lower_expr(
@@ -476,11 +510,11 @@ impl AstLowering {
             ExpressionKind::BooleanLiteral(b) => Expr::Bool(*b),
             ExpressionKind::Type(data_type) => {
                 if data_type.constraints.is_some() {
-                    let ty = self.lower_type(expr, imported);
+                    let ty = self.lower_type(expr);
                     let constraints = self.extract_constraints(analysis, expr);
                     Expr::ConstrainedType { ty, constraints }
                 } else {
-                    Expr::Type(self.lower_type(expr, imported))
+                    Expr::Type(self.lower_type(expr))
                 }
             }
             ExpressionKind::StringPattern(elements) => {
@@ -531,7 +565,7 @@ impl AstLowering {
                 "bool" => Expr::Type(Type::Bool),
                 "float" => Expr::Type(Type::Float),
                 _ => self
-                    .find_item_ref_by_name(name, imported)
+                    .resolve_item(ItemKind::TypeAlias, name)
                     .map(Expr::Identifier)
                     .unwrap_or(Expr::Int(0)),
             },
@@ -543,7 +577,7 @@ impl AstLowering {
                 Expr::List(exprs)
             }
             ExpressionKind::Reference { template, field } => {
-                if let Some(template_ref) = self.find_item_ref_by_name(template, imported) {
+                if let Some(template_ref) = self.resolve_item(ItemKind::Template, template) {
                     let field_id = analysis
                         .symbol_table
                         .get_template(template)

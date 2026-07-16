@@ -74,13 +74,14 @@ impl<'a> ReferenceTracker<'a> {
 
         loop {
             if !visited.insert(current.clone()) {
-                return false; 
+                return false;
             }
 
-            let symbol = self
-                .symbol_table
-                .get_template(&current)
-                .or_else(|| self.imported.iter().find_map(|st| st.get_template(&current)));
+            let symbol = self.symbol_table.get_template(&current).or_else(|| {
+                self.imported
+                    .iter()
+                    .find_map(|st| st.get_template(&current))
+            });
 
             let Some(symbol) = symbol else { return false };
 

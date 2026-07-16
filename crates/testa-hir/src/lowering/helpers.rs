@@ -7,38 +7,32 @@ use testa_core::{
 };
 
 use crate::{
-    AstLowering, Item, ItemId, Module,
-    module::{Constraint, ConstraintKind, Expr, ItemRef},
+    AstLowering, Item, ItemId, StringId, lowering::context::ItemKind, module::{Constraint, ConstraintKind, Expr, ItemRef},
 };
 
 impl AstLowering {
-    pub(super) fn find_item_ref_by_name(
-        &mut self,
-        name: &str,
-        imported: &HashMap<String, &Module>,
-    ) -> Option<ItemRef> {
-        if let Some(id) = self.find_local_item_id_by_name(name) {
-            return Some(ItemRef::Local(id));
-        }
-
-        for (module_name, module) in imported {
-            if let Some(item) = module.get_item_by_name(name) {
-                let module_id = self.string_pool.intern(module_name);
-                return Some(ItemRef::Imported {
-                    module: module_id,
-                    item: item.id(),
-                });
-            }
-        }
-
-        None
+    pub(super) fn resolve_item(&mut self, kind: ItemKind, name: &str) -> Option<ItemRef> {
+        let name = self.string_pool.intern(name);
+        self.context.resolve(kind, name).copied()
     }
 
-    pub(super) fn find_local_item_id_by_name(&self, name: &str) -> Option<ItemId> {
-        self.items
-            .iter()
-            .find(|item| self.string_pool.resolve(item.name()) == name)
-            .map(Item::id)
+    pub(super) fn resolve_local_item(
+        &mut self,
+        kind: ItemKind,
+        name: &str,
+    ) -> (ItemId, StringId) {
+        let name_id = self.string_pool.intern(name);
+
+        let item_id = match self
+            .context
+            .resolve(kind, name_id)
+            .expect("Item should have been registered")
+        {
+            ItemRef::Local(id) => *id,
+            ItemRef::Imported { .. } => unreachable!(),
+        };
+
+        (item_id, name_id)
     }
 
     pub(super) fn next_item_id(&mut self) -> ItemId {

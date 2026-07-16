@@ -69,6 +69,18 @@ pub enum Statement {
     },
 }
 
+impl Statement {
+    pub fn name(&self) -> Option<&str> {
+        match self {
+            Statement::Template { name, .. }
+            | Statement::Struct { name, .. }
+            | Statement::Enum { name, .. }
+            | Statement::TypeDecl { name, .. } => Some(name),
+            _ => None,
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug)]
 pub struct ExpressionStatemnt {
     pub expression: Expression,

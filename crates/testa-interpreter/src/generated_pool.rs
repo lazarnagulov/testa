@@ -26,7 +26,7 @@ impl GeneratedPool {
 
     pub fn push(&mut self, item_ref: &ItemRef, field_id: FieldId, value: Object) {
         let key = PoolKey {
-            item_ref: item_ref.clone(),
+            item_ref: *item_ref,
             field_id,
         };
         self.values
@@ -42,7 +42,7 @@ impl GeneratedPool {
         field_id: FieldId,
     ) -> Option<&Object> {
         let key = PoolKey {
-            item_ref: item_ref.clone(),
+            item_ref: *item_ref,
             field_id,
         };
         self.values.get(&key)?.sample(rng)

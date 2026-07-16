@@ -13,7 +13,7 @@ impl<'a> Iterator for RecordGenerator<'a> {
             if self.current_count < info.total_count {
                 self.current_count += 1;
 
-                let item_ref = info.template_ref.clone();
+                let item_ref = info.template_ref;
                 let ctx = &self.evaluator.context;
                 let state = &mut self.evaluator.state;
 

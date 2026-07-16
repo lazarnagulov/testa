@@ -199,7 +199,7 @@ impl<'a> RecordGenerator<'a> {
 
         let mut record = IndexMap::new();
 
-        if let Some(parent_ref) = template.parent.clone() {
+        if let Some(parent_ref) = template.parent {
             let parent_record = Self::generate_record(ctx, state, &parent_ref)?;
             record.extend(parent_record);
         }

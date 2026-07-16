@@ -127,7 +127,7 @@ impl fmt::Display for EvalError {
                 )
             }
             EvalError::NotDefined(name, span) => {
-                write!(f, "Variable '{}' not defined at {:?}", name, span)
+                write!(f, "Variable '{}' not defined at {}", name, span)
             }
             EvalError::UncompatibleConstraint {
                 data_type,
@@ -136,24 +136,24 @@ impl fmt::Display for EvalError {
             } => {
                 write!(
                     f,
-                    "Incompatible constraint '{}' for type '{}' at {:?}",
+                    "Incompatible constraint '{}' for type '{}' at {}",
                     constraint, data_type, span
                 )
             }
             EvalError::InvalidTarget(target, span) => {
-                write!(f, "Invalid target '{}' at {:?}", target, span)
+                write!(f, "Invalid target '{}' at {}", target, span)
             }
             EvalError::FileError(message, span) => {
-                write!(f, "File error: '{}' at {:?}", message, span)
+                write!(f, "File error: '{}' at {}", message, span)
             }
             EvalError::MiscellaneousError(message, span) => {
-                write!(f, "Miscellaneous error: '{}' at {:?}", message, span)
+                write!(f, "Miscellaneous error: '{}' at {}", message, span)
             }
             EvalError::DivisionByZero { span } => {
-                write!(f, "Cannot divide by zero at {:?}", span)
+                write!(f, "Cannot divide by zero at {}", span)
             }
             EvalError::InvalidCount { value, span } => {
-                write!(f, "Invalid count type {} at {:?}", value, span)
+                write!(f, "Invalid count type {} at {}", value, span)
             }
             EvalError::InvalidWeight {
                 variant,

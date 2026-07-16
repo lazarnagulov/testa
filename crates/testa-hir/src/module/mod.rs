@@ -2,7 +2,7 @@ pub mod error;
 pub mod resolver;
 pub mod serialize;
 
-use crate::{StringPool, source_map::SourceMap};
+use crate::{StringPool, lowering::context::ItemKind, source_map::SourceMap};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -14,7 +14,7 @@ pub struct StringId(pub u32);
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ItemId(pub u32);
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ItemRef {
     Local(ItemId),
     Imported { module: StringId, item: ItemId },
@@ -81,6 +81,15 @@ impl Item {
             Item::Struct(s) => s.name,
             Item::Enum(e) => e.name,
             Item::TypeAlias(t) => t.name,
+        }
+    }
+
+    pub fn kind(&self) -> ItemKind {
+        match self {
+            Item::Template(_) => ItemKind::Template,
+            Item::Struct(_) => ItemKind::Struct,
+            Item::Enum(_) => ItemKind::Enum,
+            Item::TypeAlias(_) => ItemKind::TypeAlias,
         }
     }
 }
