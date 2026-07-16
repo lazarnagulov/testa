@@ -10,3 +10,10 @@ testa-interpreter = { path = "../testa-interpreter" }
 testa-hir = { path = "../testa-hir" }
 testa-generation = { path = "../testa-generation" }
 clap = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "compiler_performance"
+harness = false

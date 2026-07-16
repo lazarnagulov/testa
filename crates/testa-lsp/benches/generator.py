@@ -169,7 +169,7 @@ def main():
 
     content = generate_program(args.lines)
 
-    out_path = args.output or f"fixture_{args.lines}.dsl"
+    out_path = args.output or f"fixture_{args.lines}.testa"
     Path(out_path).write_text(content, encoding="utf-8")
 
     print(f"Generated {out_path} ({len(content.splitlines())} lines)")

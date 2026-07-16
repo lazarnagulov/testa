@@ -1066,6 +1066,7 @@ name = "testa-cli"
 version = "0.1.1"
 dependencies = [
  "clap",
+ "criterion",
  "testa-core",
  "testa-generation",
  "testa-hir",

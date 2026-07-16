@@ -15,7 +15,9 @@ use testa_core::{
 
 use crate::{
     Item, Module,
-    module::{Enum, Field, ItemRef, Template, Type, TypeAlias, Variant, error::ResolveError},
+    module::{
+        Enum, Field, ItemRef, Struct, Template, Type, TypeAlias, Variant, error::ResolveError,
+    },
 };
 
 impl Module {
@@ -45,13 +47,33 @@ impl Module {
         for item in &self.items {
             match item {
                 Item::Template(t) => self.restore_template(t, &mut table),
+                Item::Struct(s) => self.restore_struct(s, &mut table),
                 Item::Enum(e) => self.restore_enum(e, &mut table),
                 Item::TypeAlias(t) => self.restore_type_alias(t, &mut table),
-                Item::Struct(_) => {}
             }
         }
 
         table
+    }
+
+    fn restore_struct(&self, st: &Struct, table: &mut SymbolTable) {
+        let name = self.string_pool.resolve(st.name).to_string();
+        let span = self.source_map.item_spans.get(&st.id).unwrap_or_default();
+
+        table
+            .insert(
+                name.clone(),
+                SymbolKind::Struct {
+                    name: name.clone(),
+                    fields: vec![],
+                },
+                span,
+            )
+            .ok();
+
+        table.enter_scope(ScopeKind::Template { name: name.clone() });
+        self.restore_fields(&st.fields, &name, table);
+        table.exit_scope();
     }
 
     fn restore_template(&self, template: &Template, table: &mut SymbolTable) {

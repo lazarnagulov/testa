@@ -82,7 +82,7 @@ impl<'a> Visitor for ReferenceChecker<'a> {
             }
             ExpressionKind::Reference { template, field } => match self.lookup_symbol(template) {
                 Some(SymbolKind::Template { fields, .. }) => {
-                    if !fields.iter().any(|f| f == field) {
+                    if !fields.contains(field) {
                         self.errors.push(SemanticError::UnknownIdentifier {
                             name: field.clone(),
                             span: expression.span,
