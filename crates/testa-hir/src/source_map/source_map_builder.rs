@@ -1,10 +1,13 @@
 use testa_core::utils::Span;
 
-use crate::{FieldId, ItemId, StringId, source_map::SourceMap};
+use crate::{
+    module::node::{FieldId, LocalItemId, StringId},
+    source_map::SourceMap,
+};
 
 #[derive(Default, Debug)]
 pub struct SourceMapBuilder {
-    item_spans: Vec<(ItemId, Span)>,
+    item_spans: Vec<(LocalItemId, Span)>,
     field_spans: Vec<(FieldId, Span)>,
     identifier_spans: Vec<(StringId, Span)>,
 }
@@ -18,7 +21,7 @@ impl SourceMapBuilder {
         }
     }
 
-    pub fn add_item(&mut self, id: ItemId, span: Span) {
+    pub fn add_item(&mut self, id: LocalItemId, span: Span) {
         self.item_spans.push((id, span));
     }
 

@@ -1094,7 +1094,7 @@ dependencies = [
 
 [[package]]
 name = "testa-hir"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "rmp-serde",
  "serde",

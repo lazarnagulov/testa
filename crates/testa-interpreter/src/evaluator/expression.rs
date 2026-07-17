@@ -3,12 +3,12 @@ use crate::{
         constrained_type::evaluate_constrained_type,
         context::{Context, State},
         error::EvalError,
-        identifier::{evaluate_hir_type, evaluate_item_ref},
+        identifier::{evaluate_global_id, evaluate_hir_type},
         pattern::evaluate_string_pattern,
     },
     object::Object,
 };
-use testa_hir::module::{Expr, InfixOp, PrefixOp};
+use testa_hir::module::node::{Expr, InfixOp, PrefixOp};
 
 pub fn evaluate_expression(
     ctx: &Context,
@@ -22,7 +22,7 @@ pub fn evaluate_expression(
         Expr::Bool(b) => Ok(Object::new(*b)),
 
         Expr::Type(ty) => evaluate_hir_type(ctx, state, ty),
-        Expr::Identifier(item_ref) => evaluate_item_ref(ctx, state, item_ref),
+        Expr::Identifier(item_ref) => evaluate_global_id(ctx, state, item_ref),
         Expr::StringPattern(parts) => evaluate_string_pattern(ctx, state, parts),
         Expr::ConstrainedType { ty, constraints } => {
             evaluate_constrained_type(ctx, state, ty, constraints)

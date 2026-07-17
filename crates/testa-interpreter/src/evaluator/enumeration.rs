@@ -1,5 +1,5 @@
 use rand::Rng;
-use testa_hir::module::{Enum, ItemRef};
+use testa_hir::module::node::{Enum, GlobalItemId};
 
 use crate::{
     evaluator::{
@@ -14,9 +14,9 @@ pub(crate) fn evaluate_enum(
     ctx: &Context,
     state: &mut State,
     enumeration: &Enum,
-    item_ref: &ItemRef,
+    global_id: &GlobalItemId,
 ) -> Result<Object, EvalError> {
-    let module = ctx.module_for(item_ref);
+    let module = ctx.module_for(global_id);
     let mut total_weight = 0.0;
     let mut cumulative_weights = Vec::with_capacity(enumeration.variants.len());
 

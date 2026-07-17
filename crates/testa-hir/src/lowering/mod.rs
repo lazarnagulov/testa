@@ -15,12 +15,15 @@ use testa_core::{
 };
 
 use crate::{
-    FieldId, Item, Module, ModuleMetadata, StringPool,
+    StringPool,
     lowering::context::{ItemKind, LoweringContext},
     module::{
-        Attribute as HirAttribute, Directive, Enum, Expr, InfixOp, ItemRef, PatternChar,
-        PatternPart, PrefixOp, Struct, Template, Type, TypeAlias, Variant as HirVariant,
-        attribute_kind,
+        Module, ModuleMetadata,
+        node::{
+            Attribute as HirAttribute, Directive, Enum, Expr, FieldId, GlobalItemId, InfixOp, Item,
+            ModuleId, PatternChar, PatternPart, PrefixOp, Struct, Template, Type, TypeAlias,
+            Variant as HirVariant, attribute_kind,
+        },
     },
     source_map::SourceMapBuilder,
 };
@@ -36,11 +39,10 @@ macro_rules! lower_infix {
 }
 
 pub struct AstLowering {
+    current_module: ModuleId,
     context: LoweringContext,
-
     string_pool: StringPool,
     next_item_id: u32,
-
     source_map_builder: SourceMapBuilder,
     directives: Vec<Directive>,
     source_file: PathBuf,
@@ -50,6 +52,7 @@ pub struct AstLowering {
 impl AstLowering {
     pub fn new(source_file: PathBuf) -> Self {
         Self {
+            current_module: ModuleId(0),
             string_pool: StringPool::new(),
             next_item_id: 0,
             directives: Vec::new(),
@@ -82,6 +85,7 @@ impl AstLowering {
 
         Module {
             metadata: ModuleMetadata {
+                id: ModuleId(0),
                 version: 1,
                 name: self
                     .source_file
@@ -120,18 +124,33 @@ impl AstLowering {
             };
 
             let id = self.next_item_id();
-            self.context
-                .register_local(kind, self.string_pool.intern(name), id);
+            self.context.register(
+                kind,
+                self.string_pool.intern(name),
+                GlobalItemId {
+                    module: self.current_module,
+                    item: id,
+                },
+            );
         }
     }
 
     fn register_imported_items(&mut self, imported: &HashMap<String, &Module>) {
-        for (module_name, module) in imported {
-            let module_id = self.string_pool.intern(module_name);
+        for (position, module) in imported.values().enumerate() {
+            let module_ref = ModuleId((position + 1) as u32); // 0 is reserved for "self"
 
             for item in &module.items {
-                self.context
-                    .register_import(item.kind(), module_id, item.name(), item.id());
+                let item_name = module.string_pool.resolve(item.name());
+                let name_id = self.string_pool.intern(item_name);
+
+                self.context.register(
+                    item.kind(),
+                    name_id,
+                    GlobalItemId {
+                        module: module_ref,
+                        item: item.id(),
+                    },
+                );
             }
         }
     }
@@ -225,11 +244,13 @@ impl AstLowering {
                 } else if !body.is_empty() {
                     let id = self.next_item_id();
                     let name_id = self.string_pool.intern("_");
+
                     let fields = body
                         .iter()
                         .enumerate()
                         .map(|(idx, field)| self.lower_field(analysis, field, idx, imported))
                         .collect();
+
                     let template = Template {
                         id,
                         name: name_id,
@@ -237,8 +258,13 @@ impl AstLowering {
                         fields,
                         attributes: vec![],
                     };
+
                     self.items.push(Item::Template(template));
-                    Some(ItemRef::Local(id))
+
+                    Some(GlobalItemId {
+                        module: self.current_module,
+                        item: id,
+                    })
                 } else {
                     None
                 };
@@ -394,7 +420,7 @@ impl AstLowering {
         field: &Field,
         idx: usize,
         imported: &HashMap<String, &Module>,
-    ) -> crate::module::Field {
+    ) -> crate::module::node::Field {
         let field_id = FieldId(idx as u32);
         let name_id = self.string_pool.intern(&field.name);
 
@@ -403,7 +429,7 @@ impl AstLowering {
             self.source_map_builder.add_identifier(name_id, name_span);
         }
 
-        crate::module::Field {
+        crate::module::node::Field {
             id: field_id,
             name: name_id,
             ty: self.lower_type(&field.value),
@@ -473,11 +499,7 @@ impl AstLowering {
         }
     }
 
-    fn lower_type_from_expr(
-        &mut self,
-        expr: &Expression,
-        analysis: &AnalysisResult,
-    ) -> Type {
+    fn lower_type_from_expr(&mut self, expr: &Expression, analysis: &AnalysisResult) -> Type {
         if let ExpressionKind::Identifier(name) = &expr.kind
             && let Some(checker_type) = analysis.type_map.get(name)
         {

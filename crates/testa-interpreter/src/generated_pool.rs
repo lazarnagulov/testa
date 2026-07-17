@@ -1,13 +1,13 @@
 use rand::Rng;
 use rand::rngs::StdRng;
 use std::collections::{HashMap, VecDeque};
-use testa_hir::module::{FieldId, ItemRef};
+use testa_hir::module::node::{FieldId, GlobalItemId};
 
 use crate::object::Object;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct PoolKey {
-    item_ref: ItemRef,
+    global_id: GlobalItemId,
     field_id: FieldId,
 }
 
@@ -24,9 +24,9 @@ impl GeneratedPool {
         }
     }
 
-    pub fn push(&mut self, item_ref: &ItemRef, field_id: FieldId, value: Object) {
+    pub fn push(&mut self, global_id: &GlobalItemId, field_id: FieldId, value: Object) {
         let key = PoolKey {
-            item_ref: *item_ref,
+            global_id: *global_id,
             field_id,
         };
         self.values
@@ -38,11 +38,11 @@ impl GeneratedPool {
     pub fn sample(
         &self,
         rng: &mut StdRng,
-        item_ref: &ItemRef,
+        global_id: &GlobalItemId,
         field_id: FieldId,
     ) -> Option<&Object> {
         let key = PoolKey {
-            item_ref: *item_ref,
+            global_id: *global_id,
             field_id,
         };
         self.values.get(&key)?.sample(rng)

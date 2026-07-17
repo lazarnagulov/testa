@@ -1,8 +1,5 @@
 use rand::Rng;
-use testa_hir::{
-    Item,
-    module::{ItemRef, Type},
-};
+use testa_hir::module::node::{GlobalItemId, Item, Type};
 
 use crate::{
     evaluator::{
@@ -43,21 +40,21 @@ pub(crate) fn evaluate_hir_type(
                 Ok(Object::NoReturn)
             }
         }
-        Type::UserDefined(item_ref) => evaluate_item_ref(ctx, state, item_ref),
+        Type::UserDefined(global_id) => evaluate_global_id(ctx, state, global_id),
     }
 }
 
-pub(crate) fn evaluate_item_ref(
+pub(crate) fn evaluate_global_id(
     ctx: &Context,
     state: &mut State,
-    item_ref: &ItemRef,
+    global_id: &GlobalItemId,
 ) -> Result<Object, EvalError> {
     let item = ctx
-        .resolve_item(item_ref)
-        .ok_or_else(|| EvalError::NotDefined(format!("{}", item_ref), Default::default()))?;
+        .resolve_item(global_id)
+        .ok_or_else(|| EvalError::NotDefined(format!("{}", global_id), Default::default()))?;
 
     match item {
-        Item::Enum(e) => evaluate_enum(ctx, state, e, item_ref),
+        Item::Enum(e) => evaluate_enum(ctx, state, e, global_id),
         Item::TypeAlias(t) => {
             if let Some(expr) = &t.expr {
                 return evaluate_expression(ctx, state, expr);
@@ -70,7 +67,7 @@ pub(crate) fn evaluate_item_ref(
             }
         }
         Item::Template(t) => {
-            let module = ctx.module_for(item_ref);
+            let module = ctx.module_for(global_id);
             let fields = t
                 .fields
                 .iter()
@@ -86,7 +83,7 @@ pub(crate) fn evaluate_item_ref(
             ))
         }
         Item::Struct(s) => {
-            let module = ctx.module_for(item_ref);
+            let module = ctx.module_for(global_id);
             s.fields
                 .iter()
                 .map(|field| {

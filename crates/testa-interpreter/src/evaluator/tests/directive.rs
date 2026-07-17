@@ -1,8 +1,12 @@
+use testa_hir::{
+    StringPool,
+    module::{Module, node::Directive},
+};
+
 use crate::evaluator::{
     Evaluator,
     context::{Context, OutputFormat},
 };
-use testa_hir::{Module, StringPool, module::Directive};
 
 #[test]
 fn test_output_directive() {

@@ -1,10 +1,16 @@
-use crate::{Module, ModuleMetadata, StringPool, source_map::SourceMap};
 use std::path::PathBuf;
+
+use crate::{
+    StringPool,
+    module::{Module, ModuleMetadata, node::ModuleId},
+    source_map::SourceMap,
+};
 
 impl Module {
     pub fn empty(name: &str) -> Self {
         Self {
             metadata: ModuleMetadata {
+                id: ModuleId(0),
                 version: 1,
                 name: name.to_string(),
                 source_file: PathBuf::from(format!("{}.testa", name)),

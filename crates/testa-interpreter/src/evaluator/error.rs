@@ -5,7 +5,7 @@ use testa_core::{
     diagnostics::{Diagnostic, DiagnosticCode},
     utils::Span,
 };
-use testa_hir::module::{InfixOp, PrefixOp};
+use testa_hir::module::node::{InfixOp, PrefixOp};
 
 use crate::object::Object;
 

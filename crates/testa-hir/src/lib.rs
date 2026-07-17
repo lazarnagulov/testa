@@ -7,5 +7,4 @@ pub mod string_pool;
 mod test_utils;
 
 pub use lowering::AstLowering;
-pub use module::{FieldId, Item, ItemId, Module, ModuleMetadata, StringId};
 pub use string_pool::StringPool;

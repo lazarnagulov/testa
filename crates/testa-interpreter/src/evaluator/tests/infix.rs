@@ -1,5 +1,5 @@
 use crate::object::Object;
-use testa_hir::module::InfixOp;
+use testa_hir::module::node::InfixOp;
 
 infix_tests! {
     test_add_ints:

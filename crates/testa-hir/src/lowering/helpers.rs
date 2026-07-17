@@ -7,45 +7,47 @@ use testa_core::{
 };
 
 use crate::{
-    AstLowering, Item, ItemId, StringId, lowering::context::ItemKind, module::{Constraint, ConstraintKind, Expr, ItemRef},
+    AstLowering,
+    lowering::context::ItemKind,
+    module::node::{Constraint, ConstraintKind, Expr, GlobalItemId, Item, LocalItemId, StringId},
 };
 
 impl AstLowering {
-    pub(super) fn resolve_item(&mut self, kind: ItemKind, name: &str) -> Option<ItemRef> {
+    pub(super) fn resolve_item(&mut self, kind: ItemKind, name: &str) -> Option<GlobalItemId> {
         let name = self.string_pool.intern(name);
-        self.context.resolve(kind, name).copied()
+        self.context.resolve(kind, name)
     }
 
     pub(super) fn resolve_local_item(
         &mut self,
         kind: ItemKind,
         name: &str,
-    ) -> (ItemId, StringId) {
+    ) -> (LocalItemId, StringId) {
         let name_id = self.string_pool.intern(name);
 
-        let item_id = match self
-            .context
-            .resolve(kind, name_id)
-            .expect("Item should have been registered")
-        {
-            ItemRef::Local(id) => *id,
-            ItemRef::Imported { .. } => unreachable!(),
-        };
+        let id = self.context.resolve(kind, name_id).unwrap_or_else(|| {
+            panic!(
+                "Item {:?} {:?} '{}' was not registered",
+                name_id, kind, name
+            )
+        });
 
-        (item_id, name_id)
+        (id.item, name_id)
     }
 
-    pub(super) fn next_item_id(&mut self) -> ItemId {
-        let id = ItemId(self.next_item_id);
+    pub(super) fn next_item_id(&mut self) -> LocalItemId {
+        let id = LocalItemId(self.next_item_id);
         self.next_item_id += 1;
         id
     }
 
     pub(super) fn register_item(&mut self, item: Item, span: Span, name_span: Option<Span>) {
         self.source_map_builder.add_item(item.id(), span);
+
         if let Some(ns) = name_span {
             self.source_map_builder.add_identifier(item.name(), ns);
         }
+
         self.items.push(item);
     }
 

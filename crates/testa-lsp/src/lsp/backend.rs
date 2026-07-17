@@ -96,6 +96,10 @@ impl LanguageServer for Backend {
             )
             .await;
         self.client
+            .log_message(MessageType::INFO, format!("{:#?}", diagnostics))
+            .await;
+
+        self.client
             .publish_diagnostics(params.text_document.uri, diagnostics, None)
             .await;
     }
