@@ -2,15 +2,15 @@ SIZES := "1000 10000 50000 100000 150000"
 
 default: bench
 
-fixtures:
-    @mkdir -p benches/fixtures
+compiler_fixtures:
+    @mkdir -p benches/compiler_fixtures
     @for size in {{SIZES}}; do \
         echo "Generating fixture with $size lines..."; \
-        python3 generator.py --lines $size --output benches/fixtures/fixture_$size.testa; \
+        python3 generate_compiler.py --lines $size --output benches/fixtures/fixture_$size.testa; \
     done
 
-bench: fixtures
+compiler_bench: compiler_fixtures
     cargo bench --bench compiler_performance
 
 clean:
-    rm -rf benches/fixtures/*.testa
+    rm -rf benches/**/*.testa

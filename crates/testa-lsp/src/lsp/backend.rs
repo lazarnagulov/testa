@@ -62,6 +62,7 @@ impl LanguageServer for Backend {
                         "#".to_string(),
                         ":".to_string(),
                         "=".to_string(),
+                        ".".to_string(),
                     ]),
                     resolve_provider: Some(false),
                     ..Default::default()
@@ -94,9 +95,6 @@ impl LanguageServer for Backend {
                 params.content_changes[0].text.clone(),
                 params.text_document.version,
             )
-            .await;
-        self.client
-            .log_message(MessageType::INFO, format!("{:#?}", diagnostics))
             .await;
 
         self.client

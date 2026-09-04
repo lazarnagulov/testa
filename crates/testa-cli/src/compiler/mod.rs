@@ -8,7 +8,10 @@ use testa_core::{
     parser::Parser,
     utils::Span,
 };
-use testa_hir::{AstLowering, module::{Module, resolver::ModuleResolver}};
+use testa_hir::{
+    AstLowering,
+    module::{Module, resolver::ModuleResolver},
+};
 
 #[allow(dead_code)]
 #[derive(Debug)]

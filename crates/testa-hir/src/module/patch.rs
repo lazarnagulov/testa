@@ -1,4 +1,10 @@
-use crate::module::{Module, node::{Attribute, Constraint, ConstraintKind, Directive, Expr, Field, GlobalItemId, Item, ModuleId, PatternPart, Type}};
+use crate::module::{
+    Module,
+    node::{
+        Attribute, Constraint, ConstraintKind, Directive, Expr, Field, GlobalItemId, Item,
+        ModuleId, PatternPart, Type,
+    },
+};
 
 pub fn patch_module(module: &mut Module, self_id: ModuleId, import_ids: &[ModuleId]) {
     for directive in &mut module.directives {
@@ -55,7 +61,6 @@ pub fn patch_module(module: &mut Module, self_id: ModuleId, import_ids: &[Module
 
     module.metadata.id = self_id;
 }
-
 
 fn patch_global_id(id: &mut GlobalItemId, self_id: ModuleId, import_ids: &[ModuleId]) {
     id.module = match id.module.0 {

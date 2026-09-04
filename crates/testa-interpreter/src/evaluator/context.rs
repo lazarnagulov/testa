@@ -55,10 +55,7 @@ impl Context {
     }
 
     pub fn with_imported(mut self, imported: HashMap<String, Module>) -> Self {
-        self.imported = imported
-            .into_values()
-            .map(|m| (m.metadata.id, m))
-            .collect();
+        self.imported = imported.into_values().map(|m| (m.metadata.id, m)).collect();
         self
     }
 

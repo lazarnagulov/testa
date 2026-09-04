@@ -13,10 +13,10 @@ use testa_core::{
 };
 
 use crate::module::{
-    Module, error::ResolveError, node::{
-        Enum, Field, GlobalItemId, Item,
-        ModuleId, Struct, Template, Type, TypeAlias, Variant,
-    }, patch,
+    Module,
+    error::ResolveError,
+    node::{Enum, Field, GlobalItemId, Item, ModuleId, Struct, Template, Type, TypeAlias, Variant},
+    patch,
 };
 
 pub struct ModuleResolver {
@@ -52,14 +52,49 @@ impl ModuleResolver {
         Self::new(paths)
     }
 
+    pub fn resolve_all(
+        &mut self,
+        names: &[String],
+        relative_to: &Path,
+    ) -> Result<HashMap<String, Module>, ResolveError> {
+        for name in names {
+            self.load_one(name, relative_to)?;
+        }
+
+        let loaded: Vec<String> = self.cache.keys().cloned().collect();
+        for name in &loaded {
+            self.relocate_module(name);
+        }
+
+        Ok(self
+            .cache
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect())
+    }
+
+    pub fn to_symbol_table(&self, module: &Module) -> SymbolTable {
+        let mut table = SymbolTable::new();
+        for item in &module.items {
+            match item {
+                Item::Template(t) => self.restore_template(module, t, &mut table),
+                Item::Struct(s) => self.restore_struct(module, s, &mut table),
+                Item::Enum(e) => self.restore_enum(module, e, &mut table),
+                Item::TypeAlias(t) => self.restore_type_alias(module, t, &mut table),
+            }
+        }
+
+        table
+    }
+
     fn load_one(&mut self, name: &str, relative_to: &Path) -> Result<(), ResolveError> {
         if self.cache.contains_key(name) {
             return Ok(());
         }
 
-        let path = self
-            .find_tmod(name, relative_to)
-            .ok_or_else(|| ResolveError::NotFound(name.to_string()))?;
+        let path = self.find_tmod(name, relative_to).ok_or_else(|| {
+            ResolveError::NotFound(format!("{} not found in {:?}", name, relative_to))
+        })?;
 
         let mut module = Module::load(&path)?;
         module.metadata.id = ModuleId(self.next_id);
@@ -100,27 +135,6 @@ impl ModuleResolver {
         if let Some(module) = self.cache.get_mut(name) {
             patch::patch_module(module, self_id, &import_ids);
         }
-    }
-
-    pub fn resolve_all(
-        &mut self,
-        names: &[String],
-        relative_to: &Path,
-    ) -> Result<HashMap<String, Module>, ResolveError> {
-        for name in names {
-            self.load_one(name, relative_to)?;
-        }
-
-        let loaded: Vec<String> = self.cache.keys().cloned().collect();
-        for name in &loaded {
-            self.relocate_module(name);
-        }
-
-        Ok(self
-            .cache
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect())
     }
 
     pub fn relocate_root(&mut self, module: &mut Module) {
@@ -164,20 +178,6 @@ impl ModuleResolver {
 
     fn module_by_id(&self, id: ModuleId) -> Option<&Module> {
         self.cache.values().find(|m| m.metadata.id == id)
-    }
-
-    pub fn to_symbol_table(&self, module: &Module) -> SymbolTable {
-        let mut table = SymbolTable::new();
-        for item in &module.items {
-            match item {
-                Item::Template(t) => self.restore_template(module, t, &mut table),
-                Item::Struct(s) => self.restore_struct(module, s, &mut table),
-                Item::Enum(e) => self.restore_enum(module, e, &mut table),
-                Item::TypeAlias(t) => self.restore_type_alias(module, t, &mut table),
-            }
-        }
-
-        table
     }
 
     fn restore_struct(&self, module: &Module, st: &Struct, table: &mut SymbolTable) {
