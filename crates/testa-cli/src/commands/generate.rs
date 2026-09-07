@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+
 use testa_core::diagnostics::{Diagnostic, DiagnosticCode};
 use testa_core::utils::Span;
 use testa_generation::generator::create_file_generator;
@@ -33,15 +34,20 @@ impl TryFrom<Command> for GenerateOptions {
 }
 
 pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>> {
-    let (program, symbol_table) = compile_file(&options.input)?;
-    let context = Context::new(symbol_table);
-    let mut evaluator = Evaluator::new(context, options.seed);
+    let unit = compile_file(&options.input)?;
+    let seed = options.seed;
+
+    let context = Context::new(unit.module)
+        .with_imported(unit.imported)
+        .with_options(options);
+
+    let mut evaluator = Evaluator::new(context, seed);
 
     evaluator
-        .evaluate_directives(&program)
+        .evaluate_directives()
         .map_err(|err| vec![err.to_diagnostic()])?;
-    let (format, config, path) = evaluator.output_config();
 
+    let (format, config, path) = evaluator.output_config();
     let file_generator = create_file_generator(format, config);
     let output_path = path
         .clone()
@@ -49,8 +55,9 @@ pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>>
 
     let mut record_generator = RecordGenerator::new(&mut evaluator);
     record_generator
-        .generate_infos(&program)
+        .generate_infos()
         .map_err(|err| vec![err.to_diagnostic()])?;
+
     record_generator
         .write_records(file_generator, output_path)
         .map_err(|err| {
@@ -59,5 +66,6 @@ pub fn generate_command(options: GenerateOptions) -> Result<(), Vec<Diagnostic>>
                     .with_code(DiagnosticCode::IOError),
             ]
         })?;
+
     Ok(())
 }

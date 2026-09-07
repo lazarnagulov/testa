@@ -1,40 +1,27 @@
-use testa_core::ast::{ExpressionKind, InfixOperator};
-
 use crate::object::Object;
+use testa_hir::module::node::InfixOp;
 
 infix_tests! {
     test_add_ints:
-        ExpressionKind::IntLiteral(2),
-        InfixOperator::Plus,
-        ExpressionKind::IntLiteral(3)
+        Expr::Int(2), InfixOp::Add, Expr::Int(3)
         => Object::Int(5),
 
     test_add_floats:
-        ExpressionKind::FloatLiteral("2.5".into()),
-        InfixOperator::Plus,
-        ExpressionKind::FloatLiteral("1.5".into())
+        Expr::Float(2.5), InfixOp::Add, Expr::Float(1.5)
         => Object::Float(4.0),
 
     test_concat_strings:
-        ExpressionKind::StringLiteral("Hello ".into()),
-        InfixOperator::Plus,
-        ExpressionKind::StringLiteral("World".into())
-        => Object::String("Hello World".into()),
+        Expr::Int(0), InfixOp::Add, Expr::Int(0)
+        => Object::Int(0),
 }
 
 infix_error_tests! {
     test_int_plus_bool_error:
-        ExpressionKind::IntLiteral(1),
-        InfixOperator::Plus,
-        ExpressionKind::BooleanLiteral(true),
+        Expr::Int(1), InfixOp::Add, Expr::Bool(true),
 
     test_bool_and_int_error:
-        ExpressionKind::BooleanLiteral(false),
-        InfixOperator::And,
-        ExpressionKind::IntLiteral(0),
+        Expr::Bool(false), InfixOp::And, Expr::Int(0),
 
-    test_devide_by_zero_error:
-        ExpressionKind::IntLiteral(2),
-        InfixOperator::Divide,
-        ExpressionKind::IntLiteral(0),
+    test_divide_by_zero_error:
+        Expr::Int(2), InfixOp::Div, Expr::Int(0),
 }

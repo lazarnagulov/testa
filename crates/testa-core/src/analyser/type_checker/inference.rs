@@ -1,7 +1,7 @@
 use crate::{
     analyser::{
         error::SemanticError,
-        symbol_table::symbol::SymbolKind,
+        symbol_table::symbol::{ScopeKind, SymbolKind},
         type_checker::{TypeChecker, types::Type},
     },
     ast::{DataTypeKind, Element, Expression, ExpressionKind},
@@ -19,11 +19,11 @@ impl<'a> TypeChecker<'a> {
             ExpressionKind::List(elements) => self.infer_list_type(elements),
             ExpressionKind::Type(data_type) => {
                 let base_type = match Type::from(data_type) {
-                    Type::Custom(type_name) => match self.type_cache.get(&type_name) {
+                    Type::Custom(type_name) => match self.type_map.get(&type_name) {
                         Some(custom_type) => custom_type.clone(),
                         None => {
                             let custom_type = self.resolve_custom_type(&type_name);
-                            self.type_cache.insert(type_name, custom_type.clone());
+                            self.type_map.insert(type_name, custom_type.clone());
                             custom_type
                         }
                     },
@@ -41,6 +41,14 @@ impl<'a> TypeChecker<'a> {
                 operator,
                 right,
             } => self.check_infix_op(left, *operator, right),
+            ExpressionKind::Reference { template, field } => {
+                match self.symbol_table.lookup(template) {
+                    Some(symbol) if matches!(&symbol.kind, SymbolKind::Template { .. }) => {
+                        self.get_reference_type(template, field)
+                    }
+                    _ => Type::Unknown,
+                }
+            }
             ExpressionKind::FuncCall { arguments: _ } => {
                 // Functions not yet implemented
                 Type::Unknown
@@ -88,6 +96,25 @@ impl<'a> TypeChecker<'a> {
             }
         } else {
             Type::Unknown
+        }
+    }
+
+    fn get_reference_type(&mut self, template_name: &str, field_name: &str) -> Type {
+        let field_symbol = self.symbol_table
+            .scopes()
+            .iter()
+            .find(|scope| matches!(&scope.kind, ScopeKind::Template { name } if name == template_name))
+            .and_then(|scope| scope.symbols.get(field_name));
+
+        match field_symbol {
+            Some(symbol) => {
+                if let SymbolKind::Field { expression, .. } = &symbol.kind {
+                    self.infer_type(expression)
+                } else {
+                    Type::Unknown
+                }
+            }
+            None => Type::Unknown,
         }
     }
 

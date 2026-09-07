@@ -1,0 +1,5 @@
+@output json { pretty = true; indent = 4; }
+@output_path "./example_13.json";
+@import std;
+
+@generate User[10];

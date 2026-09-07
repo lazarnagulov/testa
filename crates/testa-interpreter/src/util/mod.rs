@@ -1,7 +1,5 @@
 use rand::Rng;
 
-pub mod extract_object;
-
 pub struct ProgressReporter<I> {
     inner: I,
     total: usize,
@@ -28,7 +26,7 @@ impl<I: Iterator> Iterator for ProgressReporter<I> {
             Some(item) => {
                 self.current += 1;
 
-                if self.current % self.report_interval == 0 || self.current == self.total {
+                if self.current.is_multiple_of(self.report_interval) || self.current == self.total {
                     let percent = (self.current as f64 / self.total as f64) * 100.0;
                     println!(
                         "Progress: {}/{} ({:.1}%)",

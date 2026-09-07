@@ -1,9 +1,8 @@
-#[cfg(test)]
-pub mod test_utils;
-
 use std::fmt;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
 pub struct Location {
     pub offset: usize,
     pub line: u32,
@@ -26,7 +25,7 @@ impl fmt::Display for Location {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
 pub struct Span {
     pub start: Location,
     pub end: Location,

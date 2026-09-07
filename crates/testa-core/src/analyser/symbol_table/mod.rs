@@ -64,10 +64,10 @@ impl SymbolTable {
     }
 
     pub fn exit_scope(&mut self) {
-        if let Some(scope) = self.get_scope(self.current_scope) {
-            if let Some(parent) = scope.parent {
-                self.current_scope = parent;
-            }
+        if let Some(scope) = self.get_scope(self.current_scope)
+            && let Some(parent) = scope.parent
+        {
+            self.current_scope = parent;
         }
     }
 
@@ -256,5 +256,24 @@ impl SymbolTable {
 
     pub fn get_inheritance_chain(&self, template_name: &str) -> Option<Vec<String>> {
         self.check_inheritance_cycle(template_name).ok()
+    }
+
+    pub fn merge(&mut self, other: SymbolTable) {
+        for scope in other.scopes {
+            if scope.parent.is_none() {
+                for (name, symbol) in scope.symbols {
+                    if self
+                        .get_scope_mut(self.global_scope)
+                        .map(|s| !s.symbols.contains_key(&name))
+                        .unwrap_or(false)
+                        && let Some(global) = self.get_scope_mut(self.global_scope)
+                    {
+                        global.symbols.insert(name, symbol);
+                    }
+                }
+            } else {
+                self.scopes.push(scope);
+            }
+        }
     }
 }

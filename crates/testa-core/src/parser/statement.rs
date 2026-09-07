@@ -13,7 +13,7 @@ where
 {
     pub(super) fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.token_stream.peek_kind() {
-            Output | Seed => self.parse_directive(),
+            Output | Seed | Import => self.parse_directive(),
             OutputPath => self.parse_output_path(),
             Template => self.parse_template(),
             Struct => self.parse_struct(),
@@ -126,6 +126,10 @@ where
             Output => Ok(Statement::OutputDirective {
                 argument,
                 options,
+                span: start.merge(self.token_stream.last_span()),
+            }),
+            Import => Ok(Statement::ImportDirective {
+                argument,
                 span: start.merge(self.token_stream.last_span()),
             }),
             Seed => todo!(),

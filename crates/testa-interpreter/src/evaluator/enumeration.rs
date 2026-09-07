@@ -1,5 +1,5 @@
 use rand::Rng;
-use testa_core::analyser::symbol_table::symbol::VariantInfo;
+use testa_hir::module::node::{Enum, GlobalItemId};
 
 use crate::{
     evaluator::{
@@ -13,28 +13,29 @@ use crate::{
 pub(crate) fn evaluate_enum(
     ctx: &Context,
     state: &mut State,
-    variants: &[VariantInfo],
+    enumeration: &Enum,
+    global_id: &GlobalItemId,
 ) -> Result<Object, EvalError> {
-    let mut cumulative_weights = Vec::with_capacity(variants.len());
+    let module = ctx.module_for(global_id);
     let mut total_weight = 0.0;
+    let mut cumulative_weights = Vec::with_capacity(enumeration.variants.len());
 
-    for variant in variants {
+    for variant in &enumeration.variants {
         let weight = if let Some(weight_expr) = &variant.weight {
             match evaluate_expression(ctx, state, weight_expr)? {
                 Object::Int(w) if w > 0 => w as f64,
                 Object::Int(w) => {
                     return Err(EvalError::InvalidWeight {
-                        variant: variant.name.clone(),
+                        variant: module.string_pool.resolve(variant.name).to_string(),
                         value: w,
-                        span: weight_expr.span,
+                        span: Default::default(),
                     });
                 }
                 _ => {
-                    return Err(EvalError::TypeMismatch {
-                        expected: "positive integer".to_string(),
-                        got: "other".to_string(),
-                        span: weight_expr.span,
-                    });
+                    return Err(EvalError::type_mismatch(
+                        "positive integer".to_string(),
+                        "other".to_string(),
+                    ));
                 }
             }
         } else {
@@ -46,10 +47,14 @@ pub(crate) fn evaluate_enum(
     }
 
     let rand_val = state.rng.random::<f64>() * total_weight;
+    let index = cumulative_weights
+        .binary_search_by(|&w| w.partial_cmp(&rand_val).unwrap())
+        .unwrap_or_else(|i| i);
 
-    match cumulative_weights
-        .binary_search_by(|&cumulative_weight| cumulative_weight.partial_cmp(&rand_val).unwrap())
-    {
-        Ok(index) | Err(index) => Ok(Object::String(variants[index].name.clone())),
-    }
+    Ok(Object::String(
+        module
+            .string_pool
+            .resolve(enumeration.variants[index].name)
+            .to_string(),
+    ))
 }

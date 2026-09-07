@@ -7,6 +7,12 @@ use crate::{
     utils::{Location, Span},
 };
 
+mod data_type;
+mod directive;
+mod enumeration;
+mod error;
+mod template;
+
 pub fn loc(offset: usize, line: u32, col: u32) -> Location {
     Location::new(offset, line, col)
 }

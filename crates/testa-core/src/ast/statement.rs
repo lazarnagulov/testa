@@ -28,6 +28,10 @@ pub enum Statement {
         options: Vec<Field>,
         span: Span,
     },
+    ImportDirective {
+        argument: String,
+        span: Span,
+    },
     OutputPathDirective {
         argument: PathBuf,
         span: Span,
@@ -63,6 +67,18 @@ pub enum Statement {
         count: Expression,
         span: Span,
     },
+}
+
+impl Statement {
+    pub fn name(&self) -> Option<&str> {
+        match self {
+            Statement::Template { name, .. }
+            | Statement::Struct { name, .. }
+            | Statement::Enum { name, .. }
+            | Statement::TypeDecl { name, .. } => Some(name),
+            _ => None,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]

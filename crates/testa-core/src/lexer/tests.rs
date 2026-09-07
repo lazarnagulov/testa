@@ -1,4 +1,5 @@
 use crate::lexer::Lexer;
+use crate::lexer::error::LexerError;
 use crate::lexer::token::TokenKind::{self, *};
 
 #[test]
@@ -73,16 +74,18 @@ fn lex_range() {
 
 #[test]
 fn lex_string_tokens() {
-    let program = "@generate @output $uuid john \"Peter\" 123 true false int float string 123.123 type constraint override #[readonly] numeric123 struct";
+    let program = "@generate @output @import $uuid john \"Peter\" ref 123 true false int float string 123.123 type constraint override #[readonly] numeric123 struct";
     let mut lexer = Lexer::new(program);
     expect_token(
         &mut lexer,
         vec![
             Generate,
             Output,
+            Import,
             Uuid,
             Identifier,
             StringLiteral,
+            Ref,
             IntLiteral,
             True,
             False,
@@ -248,4 +251,28 @@ fn expect_token_size(lexer: &mut Lexer, input: &str, expected: Vec<&str>) {
         })
         .collect::<Vec<_>>();
     assert_eq!(token_strings, expected);
+}
+
+#[test]
+fn lex_unterminated_string() {
+    let mut lexer = Lexer::new("\"hello");
+    let err = lexer.next().unwrap().unwrap_err();
+
+    assert!(matches!(err, LexerError::MissingChar { expected: '"', .. }));
+}
+
+#[test]
+fn lex_invalid_number_double_dot() {
+    let mut lexer = Lexer::new("1.2.3");
+    let err = lexer.next().unwrap().unwrap_err();
+
+    assert!(matches!(err, LexerError::InvalidNumberLiteral { .. }));
+}
+
+#[test]
+fn lex_invalid_character() {
+    let mut lexer = Lexer::new("€");
+    let err = lexer.next().unwrap().unwrap_err();
+
+    assert!(matches!(err, LexerError::InvalidToken { .. }));
 }

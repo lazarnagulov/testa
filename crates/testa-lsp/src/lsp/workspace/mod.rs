@@ -11,7 +11,7 @@ use crate::lsp::{
     workspace::document::{Analysis, Document},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Workspace {
     documents: Arc<RwLock<HashMap<Url, Document>>>,
 }
@@ -41,7 +41,8 @@ impl Workspace {
     }
 
     pub async fn update(&self, uri: Url, text: String, version: i32) -> Vec<lsp_types::Diagnostic> {
-        let result = AnalysisEngine::analyse(&text);
+        let file_path = uri.to_file_path().ok();
+        let result = AnalysisEngine::analyse(&text, file_path.as_deref());
 
         let document = match (result.ast, result.symbol_table) {
             (Some(ast), Some(symbols)) => {
@@ -50,6 +51,8 @@ impl Workspace {
                     references: result.references,
                     symbol_table: Some(symbols),
                     diagnostics: result.diagnostics.clone(),
+                    imported_modules: result.imported_modules,
+                    imported_tables: result.imported_tables,
                 })
             }
             _ => Document::new(uri.clone(), text, version),

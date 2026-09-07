@@ -1,0 +1,6 @@
+template User {
+    id = int;
+    name = string_pattern "${A[4]}" + string; 
+    surname = string_pattern "${A[4]}" + string;
+    age = int [range=1..=101];
+}

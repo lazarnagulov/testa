@@ -36,6 +36,10 @@ impl<'a> SemanticAnalyser<'a> {
     }
 
     pub fn analyse(&mut self) -> AnalysisResult {
+        self.analyse_with_imports(&[])
+    }
+
+    pub fn analyse_with_imports(&mut self, imported: &[&SymbolTable]) -> AnalysisResult {
         let symbol_table = match SymbolTableBuilder::new().build(self.program) {
             Ok(table) => table,
             Err(errors) => {
@@ -43,6 +47,7 @@ impl<'a> SemanticAnalyser<'a> {
                 return AnalysisResult {
                     symbol_table: SymbolTable::default(),
                     references: HashMap::new(),
+                    type_map: HashMap::new(),
                     diagnostics: self
                         .errors
                         .iter()
@@ -54,25 +59,25 @@ impl<'a> SemanticAnalyser<'a> {
 
         self.check_all_inheritance_cycles(&symbol_table);
 
-        if let Err(errs) = ReferenceChecker::new(&symbol_table).check(self.program) {
+        if let Err(errs) =
+            ReferenceChecker::with_imports(&symbol_table, imported).check(self.program)
+        {
             self.errors.extend(errs);
         }
 
-        let references = match ReferenceTracker::new(&symbol_table).track_references(self.program) {
-            Ok(refs) => refs,
-            Err(errs) => {
-                self.errors.extend(errs);
-                HashMap::new()
-            }
-        };
+        let (references, ref_errors) =
+            ReferenceTracker::with_imports(&symbol_table, imported).track_references(self.program);
 
-        if let Err(errs) = TypeChecker::new(&symbol_table).check(self.program) {
-            self.errors.extend(errs);
-        }
+        self.errors.extend(ref_errors);
+
+        let (type_map, type_errs) = TypeChecker::new(&symbol_table).check(self.program);
+
+        self.errors.extend(type_errs);
 
         AnalysisResult {
             symbol_table,
             references,
+            type_map,
             diagnostics: self
                 .errors
                 .iter()

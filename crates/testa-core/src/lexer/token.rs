@@ -19,6 +19,7 @@ pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
         "output" => TokenKind::Output,
         "generate" => TokenKind::Generate,
         "seed" => TokenKind::Seed,
+        "import" => TokenKind::Import,
         "output_path" => TokenKind::OutputPath,
         "pick" => TokenKind::Pick,
         "uuid" => TokenKind::Uuid,
@@ -29,6 +30,7 @@ pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
         "true" => TokenKind::True,
         "false" => TokenKind::False,
         "enum" => TokenKind::Enum,
+        "ref" => TokenKind::Ref,
         "int" => TokenKind::Int,
         "float" => TokenKind::Float,
         "bool" => TokenKind::Bool,
@@ -49,6 +51,7 @@ pub enum TokenKind {
     Generate,
     Seed,
     OutputPath,
+    Import,
 
     // builtins -- starts with $
     Pick,
@@ -72,6 +75,7 @@ pub enum TokenKind {
     Str,
     Bool,
     Struct,
+    Ref,
 
     // syntax
     LParen,            // (
@@ -124,6 +128,7 @@ impl Display for TokenKind {
         let str = match self {
             TokenKind::Output => "@output",
             TokenKind::Seed => "@seed",
+            TokenKind::Import => "@import",
             TokenKind::OutputPath => "@output_path",
             TokenKind::Generate => "generate",
             TokenKind::Template => "template",
@@ -132,6 +137,7 @@ impl Display for TokenKind {
             TokenKind::Float => "float",
             TokenKind::Str => "string",
             TokenKind::Bool => "bool",
+            TokenKind::Ref => "ref",
             TokenKind::Extend => "extend",
             TokenKind::Override => "override",
             TokenKind::StringTemplate => "string_template",

@@ -1,12 +1,11 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use testa_core::ast::Expression;
+use testa_hir::module::node::Expr;
 
 use crate::{
     evaluator::{
         context::{Context, OutputFormat, State},
         error::EvalError,
-        expression::evaluate_expression,
     },
     object::Object,
 };
@@ -41,8 +40,8 @@ impl Evaluator {
         }
     }
 
-    pub fn evaluate_expression(&mut self, expression: &Expression) -> Result<Object, EvalError> {
-        evaluate_expression(&self.context, &mut self.state, expression)
+    pub fn evaluate_expression(&mut self, expr: &Expr) -> Result<Object, EvalError> {
+        expression::evaluate_expression(&self.context, &mut self.state, expr)
     }
 
     pub fn output_config(&self) -> (&OutputFormat, &HashMap<String, Object>, &Option<PathBuf>) {

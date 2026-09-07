@@ -77,7 +77,16 @@ where
                 DataTypeKind::Custom(name)
             }
             Identifier => DataTypeKind::Custom(self.parse_peeked_token_as_string()?),
-            _ => unreachable!("has to be a type"),
+            StringPattern => {
+                return self.parse_string_pattern();
+            }
+            ref kind => {
+                return Err(ParserError::Expected {
+                    expected: "data type or string pattern".to_string(),
+                    got: kind.to_string(),
+                    span: start_span,
+                });
+            }
         };
 
         self.token_stream.next_token()?;

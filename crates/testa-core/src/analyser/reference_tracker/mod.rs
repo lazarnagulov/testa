@@ -1,9 +1,13 @@
 use crate::analyser::error::SemanticError;
 use crate::analyser::symbol_table::SymbolTable;
+use crate::analyser::symbol_table::symbol::SymbolKind;
 use crate::ast::visitor::*;
 use crate::ast::*;
 use crate::utils::Span;
 use std::collections::HashMap;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Debug, Clone)]
 pub struct Reference {
@@ -28,6 +32,7 @@ pub enum ReferenceKind {
 pub struct ReferenceTracker<'a> {
     references: HashMap<String, Vec<Reference>>,
     symbol_table: &'a SymbolTable,
+    imported: &'a [&'a SymbolTable],
     errors: Vec<SemanticError>,
 }
 
@@ -37,24 +42,66 @@ impl<'a> ReferenceTracker<'a> {
             symbol_table,
             references: HashMap::new(),
             errors: Vec::new(),
+            imported: &[],
+        }
+    }
+
+    pub fn with_imports(symbol_table: &'a SymbolTable, imported: &'a [&'a SymbolTable]) -> Self {
+        Self {
+            symbol_table,
+            imported,
+            references: HashMap::new(),
+            errors: Vec::new(),
         }
     }
 
     pub fn track_references(
         mut self,
         program: &Program,
-    ) -> Result<HashMap<String, Vec<Reference>>, Vec<SemanticError>> {
+    ) -> (HashMap<String, Vec<Reference>>, Vec<SemanticError>) {
         self.visit_program(program);
+        (self.references, self.errors)
+    }
 
-        if self.errors.is_empty() {
-            Ok(self.references)
-        } else {
-            Err(self.errors)
+    fn lookup(&self, name: &str) -> bool {
+        self.symbol_table.lookup(name).is_some()
+            || self.imported.iter().any(|st| st.lookup(name).is_some())
+    }
+
+    fn resolve_field(&self, template_name: &str, field_name: &str) -> bool {
+        let mut current = template_name.to_string();
+        let mut visited = std::collections::HashSet::new();
+
+        loop {
+            if !visited.insert(current.clone()) {
+                return false;
+            }
+
+            let symbol = self.symbol_table.get_template(&current).or_else(|| {
+                self.imported
+                    .iter()
+                    .find_map(|st| st.get_template(&current))
+            });
+
+            let Some(symbol) = symbol else { return false };
+
+            match &symbol.kind {
+                SymbolKind::Template { fields, parent, .. } => {
+                    if fields.iter().any(|f| f == field_name) {
+                        return true;
+                    }
+                    match parent {
+                        Some(p) => current = p.clone(),
+                        None => return false,
+                    }
+                }
+                _ => return false,
+            }
         }
     }
 
     fn add_reference(&mut self, name: String, span: Span, kind: ReferenceKind) {
-        let is_resolved = self.symbol_table.lookup(&name).is_some();
+        let is_resolved = self.lookup(&name);
 
         if !is_resolved {
             self.errors.push(SemanticError::UnknownIdentifier {
@@ -63,14 +110,15 @@ impl<'a> ReferenceTracker<'a> {
             });
         }
 
-        let reference = Reference {
-            name: name.clone(),
-            span,
-            kind,
-            is_resolved,
-        };
-
-        self.references.entry(name).or_default().push(reference);
+        self.references
+            .entry(name.clone())
+            .or_default()
+            .push(Reference {
+                name,
+                span,
+                kind,
+                is_resolved,
+            });
     }
 
     pub fn take_errors(&mut self) -> Vec<SemanticError> {
@@ -172,6 +220,30 @@ impl<'a> Visitor for ReferenceTracker<'a> {
                 if let DataTypeKind::Custom(custom_type) = &list_type.kind {
                     self.add_reference(custom_type.clone(), list_type.span, ReferenceKind::Type);
                 }
+            }
+            ExpressionKind::Reference { template, field } => {
+                self.add_reference(
+                    template.clone(),
+                    expression.span,
+                    ReferenceKind::TemplateGenerate,
+                );
+
+                let is_resolved = self.resolve_field(template, field);
+                if !is_resolved {
+                    self.errors.push(SemanticError::UnknownIdentifier {
+                        span: expression.span,
+                        name: field.clone(),
+                    });
+                }
+                self.references
+                    .entry(field.clone())
+                    .or_default()
+                    .push(Reference {
+                        name: field.clone(),
+                        span: expression.span,
+                        kind: ReferenceKind::Field,
+                        is_resolved,
+                    });
             }
             _ => {}
         }

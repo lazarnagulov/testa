@@ -7,6 +7,7 @@ pub enum CompletionContext {
     Directive,
     TypePosition,
     Expression,
+    RefField { template_name: String },
     Unknown,
 }
 
@@ -28,21 +29,21 @@ pub fn detect_completion_context(text: &str, line: u32, column: u32) -> Completi
         return CompletionContext::Attribute;
     }
 
+    if let Some(template_name) = extract_ref_template(before_cursor) {
+        return CompletionContext::RefField { template_name };
+    }
+
     let context = find_enclosing_context(text, line);
     match context {
         Some(EnclosingContext::Template) | Some(EnclosingContext::Struct) => {
             if before_cursor.contains('=') && !before_cursor.trim_end().ends_with('=') {
                 return CompletionContext::FieldValue;
             }
-            return CompletionContext::TemplateBody;
+            CompletionContext::TemplateBody
         }
-        Some(EnclosingContext::Enum) => {
-            return CompletionContext::Expression;
-        }
-        None => {}
+        Some(EnclosingContext::Enum) => CompletionContext::Expression,
+        None => CompletionContext::TopLevel,
     }
-
-    CompletionContext::TopLevel
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -82,4 +83,28 @@ fn find_enclosing_context(text: &str, target_line: u32) -> Option<EnclosingConte
     }
 
     current_context
+}
+
+fn extract_ref_template(text_before: &str) -> Option<String> {
+    let trimmed = text_before.trim_end();
+
+    if let Some(before_dot) = trimmed.strip_suffix('.') {
+        let parts: Vec<&str> = before_dot.split_whitespace().collect();
+        if parts.len() >= 2 && parts[parts.len() - 2] == "ref" {
+            return Some(parts.last()?.to_string());
+        }
+    }
+
+    if let Some(ref_pos) = trimmed.rfind("ref ") {
+        let after_ref = &trimmed[ref_pos + 4..];
+        let parts: Vec<&str> = after_ref.splitn(2, '.').collect();
+        if parts.len() == 2 {
+            let template_name = parts[0].trim();
+            if !template_name.is_empty() && !template_name.contains(' ') {
+                return Some(template_name.to_string());
+            }
+        }
+    }
+
+    None
 }

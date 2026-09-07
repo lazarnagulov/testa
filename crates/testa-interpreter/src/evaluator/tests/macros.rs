@@ -1,221 +1,117 @@
 #![allow(unused_macros)]
 
 macro_rules! infix_test {
-    (
-        $name:ident,
-        $left_kind:expr,
-        $op:expr,
-        $right_kind:expr,
-        $expected:expr
-    ) => {
+    ($name:ident, $left:expr, $op:expr, $right:expr, $expected:expr) => {
         #[test]
         fn $name() {
-            let context = $crate::evaluator::context::Context::new(
-                ::testa_core::analyser::symbol_table::SymbolTable::new(),
-            );
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
 
+            let module = Module::empty("test");
+            let context = $crate::evaluator::context::Context::new(module);
             let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
 
-            let expression = ::testa_core::ast::Expression::new(
-                ::testa_core::ast::ExpressionKind::Infix {
-                    left: Box::new(::testa_core::ast::Expression {
-                        kind: $left_kind,
-                        span: ::testa_core::utils::Span::default(),
-                    }),
-                    operator: $op,
-                    right: Box::new(::testa_core::ast::Expression {
-                        kind: $right_kind,
-                        span: ::testa_core::utils::Span::default(),
-                    }),
-                },
-                ::testa_core::utils::Span::default(),
-            );
+            let expr = Expr::Infix {
+                left: Box::new($left),
+                right: Box::new($right),
+                op: $op,
+            };
 
             let result = evaluator
-                .evaluate_expression(&expression)
+                .evaluate_expression(&expr)
                 .expect("Evaluation failed");
-
             assert_eq!(result, $expected);
         }
     };
 }
 
 macro_rules! infix_tests {
-    (
-        $(
-            $name:ident:
-                $left_kind:expr,
-                $op:expr,
-                $right_kind:expr
-                => $expected:expr
-        ),* $(,)?
-    ) => {
-        $(
-            infix_test!(
-                $name,
-                $left_kind,
-                $op,
-                $right_kind,
-                $expected
-            );
-        )*
+    ($($name:ident: $left:expr, $op:expr, $right:expr => $expected:expr),* $(,)?) => {
+        $(infix_test!($name, $left, $op, $right, $expected);)*
+    };
+}
+
+macro_rules! infix_error_test {
+    ($name:ident, $left:expr, $op:expr, $right:expr) => {
+        #[test]
+        fn $name() {
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
+
+            let module = Module::empty("test");
+            let context = $crate::evaluator::context::Context::new(module);
+            let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
+
+            let expr = Expr::Infix {
+                left: Box::new($left),
+                right: Box::new($right),
+                op: $op,
+            };
+
+            assert!(evaluator.evaluate_expression(&expr).is_err());
+        }
+    };
+}
+
+macro_rules! infix_error_tests {
+    ($($name:ident: $left:expr, $op:expr, $right:expr),* $(,)?) => {
+        $(infix_error_test!($name, $left, $op, $right);)*
     };
 }
 
 macro_rules! prefix_test {
-    (
-        $name:ident,
-        $op:expr,
-        $expr_kind:expr,
-        $expected:expr
-    ) => {
+    ($name:ident, $op:expr, $expr:expr, $expected:expr) => {
         #[test]
         fn $name() {
-            let context = $crate::evaluator::context::Context::new(
-                ::testa_core::analyser::symbol_table::SymbolTable::new(),
-            );
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
 
+            let module = Module::empty("test");
+            let context = $crate::evaluator::context::Context::new(module);
             let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
 
-            let expression = ::testa_core::ast::Expression::new(
-                ::testa_core::ast::ExpressionKind::Prefix {
-                    operator: $op,
-                    expression: Box::new(::testa_core::ast::Expression {
-                        kind: $expr_kind,
-                        span: ::testa_core::utils::Span::default(),
-                    }),
-                },
-                ::testa_core::utils::Span::default(),
-            );
+            let expr = Expr::Prefix {
+                op: $op,
+                expr: Box::new($expr),
+            };
 
             let result = evaluator
-                .evaluate_expression(&expression)
+                .evaluate_expression(&expr)
                 .expect("Evaluation failed");
-
             assert_eq!(result, $expected);
         }
     };
 }
 
 macro_rules! prefix_tests {
-    (
-        $(
-            $name:ident:
-                $op:expr,
-                $expr_kind:expr
-                => $expected:expr
-        ),* $(,)?
-    ) => {
-        $(
-            prefix_test!(
-                $name,
-                $op,
-                $expr_kind,
-                $expected
-            );
-        )*
+    ($($name:ident: $op:expr, $expr:expr => $expected:expr),* $(,)?) => {
+        $(prefix_test!($name, $op, $expr, $expected);)*
     };
 }
 
 macro_rules! prefix_error_test {
-    (
-        $name:ident,
-        $op:expr,
-        $expr_kind:expr
-    ) => {
+    ($name:ident, $op:expr, $expr:expr) => {
         #[test]
         fn $name() {
-            let context = $crate::evaluator::context::Context::new(
-                ::testa_core::analyser::symbol_table::SymbolTable::new(),
-            );
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
 
+            let module = Module::empty("test");
+            let context = $crate::evaluator::context::Context::new(module);
             let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
 
-            let expression = ::testa_core::ast::Expression::new(
-                ::testa_core::ast::ExpressionKind::Prefix {
-                    operator: $op,
-                    expression: Box::new(::testa_core::ast::Expression {
-                        kind: $expr_kind,
-                        span: ::testa_core::utils::Span::default(),
-                    }),
-                },
-                ::testa_core::utils::Span::default(),
-            );
+            let expr = Expr::Prefix {
+                op: $op,
+                expr: Box::new($expr),
+            };
 
-            assert!(evaluator.evaluate_expression(&expression).is_err());
+            assert!(evaluator.evaluate_expression(&expr).is_err());
         }
-    };
-}
-
-macro_rules! infix_error_test {
-    (
-        $name:ident,
-        $left_kind:expr,
-        $op:expr,
-        $right_kind:expr
-    ) => {
-        #[test]
-        fn $name() {
-            let context = $crate::evaluator::context::Context::new(
-                ::testa_core::analyser::symbol_table::SymbolTable::new(),
-            );
-
-            let mut evaluator = $crate::evaluator::Evaluator::new(context, None);
-
-            let expression = ::testa_core::ast::Expression::new(
-                ::testa_core::ast::ExpressionKind::Infix {
-                    left: Box::new(::testa_core::ast::Expression {
-                        kind: $left_kind,
-                        span: ::testa_core::utils::Span::default(),
-                    }),
-                    operator: $op,
-                    right: Box::new(::testa_core::ast::Expression {
-                        kind: $right_kind,
-                        span: ::testa_core::utils::Span::default(),
-                    }),
-                },
-                ::testa_core::utils::Span::default(),
-            );
-
-            assert!(evaluator.evaluate_expression(&expression).is_err());
-        }
-    };
-}
-
-macro_rules! infix_error_tests {
-    (
-        $(
-            $name:ident:
-                $left_kind:expr,
-                $op:expr,
-                $right_kind:expr
-        ),* $(,)?
-    ) => {
-        $(
-            infix_error_test!(
-                $name,
-                $left_kind,
-                $op,
-                $right_kind
-            );
-        )*
     };
 }
 
 macro_rules! prefix_error_tests {
-    (
-        $(
-            $name:ident:
-                $op:expr,
-                $expr_kind:expr
-        ),* $(,)?
-    ) => {
-        $(
-            prefix_error_test!(
-                $name,
-                $op,
-                $expr_kind
-            );
-        )*
+    ($($name:ident: $op:expr, $expr:expr),* $(,)?) => {
+        $(prefix_error_test!($name, $op, $expr);)*
     };
 }
