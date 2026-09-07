@@ -1,0 +1,67 @@
+@output json { pretty = true; indent = 2; }
+@output_path "./university.json";
+
+enum Department {
+    ComputerScience => 4;
+    Mathematics     => 2;
+    Physics         => 2;
+    ElectricalEng   => 3;
+    Linguistics     => 1;
+}
+
+enum AcademicTitle {
+    Assistant  => 3;
+    Professor  => 4;
+    FullProfessor => 2;
+    Emeritus   => 1;
+}
+
+enum EnrollmentStatus {
+    Active    => 6;
+    OnLeave   => 1;
+    Graduated => 2;
+    Expelled  => 1;
+}
+
+type StudentId = string_pattern "S${#[7]}";
+type InstructorId = string_pattern "I${#[5]}";
+type Email = string_pattern "${a[3..=6]}.${a[3..=8]}@university.edu";
+type GPA = float [range=6..=10];
+type Year = int [range=1..=4];
+
+struct ContactInfo {
+    email = Email;
+    phone = string_pattern "+381-6${#[1]}-${#[3]}-${#[4]}";
+}
+
+template Course {
+    code   = string_pattern "${A[2]}${#[3]}";
+    name   = string;
+    ects   = int [range=3..=8];
+    department = Department;
+}
+
+template Person {
+    contact = ContactInfo;
+    first_name = string_pattern "${A}${a[3..=8]}";
+    last_name  = string_pattern "${A}${a[4..=10]}";
+}
+
+template Instructor : Person {
+    id     = InstructorId;
+    title  = AcademicTitle;
+    course = ref Course.name;
+    department = ref Course.department;
+}
+
+template Student : Person {
+    id         = StudentId;
+    gpa        = GPA;
+    year       = Year;
+    status     = EnrollmentStatus;
+    course     = ref Course.name;
+}
+
+@generate Course[20];
+@generate Instructor[10];
+@generate Student[50];

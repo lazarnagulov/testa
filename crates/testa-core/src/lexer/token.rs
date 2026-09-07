@@ -30,6 +30,7 @@ pub static KEYWORD_REGISTRY: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
         "true" => TokenKind::True,
         "false" => TokenKind::False,
         "enum" => TokenKind::Enum,
+        "ref" => TokenKind::Ref,
         "int" => TokenKind::Int,
         "float" => TokenKind::Float,
         "bool" => TokenKind::Bool,
@@ -74,6 +75,7 @@ pub enum TokenKind {
     Str,
     Bool,
     Struct,
+    Ref,
 
     // syntax
     LParen,            // (
@@ -135,6 +137,7 @@ impl Display for TokenKind {
             TokenKind::Float => "float",
             TokenKind::Str => "string",
             TokenKind::Bool => "bool",
+            TokenKind::Ref => "ref",
             TokenKind::Extend => "extend",
             TokenKind::Override => "override",
             TokenKind::StringTemplate => "string_template",

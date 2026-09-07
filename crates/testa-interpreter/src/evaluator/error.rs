@@ -5,7 +5,7 @@ use testa_core::{
     diagnostics::{Diagnostic, DiagnosticCode},
     utils::Span,
 };
-use testa_hir::module::{InfixOp, PrefixOp};
+use testa_hir::module::node::{InfixOp, PrefixOp};
 
 use crate::object::Object;
 
@@ -38,6 +38,10 @@ pub enum EvalError {
     },
     DivisionByZero {
         span: Span,
+    },
+    EmptyPool {
+        template: String,
+        field: String,
     },
     NotDefined(String, Span),
     UncompatibleConstraint {
@@ -123,7 +127,7 @@ impl fmt::Display for EvalError {
                 )
             }
             EvalError::NotDefined(name, span) => {
-                write!(f, "Variable '{}' not defined at {:?}", name, span)
+                write!(f, "Variable '{}' not defined at {}", name, span)
             }
             EvalError::UncompatibleConstraint {
                 data_type,
@@ -132,24 +136,24 @@ impl fmt::Display for EvalError {
             } => {
                 write!(
                     f,
-                    "Incompatible constraint '{}' for type '{}' at {:?}",
+                    "Incompatible constraint '{}' for type '{}' at {}",
                     constraint, data_type, span
                 )
             }
             EvalError::InvalidTarget(target, span) => {
-                write!(f, "Invalid target '{}' at {:?}", target, span)
+                write!(f, "Invalid target '{}' at {}", target, span)
             }
             EvalError::FileError(message, span) => {
-                write!(f, "File error: '{}' at {:?}", message, span)
+                write!(f, "File error: '{}' at {}", message, span)
             }
             EvalError::MiscellaneousError(message, span) => {
-                write!(f, "Miscellaneous error: '{}' at {:?}", message, span)
+                write!(f, "Miscellaneous error: '{}' at {}", message, span)
             }
             EvalError::DivisionByZero { span } => {
-                write!(f, "Cannot divide by zero at {:?}", span)
+                write!(f, "Cannot divide by zero at {}", span)
             }
             EvalError::InvalidCount { value, span } => {
-                write!(f, "Invalid count type {} at {:?}", value, span)
+                write!(f, "Invalid count type {} at {}", value, span)
             }
             EvalError::InvalidWeight {
                 variant,
@@ -160,6 +164,13 @@ impl fmt::Display for EvalError {
                     f,
                     "Invalid weight type in {} ({}) at {}",
                     variant, value, span
+                )
+            }
+            EvalError::EmptyPool { template, field } => {
+                write!(
+                    f,
+                    "'ref {}.{}' used before any '{}' records were generated",
+                    template, field, template
                 )
             }
         }
@@ -190,6 +201,18 @@ impl EvalError {
             )
             .with_code(DiagnosticCode::UnsupportedInfixOperand)
             .with_hint("Verify that both operands support this operator"),
+            EvalError::EmptyPool { template, field } => Diagnostic::error(
+                Span::default(),
+                format!(
+                    "'ref {}.{}' used before any '{}' records were generated",
+                    template, field, template
+                ),
+            )
+            .with_code(DiagnosticCode::NotDefined)
+            .with_hint(format!(
+                "Ensure '@generate {}' appears before any template that references it",
+                template
+            )),
             EvalError::TypeMismatch {
                 expected,
                 got,

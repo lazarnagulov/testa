@@ -262,3 +262,219 @@ fn test_valid_reference_from_imports() {
         "Expected to successfully resolve imported template"
     );
 }
+
+#[test]
+fn test_valid_ref_syntax() {
+    let mut table = SymbolTable::new();
+    table
+        .insert(
+            "User".to_string(),
+            SymbolKind::Template {
+                parent: None,
+                fields: vec!["id".to_string(), "name".to_string()],
+                attributes: vec![],
+            },
+            dummy_span(),
+        )
+        .unwrap();
+
+    let mut checker = ReferenceChecker::new(&table);
+    let expr = Expression {
+        kind: ExpressionKind::Reference {
+            template: "User".to_string(),
+            field: "id".to_string(),
+        },
+        span: dummy_span(),
+    };
+
+    checker.visit_expression(&expr);
+    let (_, errors) = checker.finish();
+    assert!(
+        errors.is_empty(),
+        "Expected no errors for valid ref User.id"
+    );
+}
+
+#[test]
+fn test_ref_unknown_template() {
+    let table = SymbolTable::new();
+    let mut checker = ReferenceChecker::new(&table);
+
+    let expr = Expression {
+        kind: ExpressionKind::Reference {
+            template: "NonExistent".to_string(),
+            field: "id".to_string(),
+        },
+        span: dummy_span(),
+    };
+
+    checker.visit_expression(&expr);
+    let (_, errors) = checker.finish();
+    assert_eq!(errors.len(), 1);
+    assert!(
+        matches!(&errors[0], SemanticError::UnknownIdentifier { name, .. } if name == "NonExistent")
+    );
+}
+
+#[test]
+fn test_ref_unknown_field() {
+    let mut table = SymbolTable::new();
+    table
+        .insert(
+            "User".to_string(),
+            SymbolKind::Template {
+                parent: None,
+                fields: vec!["id".to_string()],
+                attributes: vec![],
+            },
+            dummy_span(),
+        )
+        .unwrap();
+
+    let mut checker = ReferenceChecker::new(&table);
+    let expr = Expression {
+        kind: ExpressionKind::Reference {
+            template: "User".to_string(),
+            field: "nonexistent".to_string(),
+        },
+        span: dummy_span(),
+    };
+
+    checker.visit_expression(&expr);
+    let (_, errors) = checker.finish();
+    assert_eq!(errors.len(), 1);
+    assert!(
+        matches!(&errors[0], SemanticError::UnknownIdentifier { name, .. } if name == "nonexistent")
+    );
+}
+
+#[test]
+fn test_ref_to_non_template() {
+    let mut table = SymbolTable::new();
+    table
+        .insert(
+            "SomeEnum".to_string(),
+            SymbolKind::Enum {
+                variants: vec![],
+                attributes: vec![],
+            },
+            dummy_span(),
+        )
+        .unwrap();
+
+    let mut checker = ReferenceChecker::new(&table);
+    let expr = Expression {
+        kind: ExpressionKind::Reference {
+            template: "SomeEnum".to_string(),
+            field: "variant".to_string(),
+        },
+        span: dummy_span(),
+    };
+
+    checker.visit_expression(&expr);
+    let (_, errors) = checker.finish();
+    assert_eq!(errors.len(), 1);
+    assert!(
+        matches!(&errors[0], SemanticError::TypeMismatch { expected, .. } if expected == "template")
+    );
+}
+
+#[test]
+fn test_self_reference_is_valid() {
+    let mut table = SymbolTable::new();
+    table
+        .insert(
+            "A".to_string(),
+            SymbolKind::Template {
+                parent: None,
+                fields: vec!["id".to_string(), "reference".to_string()],
+                attributes: vec![],
+            },
+            dummy_span(),
+        )
+        .unwrap();
+
+    let mut checker = ReferenceChecker::new(&table);
+    let expr = Expression {
+        kind: ExpressionKind::Reference {
+            template: "A".to_string(),
+            field: "id".to_string(),
+        },
+        span: dummy_span(),
+    };
+
+    checker.visit_expression(&expr);
+    let (_, errors) = checker.finish();
+    assert!(
+        errors.is_empty(),
+        "Self-reference should be valid, handled at runtime by pool fallback"
+    );
+}
+
+#[test]
+fn test_ref_resolved_from_imported_table() {
+    let local_table = SymbolTable::new();
+    let mut imported_table = SymbolTable::new();
+    imported_table
+        .insert(
+            "User".to_string(),
+            SymbolKind::Template {
+                parent: None,
+                fields: vec!["id".to_string()],
+                attributes: vec![],
+            },
+            dummy_span(),
+        )
+        .unwrap();
+
+    let imports = vec![&imported_table];
+    let mut checker = ReferenceChecker::with_imports(&local_table, &imports);
+    let expr = Expression {
+        kind: ExpressionKind::Reference {
+            template: "User".to_string(),
+            field: "id".to_string(),
+        },
+        span: dummy_span(),
+    };
+
+    checker.visit_expression(&expr);
+    let (_, errors) = checker.finish();
+    assert!(
+        errors.is_empty(),
+        "ref to imported template field should be valid"
+    );
+}
+
+#[test]
+fn test_ref_unknown_field_in_imported_template() {
+    let local_table = SymbolTable::new();
+    let mut imported_table = SymbolTable::new();
+    imported_table
+        .insert(
+            "User".to_string(),
+            SymbolKind::Template {
+                parent: None,
+                fields: vec!["id".to_string()],
+                attributes: vec![],
+            },
+            dummy_span(),
+        )
+        .unwrap();
+
+    let imports = vec![&imported_table];
+    let mut checker = ReferenceChecker::with_imports(&local_table, &imports);
+    let expr = Expression {
+        kind: ExpressionKind::Reference {
+            template: "User".to_string(),
+            field: "nonexistent".to_string(),
+        },
+        span: dummy_span(),
+    };
+
+    checker.visit_expression(&expr);
+    let (_, errors) = checker.finish();
+    assert_eq!(errors.len(), 1);
+    assert!(
+        matches!(&errors[0], SemanticError::UnknownIdentifier { name, .. } if name == "nonexistent")
+    );
+}

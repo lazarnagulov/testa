@@ -27,6 +27,10 @@ pub enum ExpressionKind {
     Identifier(String),
     List(Vec<Element>),
     Type(DataType),
+    Reference {
+        template: String,
+        field: String,
+    },
     Prefix {
         operator: PrefixOperator,
         expression: Box<Expression>,
@@ -69,6 +73,7 @@ impl fmt::Display for ExpressionKind {
             ExpressionKind::Prefix { operator, .. } => write!(f, "{} ...", operator),
             ExpressionKind::Infix { operator, .. } => write!(f, "... {} ...", operator),
             ExpressionKind::FuncCall { .. } => write!(f, "function_call(...)"),
+            ExpressionKind::Reference { template, field } => write!(f, "ref {template}.{field}"),
         }
     }
 }

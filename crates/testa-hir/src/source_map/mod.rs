@@ -7,18 +7,18 @@ pub use span_map::SpanMap;
 use serde::{Deserialize, Serialize};
 use testa_core::utils::Span;
 
-use crate::{FieldId, ItemId, StringId};
+use crate::module::node::{FieldId, LocalItemId, StringId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceMap {
-    pub item_spans: SpanMap<ItemId, Span>,
+    pub item_spans: SpanMap<LocalItemId, Span>,
     pub field_spans: SpanMap<FieldId, Span>,
     pub identifier_spans: SpanMap<StringId, Span>,
 }
 
 impl SourceMap {
     pub fn new(
-        item_spans: Vec<(ItemId, Span)>,
+        item_spans: Vec<(LocalItemId, Span)>,
         field_spans: Vec<(FieldId, Span)>,
         identifier_spans: Vec<(StringId, Span)>,
     ) -> Self {
@@ -29,7 +29,7 @@ impl SourceMap {
         }
     }
 
-    pub fn get_item_span(&mut self, id: ItemId) -> Option<Span> {
+    pub fn get_item_span(&mut self, id: LocalItemId) -> Option<Span> {
         self.item_spans.get(&id)
     }
 

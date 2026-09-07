@@ -73,4 +73,7 @@ node_modules
 out
 
 fixture_*.testa
+*.tmod
 !generator.py
+!compiler_generate.py
+!module_generate.py

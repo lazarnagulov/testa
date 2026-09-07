@@ -1,5 +1,5 @@
 use rand::Rng;
-use testa_hir::module::{PatternChar, PatternPart};
+use testa_hir::module::node::{PatternChar, PatternPart};
 
 use crate::{
     evaluator::{

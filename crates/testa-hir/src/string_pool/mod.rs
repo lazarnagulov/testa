@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::StringId;
+use crate::module::node::StringId;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StringPool {

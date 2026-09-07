@@ -3,12 +3,12 @@ use crate::{
         constrained_type::evaluate_constrained_type,
         context::{Context, State},
         error::EvalError,
-        identifier::{evaluate_hir_type, evaluate_item_ref},
+        identifier::{evaluate_global_id, evaluate_hir_type},
         pattern::evaluate_string_pattern,
     },
     object::Object,
 };
-use testa_hir::module::{Expr, InfixOp, PrefixOp};
+use testa_hir::module::node::{Expr, InfixOp, PrefixOp};
 
 pub fn evaluate_expression(
     ctx: &Context,
@@ -22,7 +22,7 @@ pub fn evaluate_expression(
         Expr::Bool(b) => Ok(Object::new(*b)),
 
         Expr::Type(ty) => evaluate_hir_type(ctx, state, ty),
-        Expr::Identifier(item_ref) => evaluate_item_ref(ctx, state, item_ref),
+        Expr::Identifier(item_ref) => evaluate_global_id(ctx, state, item_ref),
         Expr::StringPattern(parts) => evaluate_string_pattern(ctx, state, parts),
         Expr::ConstrainedType { ty, constraints } => {
             evaluate_constrained_type(ctx, state, ty, constraints)
@@ -67,6 +67,37 @@ pub fn evaluate_expression(
             let val = evaluate_expression(ctx, state, expr)?;
             evaluate_prefix_expression(op, &val)
         }
+        Expr::Reference { template, field } => state
+            .pool
+            .sample(&mut state.rng, template, *field)
+            .cloned()
+            .ok_or_else(|| {
+                let template_name = ctx
+                    .resolve_item(template)
+                    .map(|item| {
+                        ctx.module_for(template)
+                            .string_pool
+                            .resolve(item.name())
+                            .to_string()
+                    })
+                    .unwrap_or_else(|| template.to_string());
+
+                let field_name = ctx
+                    .resolve_template(template)
+                    .and_then(|t| t.get_field(*field))
+                    .map(|f| {
+                        ctx.module_for(template)
+                            .string_pool
+                            .resolve(f.name)
+                            .to_string()
+                    })
+                    .unwrap_or_else(|| field.to_string());
+
+                EvalError::EmptyPool {
+                    template: template_name,
+                    field: field_name,
+                }
+            }),
     }
 }
 

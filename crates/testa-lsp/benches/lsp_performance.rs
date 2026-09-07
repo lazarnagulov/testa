@@ -2,6 +2,18 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use testa_lsp::lsp::backend::Backend;
 use tower_lsp::{LanguageServer, LspService, lsp_types::*};
 
+async fn pre_load_document(backend: &Backend, uri: Url, content: String) {
+    let params = DidOpenTextDocumentParams {
+        text_document: TextDocumentItem {
+            uri,
+            language_id: "testa".to_string(),
+            version: 1,
+            text: content,
+        },
+    };
+    backend.did_open(params).await;
+}
+
 async fn bench_did_change(backend: &Backend, uri: Url, text: String) {
     let params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier { uri, version: 1 },
@@ -19,8 +31,8 @@ async fn bench_hover(backend: &Backend, uri: Url) {
         text_document_position_params: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri },
             position: Position {
-                line: 10,
-                character: 5,
+                line: 9,
+                character: 17,
             },
         },
         work_done_progress_params: Default::default(),
@@ -33,8 +45,8 @@ async fn bench_goto_definition(backend: &Backend, uri: Url) {
         text_document_position_params: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri },
             position: Position {
-                line: 10,
-                character: 5,
+                line: 9,
+                character: 17,
             },
         },
         work_done_progress_params: Default::default(),
@@ -48,8 +60,8 @@ async fn bench_references(backend: &Backend, uri: Url) {
         text_document_position: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri },
             position: Position {
-                line: 10,
-                character: 5,
+                line: 9,
+                character: 17,
             },
         },
         work_done_progress_params: Default::default(),
@@ -67,7 +79,7 @@ async fn bench_completion(backend: &Backend, uri: Url) {
             text_document: TextDocumentIdentifier { uri },
             position: Position {
                 line: 10,
-                character: 5,
+                character: 4,
             },
         },
         work_done_progress_params: Default::default(),
@@ -90,6 +102,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             .unwrap_or_else(|_| panic!("Missing {}. Run your generator script first!", file_path));
 
         let uri = Url::parse(&format!("file:///benchmark_{}.testa", size)).unwrap();
+
+        rt.block_on(pre_load_document(backend, uri.clone(), content.clone()));
 
         let mut group = c.benchmark_group(format!("LSP_Scale_{}k", size / 1000));
 

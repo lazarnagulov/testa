@@ -3,8 +3,11 @@ use crate::{
     object::Object,
 };
 use testa_hir::{
-    Item, ItemId, Module, StringPool,
-    module::{Enum, Expr, ItemRef, Variant},
+    StringPool,
+    module::{
+        Module,
+        node::{Enum, Expr, GlobalItemId, Item, LocalItemId, Variant},
+    },
 };
 
 const SEED: Option<u64> = Some(42);
@@ -18,7 +21,7 @@ fn test_evaluate_enum() {
     let mut module = Module::empty("test");
     module.string_pool = pool;
     module.items = vec![Item::Enum(Enum {
-        id: ItemId(0),
+        id: LocalItemId(0),
         name: enum_name,
         variants: vec![Variant {
             name: variant_name,
@@ -30,7 +33,11 @@ fn test_evaluate_enum() {
     let context = Context::new(module);
     let mut evaluator = Evaluator::new(context, SEED);
 
-    let expr = Expr::Identifier(ItemRef::Local(ItemId(0)));
+    let item_ref = GlobalItemId {
+        module: evaluator.context.module.metadata.id,
+        item: LocalItemId(0),
+    };
+    let expr = Expr::Identifier(item_ref);
     let result = evaluate_expression(&evaluator.context, &mut evaluator.state, &expr)
         .expect("Evaluation failed");
 
@@ -39,7 +46,7 @@ fn test_evaluate_enum() {
 
 #[test]
 fn test_evaluate_type_alias() {
-    use testa_hir::module::{Type, TypeAlias};
+    use testa_hir::module::node::{Type, TypeAlias};
 
     let mut pool = StringPool::new();
     let alias_name = pool.intern("test");
@@ -47,17 +54,22 @@ fn test_evaluate_type_alias() {
     let mut module = Module::empty("test");
     module.string_pool = pool;
     module.items = vec![Item::TypeAlias(TypeAlias {
-        id: ItemId(0),
+        id: LocalItemId(0),
         name: alias_name,
         target_type: Type::Int,
         constraints: vec![],
         attributes: vec![],
+        expr: None,
     })];
 
     let context = Context::new(module);
     let mut evaluator = Evaluator::new(context, SEED);
 
-    let expr = Expr::Identifier(ItemRef::Local(ItemId(0)));
+    let item_ref = GlobalItemId {
+        module: evaluator.context.module.metadata.id,
+        item: LocalItemId(0),
+    };
+    let expr = Expr::Identifier(item_ref);
     let result = evaluate_expression(&evaluator.context, &mut evaluator.state, &expr)
         .expect("Evaluation failed");
 

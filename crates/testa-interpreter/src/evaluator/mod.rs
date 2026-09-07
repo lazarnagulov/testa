@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use testa_hir::module::Expr;
+use testa_hir::module::node::Expr;
 
 use crate::{
     evaluator::{

@@ -242,6 +242,7 @@ pub fn walk_expression<V: Visitor>(visitor: &mut V, expression: &Expression) {
         | ExpressionKind::FloatLiteral(_)
         | ExpressionKind::StringLiteral(_)
         | ExpressionKind::BooleanLiteral(_)
+        | ExpressionKind::Reference { .. }
         | ExpressionKind::Identifier(_) => {
             // No nested expressions
         }

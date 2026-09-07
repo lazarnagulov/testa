@@ -42,7 +42,7 @@
       "patterns": [
         {
           "name": "keyword.control.testa",
-          "match": "\\b(type|enum|template|string_pattern|extend|with|override|struct)\\b"
+          "match": "\\b(type|enum|template|string_pattern|extend|with|override|struct|ref)\\b"
         },
         {
           "name": "keyword.operator.testa",

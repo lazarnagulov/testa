@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use testa_hir::module::Directive;
+use testa_hir::module::node::Directive;
 
 use crate::evaluator::{Evaluator, error::EvalError, expression::evaluate_expression};
 

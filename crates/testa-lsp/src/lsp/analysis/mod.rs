@@ -6,7 +6,7 @@ use testa_core::{
     lexer::Lexer,
     parser::Parser,
 };
-use testa_hir::{Module, module::resolver::ModuleResolver};
+use testa_hir::module::{Module, resolver::ModuleResolver};
 
 use crate::lsp::workspace::document::Analysis;
 
@@ -80,7 +80,7 @@ impl AnalysisEngine {
             Ok(modules) => {
                 let tables = modules
                     .iter()
-                    .map(|(name, module)| (name.clone(), module.to_symbol_table()))
+                    .map(|(name, module)| (name.clone(), resolver.to_symbol_table(module)))
                     .collect();
                 ResolvedUnit::new(modules, tables)
             }

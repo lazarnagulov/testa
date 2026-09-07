@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use testa_core::analyser::symbol_table::SymbolTable;
 use testa_core::ast::{CompletionContext, detect_completion_context};
 use tower_lsp::jsonrpc::Result;
@@ -7,6 +9,7 @@ use tower_lsp::lsp_types::{
 };
 
 use crate::lsp::backend::Backend;
+use crate::lsp::workspace::document::Analysis;
 
 pub(crate) async fn handle_completion(
     backend: &Backend,
@@ -20,11 +23,19 @@ pub(crate) async fn handle_completion(
     let column = lsp_position.character;
 
     let context = detect_completion_context(&document.text, line, column);
-    let mut items = match context {
+    let mut items = match &context {
         CompletionContext::TopLevel => generate_top_level_completions(),
         CompletionContext::TemplateBody => generate_field_completions(),
         CompletionContext::Directive => generate_directive_completions(),
         CompletionContext::Expression => generate_expression_completions(),
+        CompletionContext::RefField { template_name } => {
+            if let Ok(analysis) = document.get_analysis() {
+                return Ok(Some(CompletionResponse::Array(
+                    generate_ref_field_completions(template_name, analysis),
+                )));
+            }
+            return Ok(Some(CompletionResponse::Array(vec![])));
+        }
         _ => generate_generic_completions(),
     };
 
@@ -128,14 +139,27 @@ fn generate_top_level_completions() -> Vec<CompletionItem> {
 }
 
 fn generate_field_completions() -> Vec<CompletionItem> {
-    vec![CompletionItem {
-        label: "field".to_string(),
-        kind: Some(CompletionItemKind::PROPERTY),
-        detail: Some("Field declaration".to_string()),
-        insert_text: Some("${1:name} = ${2:type};".to_string()),
-        insert_text_format: Some(InsertTextFormat::SNIPPET),
-        ..Default::default()
-    }]
+    vec![
+        CompletionItem {
+            label: "field".to_string(),
+            kind: Some(CompletionItemKind::PROPERTY),
+            detail: Some("Field declaration".to_string()),
+            insert_text: Some("${1:name} = ${2:type};".to_string()),
+            insert_text_format: Some(InsertTextFormat::SNIPPET),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "ref".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            detail: Some("Reference to another template's field".to_string()),
+            insert_text: Some("${1:name} = ref ${2:Template}.${3:field};".to_string()),
+            insert_text_format: Some(InsertTextFormat::SNIPPET),
+            documentation: Some(Documentation::String(
+                "Reference a field from another template. The referenced template must be generated before this one.".to_string(),
+            )),
+            ..Default::default()
+        },
+    ]
 }
 
 fn generate_builtin_type_completions() -> Vec<CompletionItem> {
@@ -233,7 +257,57 @@ fn generate_directive_completions() -> Vec<CompletionItem> {
             insert_text_format: Some(InsertTextFormat::SNIPPET),
             ..Default::default()
         },
+        CompletionItem {
+            label: "import".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            detail: Some("Import a module".to_string()),
+            insert_text: Some("import ${1:module};".to_string()),
+            insert_text_format: Some(InsertTextFormat::SNIPPET),
+            documentation: Some(Documentation::String(
+                "Import types and templates from a compiled .tmod file".to_string(),
+            )),
+            ..Default::default()
+        },
     ]
+}
+
+fn generate_ref_field_completions(
+    template_name: &str,
+    analysis: &Arc<Analysis>,
+) -> Vec<CompletionItem> {
+    use testa_core::analyser::symbol_table::symbol::SymbolKind;
+    let find_fields = |table: &SymbolTable| -> Option<Vec<CompletionItem>> {
+        let symbol = table.lookup(template_name)?;
+        if let SymbolKind::Template { fields, .. } = &symbol.kind {
+            Some(
+                fields
+                    .iter()
+                    .map(|field_name| CompletionItem {
+                        label: field_name.clone(),
+                        kind: Some(CompletionItemKind::FIELD),
+                        detail: Some(format!("field of {}", template_name)),
+                        ..Default::default()
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        }
+    };
+
+    if let Some(table) = &analysis.symbol_table
+        && let Some(items) = find_fields(table)
+    {
+        return items;
+    }
+
+    for table in analysis.imported_tables.values() {
+        if let Some(items) = find_fields(table) {
+            return items;
+        }
+    }
+
+    vec![]
 }
 
 fn generate_generic_completions() -> Vec<CompletionItem> {

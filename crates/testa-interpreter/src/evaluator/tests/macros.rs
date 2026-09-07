@@ -4,7 +4,8 @@ macro_rules! infix_test {
     ($name:ident, $left:expr, $op:expr, $right:expr, $expected:expr) => {
         #[test]
         fn $name() {
-            use testa_hir::{Module, module::Expr};
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
 
             let module = Module::empty("test");
             let context = $crate::evaluator::context::Context::new(module);
@@ -34,7 +35,8 @@ macro_rules! infix_error_test {
     ($name:ident, $left:expr, $op:expr, $right:expr) => {
         #[test]
         fn $name() {
-            use testa_hir::{Module, module::Expr};
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
 
             let module = Module::empty("test");
             let context = $crate::evaluator::context::Context::new(module);
@@ -61,7 +63,8 @@ macro_rules! prefix_test {
     ($name:ident, $op:expr, $expr:expr, $expected:expr) => {
         #[test]
         fn $name() {
-            use testa_hir::{Module, module::Expr};
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
 
             let module = Module::empty("test");
             let context = $crate::evaluator::context::Context::new(module);
@@ -90,7 +93,8 @@ macro_rules! prefix_error_test {
     ($name:ident, $op:expr, $expr:expr) => {
         #[test]
         fn $name() {
-            use testa_hir::{Module, module::Expr};
+            use testa_hir::module::Module;
+            use testa_hir::module::node::Expr;
 
             let module = Module::empty("test");
             let context = $crate::evaluator::context::Context::new(module);

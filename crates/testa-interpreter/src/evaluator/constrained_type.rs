@@ -1,8 +1,5 @@
 use rand::Rng;
-use testa_hir::{
-    Item,
-    module::{Constraint, ConstraintKind, Type},
-};
+use testa_hir::module::node::{Constraint, ConstraintKind, Item, Type};
 
 use crate::{
     evaluator::{

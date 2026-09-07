@@ -62,6 +62,7 @@ impl LanguageServer for Backend {
                         "#".to_string(),
                         ":".to_string(),
                         "=".to_string(),
+                        ".".to_string(),
                     ]),
                     resolve_provider: Some(false),
                     ..Default::default()
@@ -95,6 +96,7 @@ impl LanguageServer for Backend {
                 params.text_document.version,
             )
             .await;
+
         self.client
             .publish_diagnostics(params.text_document.uri, diagnostics, None)
             .await;

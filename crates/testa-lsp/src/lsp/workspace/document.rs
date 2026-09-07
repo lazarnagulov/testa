@@ -7,7 +7,7 @@ use testa_core::analyser::reference_tracker::Reference;
 use testa_core::analyser::symbol_table::SymbolTable;
 use testa_core::ast::Program;
 use testa_core::diagnostics::Diagnostic;
-use testa_hir::Module;
+use testa_hir::module::Module;
 use tower_lsp::jsonrpc::{self, Error};
 use tower_lsp::lsp_types::Url;
 

@@ -1,60 +1,61 @@
 use std::collections::HashMap;
 
 use testa_core::{
+    analyser::result::AnalysisResult,
     ast::{Expression, ExpressionKind},
     utils::Span,
 };
 
 use crate::{
-    AstLowering, Item, ItemId, Module,
-    module::{Constraint, ConstraintKind, Expr, ItemRef},
+    AstLowering,
+    lowering::context::ItemKind,
+    module::node::{Constraint, ConstraintKind, Expr, GlobalItemId, Item, LocalItemId, StringId},
 };
 
 impl AstLowering {
-    pub(super) fn find_item_ref_by_name(
+    pub(super) fn resolve_item(&mut self, kind: ItemKind, name: &str) -> Option<GlobalItemId> {
+        let name = self.string_pool.intern(name);
+        self.context.resolve(kind, name)
+    }
+
+    pub(super) fn resolve_local_item(
         &mut self,
+        kind: ItemKind,
         name: &str,
-        imported: &HashMap<String, &Module>,
-    ) -> Option<ItemRef> {
-        if let Some(id) = self.find_local_item_id_by_name(name) {
-            return Some(ItemRef::Local(id));
-        }
+    ) -> (LocalItemId, StringId) {
+        let name_id = self.string_pool.intern(name);
 
-        for (module_name, module) in imported {
-            if let Some(item) = module.get_item_by_name(name) {
-                let module_id = self.string_pool.intern(module_name);
-                return Some(ItemRef::Imported {
-                    module: module_id,
-                    item: item.id(),
-                });
-            }
-        }
+        let id = self.context.resolve(kind, name_id).unwrap_or_else(|| {
+            panic!(
+                "Item {:?} {:?} '{}' was not registered",
+                name_id, kind, name
+            )
+        });
 
-        None
+        (id.item, name_id)
     }
 
-    pub(super) fn find_local_item_id_by_name(&self, name: &str) -> Option<ItemId> {
-        self.items
-            .iter()
-            .find(|item| self.string_pool.resolve(item.name()) == name)
-            .map(Item::id)
-    }
-
-    pub(super) fn next_item_id(&mut self) -> ItemId {
-        let id = ItemId(self.next_item_id);
+    pub(super) fn next_item_id(&mut self) -> LocalItemId {
+        let id = LocalItemId(self.next_item_id);
         self.next_item_id += 1;
         id
     }
 
     pub(super) fn register_item(&mut self, item: Item, span: Span, name_span: Option<Span>) {
         self.source_map_builder.add_item(item.id(), span);
+
         if let Some(ns) = name_span {
             self.source_map_builder.add_identifier(item.name(), ns);
         }
+
         self.items.push(item);
     }
 
-    pub(super) fn extract_constraints(&mut self, expr: &Expression) -> Vec<Constraint> {
+    pub(super) fn extract_constraints(
+        &mut self,
+        analysis: &AnalysisResult,
+        expr: &Expression,
+    ) -> Vec<Constraint> {
         let mut constraints = Vec::new();
 
         if let ExpressionKind::Type(data_type) = &expr.kind
@@ -63,7 +64,7 @@ impl AstLowering {
             for constraint_expr in constraint_exprs {
                 use testa_core::ast::ConstraintKind as AstConstraintKind;
 
-                let value = self.lower_expr(&constraint_expr.expression, &HashMap::new());
+                let value = self.lower_expr(&constraint_expr.expression, analysis, &HashMap::new());
 
                 let kind = match constraint_expr.kind {
                     AstConstraintKind::Range => {
@@ -71,8 +72,8 @@ impl AstLowering {
                             &constraint_expr.expression.kind
                         {
                             ConstraintKind::Range {
-                                min: self.lower_expr(left, &HashMap::new()),
-                                max: self.lower_expr(right, &HashMap::new()),
+                                min: self.lower_expr(left, analysis, &HashMap::new()),
+                                max: self.lower_expr(right, analysis, &HashMap::new()),
                             }
                         } else {
                             ConstraintKind::Range {

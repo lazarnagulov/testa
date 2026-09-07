@@ -1,12 +1,12 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use rand::{SeedableRng, rngs::StdRng};
-use testa_hir::{
-    Item, Module, StringId,
-    module::{Enum, ItemRef, Template, TypeAlias},
+use testa_hir::module::{
+    Module,
+    node::{Enum, GlobalItemId, Item, ModuleId, StringId, Template, TypeAlias},
 };
 
-use crate::object::Object;
+use crate::{generated_pool::GeneratedPool, object::Object};
 
 #[derive(Debug, Clone)]
 pub struct GenerateOptions {
@@ -21,13 +21,14 @@ pub struct GenerateOptions {
 pub struct Context {
     pub output_path: Option<PathBuf>,
     pub output_options: HashMap<String, Object>,
-    pub imported: HashMap<String, Module>,
+    pub imported: HashMap<ModuleId, Module>,
     pub module: Module,
     pub output_format: OutputFormat,
 }
 
 pub struct State {
     pub rng: StdRng,
+    pub pool: GeneratedPool,
 }
 
 impl State {
@@ -35,7 +36,10 @@ impl State {
         let rng = seed
             .map(StdRng::seed_from_u64)
             .unwrap_or_else(|| StdRng::from_rng(&mut rand::rng()));
-        Self { rng }
+        Self {
+            rng,
+            pool: GeneratedPool::default(),
+        }
     }
 }
 
@@ -51,7 +55,7 @@ impl Context {
     }
 
     pub fn with_imported(mut self, imported: HashMap<String, Module>) -> Self {
-        self.imported = imported;
+        self.imported = imported.into_values().map(|m| (m.metadata.id, m)).collect();
         self
     }
 
@@ -63,62 +67,45 @@ impl Context {
         self
     }
 
-    pub fn resolve_item(&self, item_ref: &ItemRef) -> Option<&Item> {
-        match item_ref {
-            ItemRef::Local(id) => self.module.get_item(*id),
-            ItemRef::Imported { module, item } => {
-                let module_name = self.module.string_pool.resolve(*module);
-                self.imported.get(module_name)?.get_item(*item)
-            }
+    pub fn module_for(&self, item_ref: &GlobalItemId) -> &Module {
+        if item_ref.module == self.module.metadata.id {
+            &self.module
+        } else {
+            self.imported.get(&item_ref.module).unwrap_or(&self.module)
         }
     }
 
-    pub fn resolve_template(&self, item_ref: &ItemRef) -> Option<&Template> {
+    pub fn resolve_item(&self, item_ref: &GlobalItemId) -> Option<&Item> {
+        self.module_for(item_ref).get_item(item_ref.item)
+    }
+
+    pub fn resolve_template(&self, item_ref: &GlobalItemId) -> Option<&Template> {
         match self.resolve_item(item_ref)? {
             Item::Template(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn resolve_enum(&self, item_ref: &ItemRef) -> Option<&Enum> {
+    pub fn resolve_enum(&self, item_ref: &GlobalItemId) -> Option<&Enum> {
         match self.resolve_item(item_ref)? {
             Item::Enum(e) => Some(e),
             _ => None,
         }
     }
 
-    pub fn resolve_type_alias(&self, item_ref: &ItemRef) -> Option<&TypeAlias> {
+    pub fn resolve_type_alias(&self, item_ref: &GlobalItemId) -> Option<&TypeAlias> {
         match self.resolve_item(item_ref)? {
             Item::TypeAlias(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn resolve_string(&self, id: StringId, item_ref: &ItemRef) -> &str {
-        match item_ref {
-            ItemRef::Local(_) => self.module.string_pool.resolve(id),
-            ItemRef::Imported { module, .. } => {
-                let module_name = self.module.string_pool.resolve(*module);
-                self.imported
-                    .get(module_name)
-                    .map(|m| m.string_pool.resolve(id))
-                    .unwrap_or("")
-            }
-        }
+    pub fn resolve_string(&self, id: StringId, item_ref: &GlobalItemId) -> &str {
+        self.module_for(item_ref).string_pool.resolve(id)
     }
 
     pub fn resolve_local_string(&self, id: StringId) -> &str {
         self.module.string_pool.resolve(id)
-    }
-
-    pub fn module_for(&self, item_ref: &ItemRef) -> &Module {
-        match item_ref {
-            ItemRef::Local(_) => &self.module,
-            ItemRef::Imported { module, .. } => {
-                let name = self.module.string_pool.resolve(*module);
-                self.imported.get(name).unwrap_or(&self.module)
-            }
-        }
     }
 
     pub fn find_template_by_name(&self, name: &str) -> Option<(&Template, &Module)> {

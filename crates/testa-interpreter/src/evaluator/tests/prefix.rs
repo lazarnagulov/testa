@@ -1,5 +1,5 @@
 use crate::object::Object;
-use testa_hir::module::PrefixOp;
+use testa_hir::module::node::PrefixOp;
 
 prefix_tests! {
     test_negate_int:

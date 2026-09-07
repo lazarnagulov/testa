@@ -8,7 +8,10 @@ use testa_core::{
     parser::Parser,
     utils::Span,
 };
-use testa_hir::{AstLowering, Module, module::resolver::ModuleResolver};
+use testa_hir::{
+    AstLowering,
+    module::{Module, resolver::ModuleResolver},
+};
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -73,7 +76,7 @@ pub fn compile_file(path: &Path) -> Result<CompiledUnit, Vec<Diagnostic>> {
 
     let imported_tables = imported
         .values()
-        .map(|m| m.to_symbol_table())
+        .map(|m| resolver.to_symbol_table(m))
         .collect::<Vec<_>>();
 
     let imported_refs = imported_tables.iter().collect::<Vec<_>>();

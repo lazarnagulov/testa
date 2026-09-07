@@ -2,7 +2,7 @@ use indexmap::{IndexMap, IndexSet};
 use std::io::Write;
 use std::{collections::HashMap, fmt, fs::File, path::PathBuf};
 
-use testa_hir::module::{Directive, Expr, ItemRef};
+use testa_hir::module::node::{Directive, Expr, FieldId, GlobalItemId};
 
 use crate::{
     evaluator::{
@@ -36,7 +36,7 @@ pub trait FileGenerator: fmt::Debug {
 
 #[derive(Debug)]
 pub struct GenerateInfo {
-    template_ref: ItemRef,
+    template_ref: GlobalItemId,
     total_count: usize,
 }
 
@@ -81,19 +81,19 @@ impl<'a> RecordGenerator<'a> {
 
     fn collect_field_names(
         &self,
-        item_ref: &ItemRef,
+        global_id: &GlobalItemId,
         out: &mut IndexSet<String>,
     ) -> Result<(), EvalError> {
         let ctx = &self.evaluator.context;
         let template = ctx
-            .resolve_template(item_ref)
-            .ok_or_else(|| EvalError::NotDefined(format!("{}", item_ref), Default::default()))?;
+            .resolve_template(global_id)
+            .ok_or_else(|| EvalError::NotDefined(format!("{}", global_id), Default::default()))?;
 
         if let Some(parent_ref) = &template.parent {
             self.collect_field_names(parent_ref, out)?;
         }
 
-        let module = ctx.module_for(item_ref);
+        let module = ctx.module_for(global_id);
         for field in &template.fields {
             out.insert(module.string_pool.resolve(field.name).to_string());
         }
@@ -190,32 +190,33 @@ impl<'a> RecordGenerator<'a> {
     pub(crate) fn generate_record(
         ctx: &Context,
         state: &mut State,
-        item_ref: &ItemRef,
+        global_id: &GlobalItemId,
     ) -> Result<Record, EvalError> {
         let template = ctx
-            .resolve_template(item_ref)
-            .ok_or_else(|| EvalError::NotDefined(format!("{}", item_ref), Default::default()))?;
+            .resolve_template(global_id)
+            .ok_or_else(|| EvalError::NotDefined(format!("{}", global_id), Default::default()))?;
 
         let mut record = IndexMap::new();
 
-        if let Some(parent_ref) = template.parent.clone() {
+        if let Some(parent_ref) = template.parent {
             let parent_record = Self::generate_record(ctx, state, &parent_ref)?;
             record.extend(parent_record);
         }
 
-        let module = ctx.module_for(item_ref);
+        let module = ctx.module_for(global_id);
 
-        let fields: Vec<(String, Expr)> = template
+        let fields: Vec<(String, FieldId, Expr)> = template
             .fields
             .iter()
             .map(|field| {
                 let name = module.string_pool.resolve(field.name).to_string();
-                (name, field.value.clone())
+                (name, field.id, field.value.clone())
             })
             .collect();
 
-        for (name, value_expr) in fields {
+        for (name, field_id, value_expr) in fields {
             let value = evaluate_expression(ctx, state, &value_expr)?;
+            state.pool.push(global_id, field_id, value.clone());
             record.insert(name, value);
         }
 
